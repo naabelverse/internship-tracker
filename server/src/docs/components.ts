@@ -1,0 +1,152 @@
+import {
+  APPLICATION_STATUSES,
+  EMPLOYMENT_TYPES,
+  INTERVIEW_MODES,
+  INTERVIEW_OUTCOMES,
+  INTERVIEW_TYPES,
+  PRIORITIES,
+  SOURCES,
+  WORK_MODES,
+} from '@/models/Application';
+import { REMINDER_CHANNELS, REMINDER_TYPES } from '@/models/Reminder';
+
+const dateTime = { type: 'string', format: 'date-time' } as const;
+
+export const components = {
+  securitySchemes: {
+    bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+  },
+  schemas: {
+    Error: {
+      type: 'object',
+      required: ['success', 'message', 'code'],
+      properties: {
+        success: { type: 'boolean', example: false },
+        message: { type: 'string' },
+        code: { type: 'string', example: 'VALIDATION_ERROR' },
+        errors: { type: 'object', additionalProperties: true, nullable: true },
+        requestId: { type: 'string' },
+      },
+    },
+    PaginationMeta: {
+      type: 'object',
+      properties: {
+        total: { type: 'integer' },
+        page: { type: 'integer' },
+        limit: { type: 'integer' },
+        totalPages: { type: 'integer' },
+      },
+    },
+    User: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        name: { type: 'string' },
+        email: { type: 'string', format: 'email' },
+        university: { type: 'string' },
+        gradYear: { type: 'integer' },
+        targetRoles: { type: 'array', items: { type: 'string' } },
+        weeklyGoal: { type: 'integer' },
+        theme: { type: 'string', enum: ['light', 'dark', 'system'] },
+        timezone: { type: 'string', example: 'Asia/Kuala_Lumpur' },
+        emailRemindersEnabled: { type: 'boolean' },
+        emailVerified: { type: 'boolean' },
+        isDemo: { type: 'boolean' },
+        createdAt: dateTime,
+      },
+    },
+    StatusHistoryEntry: {
+      type: 'object',
+      properties: {
+        from: { type: 'string', enum: [...APPLICATION_STATUSES], nullable: true },
+        to: { type: 'string', enum: [...APPLICATION_STATUSES] },
+        changedAt: dateTime,
+        note: { type: 'string' },
+      },
+    },
+    Interview: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        type: { type: 'string', enum: [...INTERVIEW_TYPES] },
+        scheduledAt: dateTime,
+        durationMins: { type: 'integer' },
+        mode: { type: 'string', enum: [...INTERVIEW_MODES] },
+        link: { type: 'string' },
+        interviewer: { type: 'string' },
+        round: { type: 'integer' },
+        outcome: { type: 'string', enum: [...INTERVIEW_OUTCOMES] },
+        feedback: { type: 'string' },
+        prepNotes: { type: 'string' },
+      },
+    },
+    Attachment: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        originalName: { type: 'string' },
+        mimeType: { type: 'string' },
+        size: { type: 'integer' },
+        url: { type: 'string' },
+        uploadedAt: dateTime,
+      },
+    },
+    Application: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        version: { type: 'integer', description: 'Send back on PATCH for the optimistic lock' },
+        company: { type: 'string' },
+        companyWebsite: { type: 'string' },
+        companyLogoUrl: { type: 'string', description: 'Derived server side' },
+        role: { type: 'string' },
+        location: { type: 'string' },
+        workMode: { type: 'string', enum: [...WORK_MODES] },
+        employmentType: { type: 'string', enum: [...EMPLOYMENT_TYPES] },
+        status: { type: 'string', enum: [...APPLICATION_STATUSES] },
+        priority: { type: 'string', enum: [...PRIORITIES] },
+        source: { type: 'string', enum: [...SOURCES] },
+        jobUrl: { type: 'string' },
+        appliedDate: dateTime,
+        deadline: dateTime,
+        nextActionDate: { ...dateTime, description: 'Derived from the deadline and interviews' },
+        tags: { type: 'array', items: { type: 'string' } },
+        notes: { type: 'string' },
+        archived: { type: 'boolean' },
+        interviews: { type: 'array', items: { $ref: '#/components/schemas/Interview' } },
+        statusHistory: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/StatusHistoryEntry' },
+        },
+        attachments: { type: 'array', items: { $ref: '#/components/schemas/Attachment' } },
+        createdAt: dateTime,
+        updatedAt: dateTime,
+      },
+    },
+    Reminder: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        application: { type: 'string', nullable: true },
+        type: { type: 'string', enum: [...REMINDER_TYPES] },
+        title: { type: 'string' },
+        dueAt: dateTime,
+        sent: { type: 'boolean' },
+        readAt: { ...dateTime, nullable: true },
+        channel: { type: 'string', enum: [...REMINDER_CHANNELS] },
+      },
+    },
+    CalendarEvent: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        applicationId: { type: 'string' },
+        kind: { type: 'string', enum: ['deadline', 'interview'] },
+        at: dateTime,
+        company: { type: 'string' },
+        role: { type: 'string' },
+        status: { type: 'string' },
+      },
+    },
+  },
+} as const;

@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 3 complete
-**Current phase:** 4
+**Status:** Phase 4 complete
+**Current phase:** 5
 **Last updated:** 2026-09-03
 
 ---
@@ -76,13 +76,29 @@ Notes:
   RefreshToken, so applications leaked between tests and briefly masked a real assertion.
 
 ## Phase 4 — Analytics, calendar, reminders backend
-- [ ] All six analytics endpoints via aggregation pipelines
-- [ ] Calendar merge endpoint, reminders CRUD
-- [ ] Reminder cron job
-- [ ] CSV import (with per-row errors) and export
-- [ ] Upload endpoints behind the storage adapter
-- [ ] OpenAPI spec covers every endpoint, `/api/docs` renders
-- [ ] Tests green
+- [x] All six analytics endpoints via aggregation pipelines
+- [x] Calendar merge endpoint, reminders CRUD
+- [x] Reminder cron job
+- [x] CSV import (with per-row errors) and export
+- [x] Upload endpoints behind the storage adapter
+- [x] OpenAPI spec covers every endpoint, `/api/docs` renders
+- [x] Tests green
+
+Notes:
+- CSV import and export were delivered in Phase 3; the box is ticked here for the record rather
+  than rebuilt. See the Phase 3 notes.
+- Every analytics pipeline opens with `$match` on the user, which is the aggregation equivalent of
+  the ownership rule the query layer follows.
+- Day, week and streak boundaries come from the timezone stored on the account. Two fixture users
+  in Asia/Kuala_Lumpur and America/Los_Angeles get different streaks and different weekly windows
+  from the same rows.
+- The cron ticks hourly in UTC and delivers only to accounts whose own clock reads the digest hour,
+  resolved through Intl so daylight saving moves the UTC hour automatically.
+- Uploads go through a StorageAdapter. One contract suite runs against LocalDiskStorage and
+  S3Storage, so swapping STORAGE_DRIVER changes where bytes live and nothing else. Production
+  refuses the local driver outright.
+- `/api/docs` renders the OpenAPI 3 document, and a test walks the router stack in both directions:
+  no registered route may be undocumented, and no documented path may be stale.
 
 ## Phase 5 — Frontend foundation
 - [ ] Vite + Tailwind theme tokens (light + dark), no flash of wrong theme

@@ -16,6 +16,14 @@ const productionEnv = (overrides: Record<string, string> = {}): NodeJS.ProcessEn
     NODE_ENV: 'production',
     CLIENT_ORIGIN: 'https://tracker.example.com',
     APP_URL: 'https://tracker.example.com',
+    API_URL: 'https://api.tracker.example.com',
+    // Production refuses local disk storage, so a complete production
+    // configuration has to name a bucket and its credentials.
+    STORAGE_DRIVER: 's3',
+    S3_REGION: 'auto',
+    S3_BUCKET: 'tracker-uploads',
+    S3_ACCESS_KEY_ID: 'AKIAEXAMPLE',
+    S3_SECRET_ACCESS_KEY: 'secret-example-value',
     ...overrides,
   }) as NodeJS.ProcessEnv;
 
@@ -68,6 +76,18 @@ describe('env loader', () => {
     });
   });
 
+  describe('storage configuration', () => {
+    it('requires the S3 settings whenever the S3 driver is selected', () => {
+      expect(() =>
+        parseEnv({ ...minimalEnv(), STORAGE_DRIVER: 's3' } as NodeJS.ProcessEnv),
+      ).toThrow(/S3_BUCKET[\s\S]*required when STORAGE_DRIVER is s3/);
+    });
+
+    it('defaults to local disk outside production', () => {
+      expect(parseEnv(minimalEnv()).STORAGE_DRIVER).toBe('local');
+    });
+  });
+
   describe('production hardening', () => {
     it('accepts a fully configured production environment', () => {
       const env = parseEnv(productionEnv());
@@ -94,6 +114,10 @@ describe('env loader', () => {
       expect(() => parseEnv(productionEnv({ JWT_REFRESH_SECRET: validSecretA }))).toThrow(
         /must differ from JWT_ACCESS_SECRET/,
       );
+    });
+
+    it('refuses local disk storage, which a free tier host would wipe on redeploy', () => {
+      expect(() => parseEnv(productionEnv({ STORAGE_DRIVER: 'local' }))).toThrow(/ephemeral disks/);
     });
 
     it('rejects a localhost client origin', () => {

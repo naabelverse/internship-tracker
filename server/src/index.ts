@@ -3,6 +3,7 @@ import { createApp } from '@/app';
 import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
+import { startScheduledJobs, stopScheduledJobs } from '@/jobs';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
@@ -28,6 +29,7 @@ async function shutdown(reason: string, exitCode = 0): Promise<void> {
   forceExit.unref();
 
   try {
+    await stopScheduledJobs();
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
@@ -43,10 +45,16 @@ async function shutdown(reason: string, exitCode = 0): Promise<void> {
   }
 }
 
-connectDatabase().catch((error: Error) => {
-  logger.error('Database unavailable, shutting down', { message: error.message });
-  void shutdown('database-unavailable', 1);
-});
+connectDatabase()
+  .then(() => {
+    // Started only once the database is reachable: a sweep against a dead
+    // connection would just log failures every hour.
+    startScheduledJobs();
+  })
+  .catch((error: Error) => {
+    logger.error('Database unavailable, shutting down', { message: error.message });
+    void shutdown('database-unavailable', 1);
+  });
 
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));

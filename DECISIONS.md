@@ -225,3 +225,79 @@ verify`; nothing in the stack depends on a version-specific API.
   Clearing all collections generically also covers models added in later phases.
 - **Suites share `useCleanAuthRateLimits()`.** Every case registers a fresh account and registration
   is limited to 5 per address, so without a reset the sixth test in a file would be throttled.
+
+## Phase 4 - Analytics, calendar, reminders, uploads
+
+### Analytics
+
+- **Every pipeline opens with `$match` on the user.** Scoping in the first stage is the aggregation
+  equivalent of the query-level ownership rule, and it means no later stage can see another account.
+- **"Applied" and the rates are derived from `statusHistory`, not the current status.** A record that
+  reached interview and was later rejected still counts as applied, responded and interviewed. The
+  history is collapsed into a set with `$setUnion` and each milestone is a `$setIntersection`.
+- **`ghosted` counts as applied but never as a response.** That is the whole point of the status:
+  the application was sent and nothing came back.
+- **The streak is grouped in the pipeline and walked in JavaScript.** `$dateToString` with the
+  account timezone produces the distinct local day keys; only the consecutive-day walk over that
+  small reduced list happens in memory. Filtering still happens in the database.
+- **The weekly goal window starts on Monday** in the account timezone. The SPEC does not specify a
+  first day; Monday matches how a working week is usually counted.
+- **The timeline returns only buckets that have activity.** Filling a year of empty days server side
+  would bloat the payload for no benefit; the chart fills the gaps.
+- **The timeline is bounded at both ends.** An open-ended `$gte` let rows dated after the window
+  leak into a range that was supposed to end at now; found by the timezone test.
+
+### Timezone handling
+
+- **All conversions go through `Intl`.** It is the authoritative tzdata implementation, so daylight
+  saving is handled rather than approximated by a stored offset. The consequence is visible in the
+  cron: 08:00 local in Los Angeles is 15:00 UTC in summer and 16:00 UTC in winter.
+- **`startOfLocalDay` solves by probing, not by adding an offset**, because the offset itself depends
+  on the date being resolved. Two correction passes converge for every zone, including the half-hour
+  and quarter-hour ones, which the tests cover.
+
+### Reminder cron
+
+- **Hourly UTC tick, per-account local hour.** Each tick resolves the small set of distinct account
+  timezones, keeps those whose clock reads the digest hour, and only then queries reminders. A daily
+  UTC job would fire at the wrong local time for most of the world.
+- **Only email reminders have a delivery window.** In-app reminders become visible the moment
+  `dueAt` passes, through the `GET /reminders` query, so they never wait for a tick.
+- **`unreadOnly=true` means due and unacknowledged.** That is what a notification bell is asking for;
+  returning future reminders under that flag would be noise.
+- **The sweep marks the batch sent and logs it.** Delivery is Phase 12. Selection and claiming are
+  genuinely this phase, and they are what the timezone tests exercise.
+
+### Storage
+
+- **A `StorageAdapter` interface with two implementations, chosen by `STORAGE_DRIVER`.** Production
+  refuses the local driver in the env loader and again in the factory: a free tier host wipes local
+  disk on redeploy, so it must not be reachable by accident.
+- **`signedUrl` is part of the contract.** S3 returns a real presigned GET; the local driver returns
+  an app URL carrying an HMAC and an expiry, served by a route that always sets
+  `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`. Same expiry semantics
+  either way, so swapping drivers does not change client behaviour.
+- **S3 is tested with `aws-sdk-client-mock` over an in-memory bucket, not MinIO.** It needs no Docker
+  daemon or network in CI and lets one contract suite run against both drivers. The limitation is
+  stated in the helper: it proves the adapter issues the right commands and honours the contract, it
+  does not exercise real S3 durability, IAM or consistency.
+- **Objects are keyed `attachments/{userId}/{applicationId}/{uuid}.{ext}`.** The uploaded filename is
+  never used on disk or in the bucket, so a crafted name cannot traverse paths or collide.
+- **The storage key is stripped from JSON.** The client downloads through a signed URL minted on
+  demand and has no use for the key.
+- **EXIF is stripped by re-encoding with sharp.** sharp drops metadata unless asked to keep it, and
+  `rotate()` bakes in the orientation first so the image does not end up sideways once the tag goes.
+- **An attachment row is removed before its object is deleted.** An orphaned object is recoverable;
+  a row pointing at bytes that no longer exist is not.
+
+### API documentation
+
+- **The OpenAPI document is hand written and split by area** under `docs/`, rather than generated
+  from decorators, which would mean annotating every route for a tool that is not in the locked
+  stack.
+- **A test walks the router stack in both directions.** No registered route may be undocumented and
+  no documented path may be stale, which is what stops the document drifting behind the code.
+- **Swagger UI gets a relaxed Content Security Policy scoped to `/api/docs`.** It needs inline script
+  and style; nothing else on the API is relaxed.
+- **`API_URL` was added to the environment.** Signed download links have to point at the API, and
+  `APP_URL` is the client origin.

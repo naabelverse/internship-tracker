@@ -4,6 +4,7 @@ import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import { isProduction } from '@/config/env';
 import { logger } from '@/config/logger';
+import { ObjectNotFoundError } from '@/storage/StorageAdapter';
 import { ApiError } from '@/utils/ApiError';
 import type { ApiErrorBody } from '@/utils/apiResponse';
 
@@ -77,6 +78,10 @@ function normalise(error: unknown): NormalisedError {
       code: 'VALIDATION_ERROR',
       details,
     };
+  }
+
+  if (error instanceof ObjectNotFoundError) {
+    return { statusCode: 404, message: 'File not found', code: 'FILE_NOT_FOUND' };
   }
 
   if (error instanceof mongoose.Error.VersionError) {

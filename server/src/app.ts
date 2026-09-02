@@ -1,9 +1,11 @@
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express, { type Express } from 'express';
+import express, { type Express, type RequestHandler } from 'express';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import { env } from '@/config/env';
+import { openApiDocument } from '@/docs/openapi';
 import { errorHandler } from '@/middleware/errorHandler';
 import { httpLogger } from '@/middleware/httpLogger';
 import { notFound } from '@/middleware/notFound';
@@ -13,6 +15,18 @@ import apiRouter from '@/routes/index';
 import healthRouter from '@/routes/health.routes';
 
 const BODY_LIMIT = '1mb';
+
+/**
+ * Swagger UI needs inline script and style, which the global helmet policy
+ * forbids. Scoped to the docs path so nothing else is relaxed.
+ */
+const docsContentSecurityPolicy: RequestHandler = (_request, response, next) => {
+  response.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:",
+  );
+  next();
+};
 
 /**
  * Builds the Express application without binding a port, so tests can drive it
@@ -33,6 +47,17 @@ export function createApp(): Express {
   app.use(cookieParser());
   app.use(httpLogger);
   app.use(globalRateLimiter);
+
+  app.use(
+    '/api/docs',
+    docsContentSecurityPolicy,
+    swaggerUi.serve,
+    swaggerUi.setup(openApiDocument, { customSiteTitle: 'Internship Tracker API' }),
+  );
+
+  app.get('/api/docs.json', (_request, response) => {
+    response.json(openApiDocument);
+  });
 
   // Probes live at the root so platform health checks do not need the API version.
   app.use(healthRouter);

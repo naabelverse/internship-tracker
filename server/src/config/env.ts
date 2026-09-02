@@ -29,8 +29,26 @@ const baseSchema = z.object({
   REFRESH_TOKEN_TTL: z.string().min(1).default('7d'),
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
   APP_URL: z.string().url().default('http://localhost:5173'),
+  /** Public origin of this API, used to build signed download links. */
+  API_URL: z.string().url().default('http://localhost:5000'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
+
+  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  UPLOAD_DIR: z.string().min(1).default('uploads'),
+  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(50).default(5),
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_REGION: z.string().min(1).optional(),
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+
+  /** Local hour at which a user receives their reminder digest. */
+  REMINDER_DIGEST_HOUR: z.coerce.number().int().min(0).max(23).default(8),
+  ENABLE_CRON: z.preprocess(
+    (value) => (value === undefined ? undefined : value !== 'false' && value !== false),
+    z.boolean().default(true),
+  ),
 });
 
 const SECRET_KEYS = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
@@ -68,12 +86,43 @@ export const envSchema = baseSchema.superRefine((value, ctx) => {
     });
   }
 
-  for (const key of ['CLIENT_ORIGIN', 'APP_URL'] as const) {
+  if (value.STORAGE_DRIVER === 'local') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['STORAGE_DRIVER'],
+      message:
+        'must be s3 in production: free tier hosts have ephemeral disks, so local uploads are destroyed on every redeploy',
+    });
+  }
+
+  for (const key of ['CLIENT_ORIGIN', 'APP_URL', 'API_URL'] as const) {
     if (/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(value[key])) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: [key],
         message: 'must point at the deployed origin, not localhost, in production',
+      });
+    }
+  }
+});
+
+const S3_REQUIRED_KEYS = [
+  'S3_REGION',
+  'S3_BUCKET',
+  'S3_ACCESS_KEY_ID',
+  'S3_SECRET_ACCESS_KEY',
+] as const;
+
+/** The S3 driver needs its credentials in every environment, not only production. */
+export const envSchemaWithStorage = envSchema.superRefine((value, ctx) => {
+  if (value.STORAGE_DRIVER !== 's3') return;
+
+  for (const key of S3_REQUIRED_KEYS) {
+    if (!value[key]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: 'is required when STORAGE_DRIVER is s3',
       });
     }
   }
@@ -87,7 +136,7 @@ export type Env = z.infer<typeof envSchema>;
  * in a single pass instead of one variable per restart.
  */
 export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchema.safeParse(source);
+  const result = envSchemaWithStorage.safeParse(source);
 
   if (!result.success) {
     const details = result.error.issues

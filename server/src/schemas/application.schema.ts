@@ -137,6 +137,7 @@ export const updateInterviewSchema = z
 
 export const applicationIdParams = z.object({ id: objectId }).strict();
 export const interviewIdParams = z.object({ id: objectId, interviewId: objectId }).strict();
+export const attachmentIdParams = z.object({ id: objectId, attachmentId: objectId }).strict();
 
 /** Accepts both repeated keys and comma separated values for array filters. */
 function toStringArray(value: unknown): unknown {

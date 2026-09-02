@@ -157,7 +157,18 @@ const attachmentSchema = new Schema<Attachment>(
     url: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
   },
-  { toJSON: subdocumentJson },
+  {
+    toJSON: {
+      transform: (_document: unknown, record: Record<string, unknown>) => {
+        record.id = record._id;
+        delete record._id;
+        // The storage key never leaves the server: downloads go through a signed
+        // URL minted on demand, so the client has no use for it.
+        delete record.filename;
+        return record;
+      },
+    },
+  },
 );
 
 // Value objects rather than entities: an id on each row would be noise in the
