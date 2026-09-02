@@ -146,3 +146,82 @@ verify`; nothing in the stack depends on a version-specific API.
   simulate the real threat, which is a token replayed later.
 - **`@types/bcryptjs` was removed.** bcryptjs 3 ships its own type declarations and the DefinitelyTyped
   package shadowed them.
+
+## Phase 3 - Applications backend
+
+### Status history
+
+- **Appended explicitly in the service, never by a hook.** `PATCH /:id/status` carries a `note`, and
+  a `pre('save')` hook cannot see it; recovering the previous status inside a hook also means
+  reaching into Mongoose internals. Every write path funnels through one `applyStatusChange` helper,
+  so exactly one row is appended per transition and a duplicate is structurally impossible.
+- **Creation writes an opening entry with `from: null`.** The SPEC only requires an append on change,
+  but the detail page renders its timeline from this array, and a record with no history would show
+  an empty timeline on day one.
+- **A no-op transition appends nothing.** Setting a record to the status it already has is not a
+  change and would otherwise pad the timeline with noise.
+
+### Optimistic concurrency
+
+- **`optimisticConcurrency: true` uses the existing `__v` version key**, surfaced to clients as
+  `version` by the `toJSON` transform. It only applies to `document.save()`, so the update path loads
+  and saves rather than using `findOneAndUpdate`.
+- **Two guards, one status code.** An explicit comparison catches a client that read an older
+  version; the Mongoose `VersionError` catches a genuine race where both writers read the same
+  version. Both return 409 with the current document attached.
+- **The 409 body carries `conflictSource`, either `stale_read` or `concurrent_write`.** Without it
+  the two paths are indistinguishable, which makes the race untestable and production conflicts
+  harder to diagnose.
+- **Omitting `version` skips the check.** The notes editor autosaves on a debounce and has no useful
+  version to send; the endpoint is unsafe by omission, never unsafe by default.
+
+### Querying
+
+- **`search` uses an escaped case-insensitive regex, not `$text`.** The SPEC mandates the text index
+  and the index is created, but `$text` matches whole words only, so a debounced search box would
+  return nothing while the user is still typing. Input is escaped through `utils/regex` per SPEC
+  section 7, and a test proves metacharacters are treated literally.
+- **`dateFrom` and `dateTo` filter on `createdAt`.** The SPEC does not say which date. Every record
+  has `createdAt`, whereas a saved-but-not-applied row has no `appliedDate`, and it matches the
+  analytics timeline definition of applications created over time.
+- **`tags` matches any of the given tags (`$in`), not all of them.** It behaves like the other
+  multi-select filters, which is what the filter bar in Phase 6 needs.
+- **`archived` defaults to false.** The table and board both want live records; passing
+  `archived=true` returns only archived ones.
+- **Pagination adds `_id` as a tiebreaker to every sort**, so paging cannot show a row twice when the
+  sorted field has duplicates.
+
+### Derived fields
+
+- **`nextActionDate` and `companyLogoUrl` are computed server-side and rejected in request bodies.**
+  Accepting them would let the two drift from the data they summarise.
+- **`companyLogoUrl` is a constructed Clearbit-style URL, with no network call at write time.** The
+  client falls back to an initials avatar when the image fails. Note that loading it discloses the
+  company domain to a third party, which the privacy page in Phase 13 has to mention.
+
+### Bulk actions
+
+- **Ownership is re-checked per id.** The ids are re-queried scoped to the caller, so an id owned by
+  someone else never matches and comes back in `notFound`, exactly like a deleted row.
+- **`archive` and `unarchive` use `updateMany`, which bypasses optimistic concurrency.** They toggle
+  one boolean and carry no history, so a lost update is not meaningful. `setStatus` instead loops
+  document by document because every transition owes a `statusHistory` entry.
+
+### Import and export
+
+- **CSV handled by papaparse.** Correct quoting and embedded separators are not worth hand-rolling;
+  `utils/csv` is a thin wrapper that keeps the column order stable.
+- **Import is multipart via multer memory storage, capped at 2 MB and 1000 rows.** Nothing touches
+  disk, so the storage adapter is not involved and the Phase 4 upload work is unaffected.
+- **A bad row never aborts the batch.** Each row is validated on its own and every skipped row is
+  reported with its 1-based spreadsheet row number, the offending field, and the reason.
+- **Export returns the raw file rather than the JSON envelope**, because it is a download with a
+  `Content-Disposition` attachment header.
+
+### Testing
+
+- **The test database helper now truncates every collection between cases.** It previously cleared
+  only User and RefreshToken, so applications leaked across tests and hid a real assertion failure.
+  Clearing all collections generically also covers models added in later phases.
+- **Suites share `useCleanAuthRateLimits()`.** Every case registers a fresh account and registration
+  is limited to 5 per address, so without a reset the sixth test in a file would be throttled.

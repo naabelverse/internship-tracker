@@ -1,5 +1,6 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import { Application } from '@/models/Application';
 import { RefreshToken } from '@/models/RefreshToken';
 import { User } from '@/models/User';
 
@@ -15,12 +16,15 @@ export function useTestDatabase(): void {
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     await mongoose.connect(mongod.getUri());
-    // Unique indexes have to exist before duplicate-key behaviour can be tested.
-    await Promise.all([User.init(), RefreshToken.init()]);
+    // Indexes have to exist before unique and text behaviour can be tested.
+    await Promise.all([User.init(), RefreshToken.init(), Application.init()]);
   }, BOOT_TIMEOUT_MS);
 
   afterEach(async () => {
-    await Promise.all([User.deleteMany({}), RefreshToken.deleteMany({})]);
+    // Every collection, not a hand-written list: a model added in a later phase
+    // would otherwise leak rows between tests and mask real failures.
+    const collections = Object.values(mongoose.connection.collections);
+    await Promise.all(collections.map((collection) => collection.deleteMany({})));
   });
 
   afterAll(async () => {

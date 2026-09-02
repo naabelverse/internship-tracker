@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { createApp } from '@/app';
+import { resetAuthRateLimiters } from '@/middleware/rateLimit';
 import { REFRESH_COOKIE_NAME } from '@/utils/cookies';
 
 export const AUTH_BASE = '/api/v1/auth';
@@ -78,4 +79,59 @@ export async function registerUser(
 
 export function buildTestApp(): Express {
   return createApp();
+}
+
+export const APPLICATIONS_BASE = '/api/v1/applications';
+
+/** Unique-by-default application body so cases never collide on company name. */
+export function buildApplicationPayload(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  sequence += 1;
+
+  return {
+    company: `Company ${String(sequence)}`,
+    role: 'Software Engineering Intern',
+    ...overrides,
+  };
+}
+
+export interface CreatedApplication {
+  id: string;
+  version: number;
+  application: Record<string, unknown>;
+}
+
+export async function createApplicationFor(
+  app: Express,
+  accessToken: string,
+  overrides: Record<string, unknown> = {},
+): Promise<CreatedApplication> {
+  const response = await request(app)
+    .post(APPLICATIONS_BASE)
+    .set('Authorization', `Bearer ${accessToken}`)
+    .send(buildApplicationPayload(overrides));
+
+  if (response.status !== 201) {
+    throw new Error(`Create application failed: ${String(response.status)} ${response.text}`);
+  }
+
+  const application = response.body.data.application as Record<string, unknown>;
+
+  return {
+    id: application.id as string,
+    version: application.version as number,
+    application,
+  };
+}
+
+/**
+ * Clears the auth attempt counters before each test. Every suite registers a
+ * fresh account per case, and registration is limited to 5 attempts per address,
+ * so without this the sixth test in a file would be throttled rather than run.
+ */
+export function useCleanAuthRateLimits(): void {
+  beforeEach(() => {
+    resetAuthRateLimiters();
+  });
 }

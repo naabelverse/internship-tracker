@@ -19,3 +19,36 @@ export function validateBody(schema: ZodTypeAny): RequestHandler {
     next();
   };
 }
+
+/**
+ * Validates `req.query`. Express parses repeated keys into arrays and everything
+ * else into strings, so the schema is responsible for coercion.
+ */
+export function validateQuery(schema: ZodTypeAny): RequestHandler {
+  return (req, _res, next) => {
+    const result = schema.safeParse(req.query);
+
+    if (!result.success) {
+      next(result.error);
+      return;
+    }
+
+    req.query = result.data as typeof req.query;
+    next();
+  };
+}
+
+/** Validates route parameters, so a malformed id is a 400 rather than a cast error. */
+export function validateParams(schema: ZodTypeAny): RequestHandler {
+  return (req, _res, next) => {
+    const result = schema.safeParse(req.params);
+
+    if (!result.success) {
+      next(result.error);
+      return;
+    }
+
+    req.params = result.data as typeof req.params;
+    next();
+  };
+}

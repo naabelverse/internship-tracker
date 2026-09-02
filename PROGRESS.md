@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 2 complete
-**Current phase:** 3
+**Status:** Phase 3 complete
+**Current phase:** 4
 **Last updated:** 2026-09-03
 
 ---
@@ -53,13 +53,27 @@ Notes:
   between cases, so the 5-per-15-minutes behaviour is proven rather than skipped.
 
 ## Phase 3 — Applications backend
-- [ ] Application model + indexes + optimistic concurrency
-- [ ] Full CRUD, filtering, search, sort, pagination with `meta`
-- [ ] `PATCH /:id/status` appends to `statusHistory`
-- [ ] Interviews subresource CRUD
-- [ ] Bulk actions
-- [ ] Ownership isolation test (user A cannot see user B, returns 404)
-- [ ] Tests green
+- [x] Application model + indexes + optimistic concurrency
+- [x] Full CRUD, filtering, search, sort, pagination with `meta`
+- [x] `PATCH /:id/status` appends to `statusHistory`
+- [x] Interviews subresource CRUD
+- [x] Bulk actions
+- [x] Ownership isolation test (user A cannot see user B, returns 404)
+- [x] Tests green
+
+Notes:
+- `statusHistory` is appended explicitly by a single `applyStatusChange` helper, not by a pre-save
+  hook. A hook cannot see the `note` that `PATCH /:id/status` accepts, and running both mechanisms
+  would append two rows per change.
+- `optimisticConcurrency: true` makes Mongoose use `__v` as a real lock, exposed to clients as
+  `version`. Two guards produce the same 409: a stale `version` in the body, and a lost race at
+  `save()`. The response says which via `errors.conflictSource`.
+- CSV import and export were pulled forward from Phase 4 at your request. Uploads still go through
+  in-memory multer only; the storage adapter and attachment endpoints remain Phase 4.
+- `search` uses an escaped case-insensitive regex rather than `$text`, so type-ahead matches
+  partial words. The text index the SPEC asks for is still created.
+- Test isolation now truncates every collection between cases. The old helper cleared only User and
+  RefreshToken, so applications leaked between tests and briefly masked a real assertion.
 
 ## Phase 4 — Analytics, calendar, reminders backend
 - [ ] All six analytics endpoints via aggregation pipelines

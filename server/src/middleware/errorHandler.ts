@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from 'express';
 import mongoose from 'mongoose';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import { isProduction } from '@/config/env';
 import { logger } from '@/config/logger';
@@ -78,6 +79,14 @@ function normalise(error: unknown): NormalisedError {
     };
   }
 
+  if (error instanceof mongoose.Error.VersionError) {
+    return {
+      statusCode: 409,
+      message: 'This application was changed somewhere else. Reload to see the latest version.',
+      code: 'VERSION_CONFLICT',
+    };
+  }
+
   if (error instanceof mongoose.Error.CastError) {
     return {
       statusCode: 400,
@@ -93,6 +102,15 @@ function normalise(error: unknown): NormalisedError {
       message: `That ${field} is already in use`,
       code: 'DUPLICATE_KEY',
       details: { field },
+    };
+  }
+
+  if (error instanceof MulterError) {
+    const tooLarge = error.code === 'LIMIT_FILE_SIZE';
+    return {
+      statusCode: tooLarge ? 413 : 400,
+      message: tooLarge ? 'The uploaded file is too large' : 'The upload could not be read',
+      code: tooLarge ? 'PAYLOAD_TOO_LARGE' : 'INVALID_UPLOAD',
     };
   }
 
