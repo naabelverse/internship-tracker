@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+build
+.husky
+package-lock.json
+*.min.js
+
+# Delivered verbatim by the project owner - kept byte-identical.
+SPEC.md
+CLAUDE.md
+PROGRESS.md

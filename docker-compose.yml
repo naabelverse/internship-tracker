@@ -1,0 +1,75 @@
+name: internship-tracker
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: internship-tracker-mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand({ ping: 1 }).ok']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      target: dev
+    container_name: internship-tracker-api
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: '5000'
+      MONGO_URI: mongodb://mongo:27017/internship_tracker
+      # Development-only values with no production meaning. Real secrets are
+      # generated per SPEC section 15 and never committed.
+      JWT_ACCESS_SECRET: local-development-access-secret-do-not-deploy
+      JWT_REFRESH_SECRET: local-development-refresh-secret-do-not-deploy
+      ACCESS_TOKEN_TTL: 15m
+      REFRESH_TOKEN_TTL: 7d
+      CLIENT_ORIGIN: http://localhost:5173
+      APP_URL: http://localhost:5173
+      LOG_LEVEL: debug
+      TRUST_PROXY: '0'
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./server/src:/app/server/src
+      - ./server/tsconfig.json:/app/server/tsconfig.json
+      - ./server/tsconfig.build.json:/app/server/tsconfig.build.json
+      - ./tsconfig.base.json:/app/tsconfig.base.json
+
+  web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+      target: dev
+    container_name: internship-tracker-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Read by the browser, so this must be the host-visible API URL.
+      VITE_API_URL: http://localhost:5000
+      VITE_APP_URL: http://localhost:5173
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./client/src:/app/client/src
+      - ./client/index.html:/app/client/index.html
+      - ./client/vite.config.ts:/app/client/vite.config.ts
+      - ./client/tsconfig.json:/app/client/tsconfig.json
+      - ./client/tsconfig.node.json:/app/client/tsconfig.node.json
+      - ./tsconfig.base.json:/app/tsconfig.base.json
+
+volumes:
+  mongo-data:

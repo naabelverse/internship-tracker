@@ -1,0 +1,53 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# test / coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# environment — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# uploads (local storage driver only; production uses object storage)
+uploads/
+server/uploads/
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# OS junk
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# caches
+.eslintcache
+.vite/
+.cache/
