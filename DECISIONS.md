@@ -84,3 +84,65 @@ verify`; nothing in the stack depends on a version-specific API.
   being quietly rewritten by the pre-commit hook.
 - **`SPEC.md`, `CLAUDE.md` and `PROGRESS.md` are prettier-ignored.** They were delivered by the
   project owner; reformatting them would produce noisy diffs on documents that are the source of truth.
+
+## Phase 2 - Auth backend
+
+### Refresh token design
+
+- **`RefreshToken` has a `family` field the SPEC did not list.** SPEC section 4 lists
+  `user, tokenHash, expiresAt, revokedAt, replacedBy, userAgent, ip` and asks for whole-family
+  revocation on reuse. Those fields only give a forward-linked list, so revoking a family would mean
+  walking `replacedBy` one query at a time and would still miss ancestors. A `family` id minted at
+  login and inherited by every rotation turns it into one indexed
+  `updateMany({ user, family, revokedAt: null })`.
+- **Refresh tokens are opaque random strings, not JWTs.** They have to be revocable server-side,
+  which a self-contained JWT is not.
+- **Stored as an HMAC-SHA256 keyed with `JWT_REFRESH_SECRET`, not a bare SHA-256.** A leaked database
+  alone then cannot be used to match stolen cookies, because an attacker also needs the secret. This
+  also gives `JWT_REFRESH_SECRET` a real job now that refresh tokens are not signed.
+- **A 10 second reuse grace window.** Rotation claims the token atomically, so of N concurrent
+  requests exactly one wins. The losers have to be told apart from a genuine replay: a token revoked
+  by rotation inside the window is a concurrent duplicate (401, family untouched), anything older is
+  replay (401, family revoked). Without this, two browser tabs refreshing at once would log the
+  account out of every device.
+- **No MongoDB transactions.** The single-document `findOneAndUpdate` is already atomic, and avoiding
+  transactions keeps the suite runnable on a standalone `mongodb-memory-server` with no replica set.
+
+### Access tokens
+
+- **Access tokens carry a custom millisecond `iatMs` claim.** The standard `iat` claim is whole
+  seconds, so a token minted in the same second as a password change compared equal and survived
+  invalidation. Comparing `passwordChangedAt` against `iatMs` closes that window and removed the need
+  to backdate `passwordChangedAt`, which was the earlier workaround.
+
+### Endpoint behaviour
+
+- **`PATCH /auth/me/password` revokes every refresh token, then issues a fresh session.** The SPEC
+  says "revokes all other sessions". Revoking all and re-issuing to the caller is simpler than
+  exempting one token, and leaves the calling device signed in as intended.
+- **`PATCH /auth/me` uses a strict schema and rejects `email`.** Changing an email needs the pending
+  email plus re-verification flow, which is Phase 11. Rejecting loudly beats ignoring the field.
+- **A locked account returns 423, not 429.** 429 means "slow down and retry"; the lock is a state of
+  the account, and the distinct code `ACCOUNT_LOCKED` lets the client explain it properly.
+- **Registration does not send a verification email yet.** There is no mail transport until Phase 12.
+  Every User field the verification flow needs already exists, so the schema will not change under it.
+- **A soft-deleted account keeps its email reserved.** The unique index still holds the row, so
+  re-registering that address returns 409 until the Phase 11 purge job removes it.
+- **The refresh cookie is scoped to `Path=/api/v1/auth` with `SameSite=Strict`.** It is never attached
+  to ordinary API calls, which shrinks the surface for theft.
+- **Password policy: 8 to 128 characters with upper, lower and a digit.** The SPEC does not specify
+  one; this is the common baseline and is enforced by zod at the route boundary.
+
+### Testing
+
+- **Auth rate limiters run during tests instead of being skipped.** Each limiter owns a `MemoryStore`
+  and `resetAuthRateLimiters()` clears them between cases, so "5 attempts then 429" is proven rather
+  than assumed. The global 200-per-window limiter stays skipped in tests.
+- **Tests set `TRUST_PROXY=1`.** That lets a test vary the client address with `X-Forwarded-For` and
+  trip the IP-keyed and email-keyed limiters independently, and it matches how the API runs behind
+  Render or Railway.
+- **The sequential-replay test explicitly ages the revocation past the grace window.** Replaying
+  immediately is by design a concurrent duplicate, so the test moves `revokedAt` into the past to
+  simulate the real threat, which is a token replayed later.
+- **`@types/bcryptjs` was removed.** bcryptjs 3 ships its own type declarations and the DefinitelyTyped
+  package shadowed them.

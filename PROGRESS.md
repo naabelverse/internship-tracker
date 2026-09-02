@@ -2,9 +2,9 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 1 complete
-**Current phase:** 2
-**Last updated:** 2026-09-02
+**Status:** Phase 2 complete
+**Current phase:** 3
+**Last updated:** 2026-09-03
 
 ---
 
@@ -29,12 +29,28 @@ Notes:
   the application shell in Phase 5.
 
 ## Phase 2 — Auth backend
-- [ ] User model with hashing, `toJSON` strips password
-- [ ] register, login, refresh (with rotation + reuse detection), logout, logout-all
-- [ ] `GET/PATCH /auth/me`, password change revokes other sessions
-- [ ] `requireAuth` middleware, `passwordChangedAt` invalidates old access tokens
-- [ ] Rate limits on auth routes, keyed on IP and email
-- [ ] Tests green
+- [x] User model with hashing, `toJSON` strips password
+- [x] register, login, refresh (with rotation + reuse detection), logout, logout-all
+- [x] `GET/PATCH /auth/me`, password change revokes other sessions
+- [x] `requireAuth` middleware, `passwordChangedAt` invalidates old access tokens
+- [x] Rate limits on auth routes, keyed on IP and email
+- [x] Tests green
+
+Notes:
+- `RefreshToken` gained a `family` field beyond the SPEC list. The listed fields only support
+  walking `replacedBy` one document at a time; `family` makes revocation a single indexed
+  `updateMany`. `replacedBy` is kept for audit and to tell rotation apart from outright revocation.
+- Rotation claims a token with one conditional `findOneAndUpdate`, so concurrent requests cannot
+  both win. A 10 s grace window separates a benign concurrent duplicate (401, family intact) from a
+  genuine replay (401, whole family revoked).
+- Access tokens carry a millisecond `iatMs` claim. The standard `iat` is whole seconds, which let a
+  token minted in the same second as a password change survive it. Found via a flaky test, fixed in
+  the mechanism rather than the assertion, and covered by a same-second regression test.
+- Email verification is not sent at registration: there is no mail transport until Phase 12 and the
+  verification flow is Phase 11. The User fields for both already exist, so no later migration.
+- `PATCH /auth/me` deliberately rejects `email`; the change-email flow needs verification (Phase 11).
+- Auth rate limiters stay active during tests, with `resetAuthRateLimiters()` clearing counters
+  between cases, so the 5-per-15-minutes behaviour is proven rather than skipped.
 
 ## Phase 3 — Applications backend
 - [ ] Application model + indexes + optimistic concurrency

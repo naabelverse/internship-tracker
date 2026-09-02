@@ -51,3 +51,6 @@ desktop.ini
 .eslintcache
 .vite/
 .cache/
+
+# local agent tooling artefacts, not part of the project
+ruvector.db

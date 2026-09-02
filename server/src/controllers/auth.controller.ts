@@ -1,0 +1,112 @@
+import type { Request } from 'express';
+import { getAuthenticatedUser } from '@/middleware/requireAuth';
+import type {
+  ChangePasswordInput,
+  LoginInput,
+  RegisterInput,
+  UpdateMeInput,
+} from '@/schemas/auth.schema';
+import * as authService from '@/services/auth.service';
+import { rotateSession, type SessionContext } from '@/services/token.service';
+import { ApiError } from '@/utils/ApiError';
+import { asyncHandler } from '@/utils/asyncHandler';
+import { sendSuccess } from '@/utils/apiResponse';
+import { REFRESH_COOKIE_NAME, clearRefreshCookie, setRefreshCookie } from '@/utils/cookies';
+
+/** Device fingerprint stored against a refresh token so users can audit sessions. */
+function sessionContext(req: Request): SessionContext {
+  return { userAgent: req.get('user-agent'), ip: req.ip };
+}
+
+function readRefreshCookie(req: Request): string | undefined {
+  const cookies: unknown = req.cookies;
+  const value = (cookies as Record<string, unknown> | undefined)?.[REFRESH_COOKIE_NAME];
+
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+export const register = asyncHandler(async (req, res) => {
+  const { user, session } = await authService.register(
+    req.body as RegisterInput,
+    sessionContext(req),
+  );
+
+  setRefreshCookie(res, session.refreshToken);
+  sendSuccess(
+    res,
+    { user: user.toJSON(), accessToken: session.accessToken },
+    { status: 201, message: 'Account created' },
+  );
+});
+
+export const login = asyncHandler(async (req, res) => {
+  const { user, session } = await authService.login(req.body as LoginInput, sessionContext(req));
+
+  setRefreshCookie(res, session.refreshToken);
+  sendSuccess(
+    res,
+    { user: user.toJSON(), accessToken: session.accessToken },
+    { message: 'Signed in' },
+  );
+});
+
+export const refresh = asyncHandler(async (req, res) => {
+  const raw = readRefreshCookie(req);
+
+  if (!raw) {
+    throw ApiError.unauthorized('No refresh token was provided', 'MISSING_REFRESH_TOKEN');
+  }
+
+  try {
+    const rotated = await rotateSession(raw, sessionContext(req));
+    setRefreshCookie(res, rotated.refreshToken);
+    sendSuccess(res, { accessToken: rotated.accessToken });
+  } catch (error) {
+    // Not swallowed: a cookie that can never rotate again is dead weight that
+    // would keep failing every request, so drop it before rethrowing.
+    clearRefreshCookie(res);
+    throw error;
+  }
+});
+
+export const logout = asyncHandler(async (req, res) => {
+  await authService.logout(readRefreshCookie(req));
+
+  clearRefreshCookie(res);
+  sendSuccess(res, { loggedOut: true }, { message: 'Signed out' });
+});
+
+export const logoutAll = asyncHandler(async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const revoked = await authService.logoutAll(user._id);
+
+  clearRefreshCookie(res);
+  sendSuccess(res, { revokedSessions: revoked }, { message: 'Signed out on every device' });
+});
+
+export const me = asyncHandler(async (req, res) => {
+  const user = await authService.getMe(getAuthenticatedUser(req)._id);
+
+  sendSuccess(res, { user: user.toJSON() });
+});
+
+export const updateMe = asyncHandler(async (req, res) => {
+  const user = await authService.updateMe(getAuthenticatedUser(req)._id, req.body as UpdateMeInput);
+
+  sendSuccess(res, { user: user.toJSON() }, { message: 'Profile updated' });
+});
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const { user, session } = await authService.changePassword(
+    getAuthenticatedUser(req)._id,
+    req.body as ChangePasswordInput,
+    sessionContext(req),
+  );
+
+  setRefreshCookie(res, session.refreshToken);
+  sendSuccess(
+    res,
+    { user: user.toJSON(), accessToken: session.accessToken },
+    { message: 'Password changed. Every other session has been signed out.' },
+  );
+});
