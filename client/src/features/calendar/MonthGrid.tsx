@@ -1,0 +1,83 @@
+import { format, isSameDay } from 'date-fns';
+import { cn } from '@/lib/cn';
+import { EVENT_TONE, type CalendarDay } from '@/features/calendar/monthModel';
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+interface MonthGridProps {
+  days: CalendarDay[];
+  selectedDate: Date | null;
+  onSelectDay: (date: Date) => void;
+}
+
+export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): JSX.Element {
+  return (
+    <div className="overflow-hidden rounded-card border border-border bg-surface">
+      <div className="grid grid-cols-7 border-b border-border">
+        {WEEKDAYS.map((weekday) => (
+          <div
+            key={weekday}
+            className="px-2 py-2 text-center text-xs font-medium uppercase tracking-wide text-content-subtle"
+          >
+            {weekday}
+          </div>
+        ))}
+      </div>
+
+      <div role="grid" aria-label="Month" className="grid grid-cols-7">
+        {days.map((day) => {
+          const isSelected = selectedDate !== null && isSameDay(day.date, selectedDate);
+
+          return (
+            <button
+              key={day.date.toISOString()}
+              type="button"
+              role="gridcell"
+              aria-selected={isSelected}
+              aria-label={`${format(day.date, 'd MMMM yyyy')}, ${String(day.events.length)} events`}
+              onClick={() => {
+                onSelectDay(day.date);
+              }}
+              className={cn(
+                'min-h-[5.5rem] border-b border-r border-border p-1.5 text-left align-top transition-colors',
+                day.inMonth ? 'bg-surface' : 'bg-surface-muted/40',
+                isSelected && 'ring-2 ring-inset ring-primary',
+                'hover:bg-surface-muted',
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs',
+                  day.isToday ? 'bg-primary font-semibold text-primary-fg' : 'text-content-muted',
+                  !day.inMonth && 'text-content-subtle',
+                )}
+              >
+                {format(day.date, 'd')}
+              </span>
+
+              <span className="mt-1 block space-y-1">
+                {day.events.slice(0, 2).map((event) => (
+                  <span
+                    key={event.id}
+                    className={cn(
+                      'block truncate rounded px-1.5 py-0.5 text-[0.7rem]',
+                      EVENT_TONE[event.kind],
+                    )}
+                  >
+                    {event.company}
+                  </span>
+                ))}
+
+                {day.events.length > 2 && (
+                  <span className="block px-1.5 text-[0.7rem] text-content-subtle">
+                    +{day.events.length - 2} more
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

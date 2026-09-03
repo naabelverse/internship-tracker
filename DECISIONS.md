@@ -489,3 +489,75 @@ verify`; nothing in the stack depends on a version-specific API.
   bundle past Vite's 500 kB warning. Dependencies change far less often than application code, so
   react, the query layer and the markdown pair are separated, which also stops a deploy from
   invalidating everything. Route-level lazy loading and the formal size budget remain Phase 15.
+
+## Phase 7 - Board and calendar UI
+
+### A drop goes through the general PATCH, not the status route
+
+- **The board calls `PATCH /applications/:id`, not `PATCH /applications/:id/status`.** A drop has to
+  carry the version the card was rendered with, so a stale drag hits the optimistic lock instead of
+  quietly overwriting. `statusChangeSchema` is `.strict()` and permits only `{ status, note? }`, so a
+  version sent there is a 400, not a 409. `updateApplicationSchema` accepts `version` and runs
+  `assertVersion`, and `updateApplication` calls the same `applyStatusChange` helper when `status` is
+  present, so `statusHistory` is still appended. The alternative, widening the Phase 3 status schema,
+  would have meant editing a shipped contract and its tests to gain something the general update
+  already does.
+- **`useChangeStatus`, `DeadlineChip` and `STATUS_CONFIG` are reused unchanged.** The board picks the
+  hook whose endpoint can carry a version rather than reshaping a hook. The table's inline dropdown
+  keeps `useChangeStatus` and stays unversioned, exactly as Phase 6 shipped it.
+- **The origin column for a rollback is the cache snapshot, not board state.** A card's column is
+  derived from `application.status`, and `onMutate` already snapshots every cached entry under the
+  applications prefix, so `restore()` puts the card back with no board-local "where did this come
+  from" value that could drift. The drag data carries `{ status, version, company }` only for the
+  version to send and to short-circuit a drop onto the column the card started in.
+- **The board's query reuses the applications list key shape.** A status change made from the table
+  patches the board's cached copy and the reverse, with no board-specific cache handling.
+- **The board shows the 100 most recently updated live applications**, which is the server's `limit`
+  cap, and says so when there are more. A board is a working view, not an archive; the table view
+  filters the rest.
+
+### Keyboard dragging
+
+- **A custom `coordinateGetter` steps one column per arrow press.** dnd-kit's default nudges by
+  25 px, which on a 320 px column means a dozen presses to cross one. Stepping through the declared
+  column index makes the keyboard path as direct as the pointer one and does not depend on how wide
+  the columns happen to be.
+- **Collision detection is `pointerWithin` with a `closestCenter` fallback.** A keyboard drag has no
+  pointer, so `pointerWithin` returns nothing and the centre-based pass resolves the drop.
+- **The drag listeners live on a real button inside the card, not on the card body.** The keyboard
+  sensor needs something focusable to activate, and a button gives it that with a label naming the
+  card and the column it is leaving.
+
+### Testing dnd-kit under jsdom
+
+- **jsdom reports every element as a zero-sized box, so the board is given a synthetic layout.**
+  `mockBoardLayout` lays columns out left to right by `data-column-index` and stacks cards inside
+  them by `data-card-index`, which is the geometry a browser would produce. Without it dnd-kit has
+  nothing to resolve a drop against. `ResizeObserver` and `PointerEvent` are shimmed in the test
+  setup for the same reason: they are platform gaps, not application behaviour.
+- **The two `data-*` attributes exist for that layout mock.** They are inert in production and are
+  the same kind of hook as the `data-testid` values used elsewhere.
+- **Both drag paths are tested end to end**, pointer and keyboard, each with a success case and a
+  rollback case, so "the library supports keyboard" is not taken on trust.
+
+### Calendar
+
+- **The visible window is part of the query key, so changing month issues a request.** The key is
+  `['calendar', from, to]`; there is no single fetched window being re-filtered.
+- **The range covers the whole grid, not the month.** February 2026 opens on a Sunday, so the grid
+  starts in late January; fetching only the month would leave those cells looking empty when they
+  are not.
+- **The month lives in the URL as `?month=YYYY-MM`,** for the same reason the table's filters do: the
+  view someone is looking at should survive a refresh and be shareable.
+- **Clicking an event navigates to the Phase 6 detail page** rather than opening a second summary
+  surface, so a deadline or an interview is edited in exactly one place.
+- **Days are bucketed by local calendar day**, which is what a month grid means. The tests build
+  their fixtures from local components rather than fixed UTC instants, because an instant near
+  midnight lands on a different day depending on the runner's timezone.
+- **`monthGrid.ts` was renamed `monthModel.ts`.** It collided with `MonthGrid.tsx` on a
+  case-insensitive filesystem, which TypeScript reports as two files differing only in casing.
+
+### Build
+
+- **dnd-kit is its own chunk.** Only the board needs it, so it stays off the dashboard's path, the
+  same reasoning that separated the markdown pair in Phase 6.

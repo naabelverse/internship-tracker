@@ -23,12 +23,14 @@ export default defineConfig({
       output: {
         // Dependencies change far less often than application code, so splitting
         // them out keeps a deploy from invalidating the whole bundle. The
-        // markdown pair is separated again because only the detail view needs it.
+        // markdown pair and dnd-kit are separated again because only the detail
+        // view and the board need them, so neither loads on the dashboard's path.
         // Route-level lazy loading and the formal size budget are Phase 15.
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'query-vendor': ['@tanstack/react-query', 'axios'],
           markdown: ['marked', 'dompurify'],
+          dnd: ['@dnd-kit/core', '@dnd-kit/utilities'],
         },
       },
     },

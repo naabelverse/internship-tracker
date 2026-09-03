@@ -25,4 +25,10 @@ const applications = {
   detail: (id: string) => ['applications', 'detail', id] as const,
 };
 
-export const queryKeys = { auth, applications } as const;
+const calendar = {
+  all: ['calendar'] as const,
+  /** The window is part of the key, so changing month is what refetches. */
+  range: (from: string, to: string) => ['calendar', from, to] as const,
+};
+
+export const queryKeys = { auth, applications, calendar } as const;

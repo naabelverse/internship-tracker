@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 6 complete
-**Current phase:** 7
+**Status:** Phase 7 complete
+**Current phase:** 8
 **Last updated:** 2026-09-04
 
 ---
@@ -172,9 +172,34 @@ Notes:
   exist), and the attachment download signing route, which the detail list links to directly for now.
 
 ## Phase 7 — Board + calendar UI
-- [ ] dnd-kit Kanban, per-column counts, optimistic status change with rollback
-- [ ] Deadline chips (amber ≤3 days, red overdue)
-- [ ] Calendar month view with deadline and interview events
+- [x] dnd-kit Kanban, per-column counts, optimistic status change with rollback
+- [x] Deadline chips (amber ≤3 days, red overdue)
+- [x] Calendar month view with deadline and interview events
+
+Notes:
+- A drop goes through `PATCH /applications/:id`, not `/status`. Only the general update accepts
+  `version`, which a drop must carry so a stale drag hits the optimistic lock; that endpoint still
+  appends to `statusHistory` through the same `applyStatusChange` helper. No Phase 6 hook changed
+  shape — the board picks the hook whose endpoint can carry a version, and `useChangeStatus`,
+  `DeadlineChip` and `STATUS_CONFIG` are reused as they are.
+- Rollback reuses Phase 6's snapshot wholesale: a card's column is derived from `application.status`,
+  so `restore()` moves it back with no board-local origin state to drift. A 409 opens the same
+  `VersionConflictDialog` the edit modal uses, with the card left in its origin column while the
+  prompt is open.
+- The keyboard sensor is wired with a custom coordinate getter that steps one column per arrow press
+  rather than dnd-kit's default 25 px nudge. Pointer and keyboard drags are each tested with a
+  success and a rollback case.
+- dnd-kit needs layout, which jsdom has none of, so the tests supply a synthetic one and the setup
+  shims `ResizeObserver` and `PointerEvent`. Two inert `data-*` attributes on columns and cards give
+  that mock something to lay out against.
+- The calendar's visible window is part of the query key, so changing month issues a request for the
+  new range. The range covers the whole grid rather than the month, since February 2026 opens on a
+  Sunday and those borrowed cells hold real events. The month lives in the URL as `?month=YYYY-MM`.
+- Clicking an event opens the Phase 6 detail page rather than a second summary surface.
+- Bundle after this phase: 565 kB raw / 178 kB gzip across five chunks, up from 531 kB / 169 kB.
+  dnd-kit is its own 39 kB chunk, so it stays off the dashboard's path.
+- Deferred: dragging to reorder within a column (SPEC asks only for moves between columns), and a
+  week or day calendar view. Real-browser verification at 375 px stays Phase 9/15.
 
 ## Phase 8 — Dashboard + charts
 - [ ] Stat cards with period deltas

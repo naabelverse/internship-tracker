@@ -1,5 +1,6 @@
 import type { ApiErrorBody, ApiSuccessBody, PaginationMeta } from '@/types/api';
 import type { Application, Attachment, Interview } from '@/types/application';
+import type { CalendarEvent } from '@/types/calendar';
 import type { AuthSession, User } from '@/types/user';
 
 let sequence = 0;
@@ -112,5 +113,20 @@ export function makeListResponse(
       limit,
       totalPages: meta.totalPages ?? Math.max(Math.ceil(total / limit), 1),
     },
+  };
+}
+
+export function makeCalendarEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+  sequence += 1;
+
+  return {
+    id: `deadline:event-${String(sequence)}`,
+    applicationId: `application-${String(sequence)}`,
+    kind: 'deadline',
+    at: '2026-02-11T00:00:00.000Z',
+    company: 'Stripe',
+    role: 'Backend Intern',
+    status: 'applied',
+    ...overrides,
   };
 }

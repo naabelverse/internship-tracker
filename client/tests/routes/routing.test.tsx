@@ -73,13 +73,11 @@ describe('protected routing', () => {
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
   });
 
-  // Phase 6 replaced the Applications and Detail placeholders with real pages, so
-  // those two paths are covered by tests/applications instead. The rest still
-  // assert the placeholder contract their phases will retire in turn.
+  // Phase 6 replaced the Applications and Detail placeholders and Phase 7 the
+  // Board and Calendar ones, so those paths are covered by their own suites. The
+  // rest still assert the placeholder contract their phases will retire in turn.
   it.each([
     ['/', '8', 'Dashboard'],
-    ['/applications/board', '7', 'Board'],
-    ['/applications/calendar', '7', 'Calendar'],
     ['/settings', '9', 'Settings'],
   ])('renders the %s route for a signed-in user', async (route, phase, heading) => {
     installMockApi({});
@@ -95,11 +93,14 @@ describe('protected routing', () => {
   it.each([
     ['/applications', 'Applications'],
     ['/applications/64b7f0c2c1a4d9e5f2a10001', 'Stripe'],
+    ['/applications/board', 'Board'],
+    ['/applications/calendar', 'Calendar'],
   ])('renders the real %s page for a signed-in user', async (route, heading) => {
     const application = makeApplication({ company: 'Stripe' });
     installMockApi({
       [LIST_ROUTE]: () => ({ status: 200, data: makeListResponse([application]) }),
       [DETAIL_ROUTE]: () => ({ status: 200, data: successBody({ application }) }),
+      'GET /calendar': () => ({ status: 200, data: successBody({ events: [] }) }),
     });
     signIn(makeSession());
 
