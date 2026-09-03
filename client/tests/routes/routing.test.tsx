@@ -2,12 +2,21 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { App } from '@/App';
 import { readRedirectTarget } from '@/routes/redirectTarget';
-import { errorBody, makeSession, makeUser, successBody } from '../utils/factories';
+import {
+  errorBody,
+  makeApplication,
+  makeListResponse,
+  makeSession,
+  makeUser,
+  successBody,
+} from '../utils/factories';
 import { createGate, installMockApi } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 
 const REFRESH = 'POST /auth/refresh';
 const ME = 'GET /auth/me';
+const LIST_ROUTE = 'GET /applications';
+const DETAIL_ROUTE = 'GET /applications/64b7f0c2c1a4d9e5f2a10001';
 
 beforeEach(() => {
   resetClientState();
@@ -53,20 +62,24 @@ describe('protected routing', () => {
     installMockApi({
       [REFRESH]: () => ({ status: 200, data: successBody({ accessToken: 'fresh' }) }),
       [ME]: () => ({ status: 200, data: successBody({ user }) }),
+      [LIST_ROUTE]: () => ({ status: 200, data: makeListResponse([]) }),
     });
 
     renderWithProviders(<App />, { route: '/applications' });
 
-    expect(await screen.findByTestId('phase-placeholder')).toHaveAttribute('data-phase', '6');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Applications' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
   });
 
+  // Phase 6 replaced the Applications and Detail placeholders with real pages, so
+  // those two paths are covered by tests/applications instead. The rest still
+  // assert the placeholder contract their phases will retire in turn.
   it.each([
     ['/', '8', 'Dashboard'],
-    ['/applications', '6', 'Applications'],
     ['/applications/board', '7', 'Board'],
     ['/applications/calendar', '7', 'Calendar'],
-    ['/applications/64b7f0c2c1a4d9e5f2a10001', '6', 'Application detail'],
     ['/settings', '9', 'Settings'],
   ])('renders the %s route for a signed-in user', async (route, phase, heading) => {
     installMockApi({});
@@ -77,6 +90,23 @@ describe('protected routing', () => {
     const placeholder = await screen.findByTestId('phase-placeholder');
     expect(placeholder).toHaveAttribute('data-phase', phase);
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['/applications', 'Applications'],
+    ['/applications/64b7f0c2c1a4d9e5f2a10001', 'Stripe'],
+  ])('renders the real %s page for a signed-in user', async (route, heading) => {
+    const application = makeApplication({ company: 'Stripe' });
+    installMockApi({
+      [LIST_ROUTE]: () => ({ status: 200, data: makeListResponse([application]) }),
+      [DETAIL_ROUTE]: () => ({ status: 200, data: successBody({ application }) }),
+    });
+    signIn(makeSession());
+
+    renderWithProviders(<App />, { route });
+
+    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    expect(screen.queryByTestId('phase-placeholder')).not.toBeInTheDocument();
   });
 
   it('renders the 404 page for an unknown path without asking for a session', async () => {

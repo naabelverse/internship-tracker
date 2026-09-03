@@ -14,6 +14,8 @@ export interface RecordedRequest {
   /** The header the request actually carried, which is how a stale token is spotted. */
   authorization: string | null;
   data: unknown;
+  /** Query parameters as axios would serialise them, for asserting list filters. */
+  params: Record<string, string>;
 }
 
 export interface MockReply {
@@ -26,6 +28,17 @@ export type Responder = (request: RecordedRequest) => MockReply | Promise<MockRe
 export interface MockApi {
   calls: RecordedRequest[];
   callsTo: (method: string, url: string) => RecordedRequest[];
+}
+
+function readParams(raw: unknown): Record<string, string> {
+  if (typeof raw !== 'object' || raw === null) return {};
+
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (value !== undefined && value !== null) params[key] = String(value);
+  }
+
+  return params;
 }
 
 function parseBody(raw: unknown): unknown {
@@ -60,6 +73,7 @@ export function installMockApi(routes: Record<string, Responder>): MockApi {
       url,
       authorization: typeof header === 'string' ? header : null,
       data: parseBody(config.data),
+      params: readParams(config.params),
     };
     calls.push(request);
 

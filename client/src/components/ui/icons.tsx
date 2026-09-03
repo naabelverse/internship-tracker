@@ -120,3 +120,103 @@ export const AlertIcon = (props: IconProps): JSX.Element => (
     <path d="M12 10v4M12 17.5h.01" />
   </Icon>
 );
+
+export const PlusIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M12 5v14M5 12h14" />
+  </Icon>
+);
+
+export const SearchIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-3.5-3.5" />
+  </Icon>
+);
+
+export const FilterIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" />
+  </Icon>
+);
+
+export const ColumnsIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16M15 4v16" />
+  </Icon>
+);
+
+export const TrashIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13M10 11v6M14 11v6" />
+  </Icon>
+);
+
+export const ArchiveIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <rect x="3" y="4" width="18" height="4" rx="1" />
+    <path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 12h4" />
+  </Icon>
+);
+
+export const UploadIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M12 16V4M8 8l4-4 4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+  </Icon>
+);
+
+export const ExternalLinkIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" />
+  </Icon>
+);
+
+export const ChevronLeftIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M15 5l-7 7 7 7" />
+  </Icon>
+);
+
+export const ChevronRightIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M9 5l7 7-7 7" />
+  </Icon>
+);
+
+export const ChevronDownIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M6 9l6 6 6-6" />
+  </Icon>
+);
+
+export const ArrowUpIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M12 19V5M6 11l6-6 6 6" />
+  </Icon>
+);
+
+export const ArrowDownIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M12 5v14M6 13l6 6 6-6" />
+  </Icon>
+);
+
+export const CheckIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M5 12.5l4.5 4.5L19 7" />
+  </Icon>
+);
+
+export const FileIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z" />
+    <path d="M14 3v5h5" />
+  </Icon>
+);
+
+export const EditIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M4 20h4l10.5-10.5a2.1 2.1 0 00-3-3L5 17v3z" />
+  </Icon>
+);

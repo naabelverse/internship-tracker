@@ -406,3 +406,86 @@ verify`; nothing in the stack depends on a version-specific API.
 - **Icons are hand-drawn inline SVG rather than an icon package.** The locked stack names no icon
   library, fourteen paths are not worth a dependency, and they inherit `currentColor`, so they
   follow the theme tokens for free.
+
+## Phase 6 - Applications UI
+
+### List state in the URL
+
+- **`useSearchParams` with a hand-written codec, not a URL-state library.** react-router is already
+  the locked router and `useSearchParams` is its native API. The parse and serialise step has to
+  exist regardless, because the server accepts arrays as repeated keys or comma-separated values and
+  something has to choose; a library would add a dependency and still leave that shaping to us.
+- **The URL is the only store for list state.** The query key is built from the parsed filters, so
+  changing the address is what triggers the refetch. Nothing is duplicated in component state, which
+  is why a fresh mount at a filtered URL and a client-side navigation take the identical path.
+- **Arrays are written comma-separated.** The server's `toStringArray` preprocessor accepts both
+  encodings; this is the shorter one, and shareable links are the point of the requirement.
+- **Unrecognised values are dropped, not rejected.** A hand-edited or stale link should open on a
+  sane view rather than an error screen, so an unknown status or a malformed sort falls back to the
+  default instead of failing the page.
+- **Every filter change resets to page 1, except an explicit page move.** Holding page 7 while
+  narrowing a filter lands on an empty result the user did not ask for.
+
+### Optimistic updates and rollback
+
+- **One `useOptimisticApplicationMutation` shape backs every write.** Create, update, status change,
+  delete and bulk all get the same four hooks, so there is a single rollback path to reason about
+  rather than five hand-rolled ones.
+- **`cancelQueries` runs before the snapshot.** Without it a refetch resolving mid-mutation would
+  overwrite the cache after the snapshot was taken, and the state a rollback restores would be
+  whatever that refetch happened to return rather than what the user was looking at.
+- **The snapshot sweeps the whole `applications` prefix, not one key.** The same row is cached under
+  every filter combination the user has visited plus its own detail entry; patching only the active
+  page would leave stale copies that reappear on a back navigation.
+- **Create inserts a `temp-` row and swaps it for the server document on success.** It is the one
+  variant with no existing row to patch, but it keeps the same three-hook shape, so the rollback
+  proof is the same proof.
+
+### Version conflicts
+
+- **A 409 is routed to a dialog instead of the shared error toast.** `onFailure` returns true for
+  `VERSION_CONFLICT`, which suppresses the toast; the prompt then renders the `current` document
+  from the error payload so the user can compare rather than guess.
+- **"Overwrite" resends the same body with `version` omitted.** That is exactly what the server's
+  `assertVersion` treats as "do not check the read I started from", so the second attempt is a
+  deliberate, explicit choice rather than a retry that happens to win a race.
+- **The optimistic patch is rolled back before the prompt appears.** The table shows the truth while
+  the user decides, not a change that has not been accepted.
+
+### Detail view
+
+- **Autosave compares against the last server-acknowledged text, held in a ref, not a dirty flag.**
+  Three cases fall out of that: typing a character and deleting it returns to the saved text and
+  saves nothing; the success write that lands in `savedNotes` re-syncs the ref, so the editor does
+  not try to save what it just saved; and a refetch carrying someone else's edit becomes the new
+  baseline instead of looking like a local change.
+- **`marked` and `dompurify` were added for the notes preview.** The locked stack names no markdown
+  renderer, and hand-rolling parsing plus sanitisation is how XSS holes get written. Sanitising
+  happens after parsing, with an allowlist and a URI scheme filter, because a payload can be
+  harmless as markdown and dangerous once expanded to HTML. A test asserts a `javascript:` link and
+  an `onerror` image are both stripped.
+- **Attachments are validated client-side against the same 5 MB and mimetype rules the server
+  enforces.** This is a fast-fail for the user, not a security boundary; the server remains the
+  authority, and the client check exists so an obviously invalid pick does not cost an upload.
+- **The timeline merges `statusHistory` and `interviews` into one normalised list.** They are two
+  shapes on the document but one story to the user, so they are merged and sorted rather than
+  stacked as two lists.
+
+### Bugs found while building this phase
+
+- **The edit form reset itself on every background refetch.** The reset effect depended on the whole
+  `application` object, so a refetch producing a new identity for the same row wiped whatever the
+  user was typing — visible as the overwrite retry sending the server's role rather than the typed
+  one. It now keys on the row id plus the open state and reads the row through a ref.
+- **Clearing the filters wrote the search term straight back.** The input's re-seed effect and the
+  debounce effect ran in the same commit, where the debounced value still held the old term. The
+  debounce is now an explicit timer started by the change handler and cancelled whenever the URL
+  changes from elsewhere, so a pending write is only ever the user's own typing.
+- Both are covered by the tests that caught them.
+
+### Build
+
+- **Vendor chunks are split manually.** Adding the table, modal and detail view pushed the single
+  bundle past Vite's 500 kB warning. Dependencies change far less often than application code, so
+  react, the query layer and the markdown pair are separated, which also stops a deploy from
+  invalidating everything. Route-level lazy loading and the formal size budget remain Phase 15.

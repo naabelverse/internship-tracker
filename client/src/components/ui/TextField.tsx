@@ -7,10 +7,12 @@ export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   hint?: string;
   /** Rendered inside the field, used by `PasswordField` for its reveal toggle. */
   trailing?: ReactNode;
+  /** Hides the visible label but keeps it for assistive technology. */
+  labelHidden?: boolean;
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
-  { label, error, hint, trailing, className, id, ...props },
+  { label, error, hint, trailing, labelHidden = false, className, id, ...props },
   ref,
 ) {
   const generatedId = useId();
@@ -21,7 +23,10 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={inputId} className="block text-sm font-medium text-content">
+      <label
+        htmlFor={inputId}
+        className={cn('block text-sm font-medium text-content', labelHidden && 'sr-only')}
+      >
         {label}
       </label>
 

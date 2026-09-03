@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 5 complete
-**Current phase:** 6
+**Status:** Phase 6 complete
+**Current phase:** 7
 **Last updated:** 2026-09-04
 
 ---
@@ -137,10 +137,39 @@ Notes:
   registration checkbox, which is plain text for now so it links nowhere broken (Phase 13).
 
 ## Phase 6 — Applications UI
-- [ ] Table with server-side pagination, sorting, filters synced to URL
-- [ ] Debounced search, column visibility, row selection, bulk actions bar
-- [ ] Create/edit modal with optimistic update and rollback
-- [ ] Detail page: timeline, markdown notes with autosave, attachments
+- [x] Table with server-side pagination, sorting, filters synced to URL
+- [x] Debounced search, column visibility, row selection, bulk actions bar
+- [x] Create/edit modal with optimistic update and rollback
+- [x] Detail page: timeline, markdown notes with autosave, attachments
+
+Notes:
+- All eleven list filters live in the URL and nowhere else, through `useSearchParams` plus a codec
+  that mirrors the server's query schema. The query key is built from the parsed filters, so a fresh
+  mount at a filtered link and a client-side navigation take the same path. Unknown values are
+  dropped rather than rejected, so a stale link opens on a sane view.
+- One `useOptimisticApplicationMutation` backs create, update, status change, delete and bulk. It
+  cancels in-flight queries before snapshotting, sweeps the whole `applications` cache prefix rather
+  than one key, and hands back a restore closure the error path calls. Rollback is proven for the
+  inline status dropdown and for the edit modal, against a 400, a 500 and a transport failure.
+- A 409 renders the reload/overwrite prompt with the server's document rather than a toast.
+  "Overwrite" resends the same body with `version` omitted, which is exactly what the server treats
+  as "stop checking the read I started from"; a test asserts the second request carries no version.
+- Notes autosave compares the debounced draft against the last server-acknowledged text held in a
+  ref, so typing a character and deleting it saves nothing and a success write does not echo.
+- Attachments are checked against the 5 MB and pdf/doc/docx/png/jpg limits before the request, as a
+  fast fail; the server stays the authority. The markdown preview is sanitised after parsing, with a
+  test proving a `javascript:` link and an `onerror` image are stripped.
+- Two real bugs were found by the tests and fixed with them: the edit form reset itself on every
+  background refetch and discarded in-progress typing, and clearing the filters wrote the old search
+  term back into the URL. Both are described in `DECISIONS.md`.
+- The table becomes stacked cards below `md`, a genuinely different layout rather than a table that
+  scrolls sideways. Verification at 375/768/1440 px in a real browser is still Phase 9/15.
+- `marked` and `dompurify` were added for the notes preview; the locked stack names no markdown
+  renderer and hand-rolling sanitisation is not worth the risk.
+- Bundle after this phase: 531 kB raw / 169 kB gzip across four chunks, up from 387 kB / 124 kB.
+  Vendor chunks are now split manually; route-level lazy loading and the budget stay Phase 15.
+- Deferred: editing and deleting an existing interview from the timeline (add is wired; the endpoints
+  exist), and the attachment download signing route, which the detail list links to directly for now.
 
 ## Phase 7 — Board + calendar UI
 - [ ] dnd-kit Kanban, per-column counts, optimistic status change with rollback
