@@ -1,108 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens. Each value is space-separated RGB channels rather than a hex
+ * string so Tailwind's `<alpha-value>` modifier works and Phase 8's charts can
+ * read the same variable and wrap it in `rgb(...)` themselves.
+ *
+ * `:root` carries the light palette. The dark palette is applied by attribute,
+ * which the inline script in `index.html` sets before the first paint.
+ */
 :root {
-  color-scheme: dark;
-  --surface: #0b1120;
-  --panel: #131c31;
-  --border: #1f2b45;
-  --text: #e6ecf7;
-  --muted: #94a3b8;
-  --accent: #6366f1;
-  --ok: #34d399;
-  --bad: #f87171;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+  --color-canvas: 248 250 252;
+  --color-surface: 255 255 255;
+  --color-surface-muted: 241 245 249;
+  --color-border: 226 232 240;
+  --color-border-strong: 203 213 225;
+  --color-text: 15 23 42;
+  --color-text-muted: 71 85 105;
+  --color-text-subtle: 100 116 139;
+  --color-primary: 79 70 229;
+  --color-primary-hover: 67 56 202;
+  --color-primary-fg: 255 255 255;
+  --color-success: 21 128 61;
+  --color-warning: 180 83 9;
+  --color-danger: 220 38 38;
+  --color-info: 2 132 199;
+  --color-ring: 79 70 229;
+  --color-shadow: 15 23 42;
 }
 
-* {
-  box-sizing: border-box;
+[data-theme='dark'] {
+  --color-canvas: 11 17 32;
+  --color-surface: 19 28 49;
+  --color-surface-muted: 27 38 62;
+  --color-border: 31 43 69;
+  --color-border-strong: 51 65 96;
+  --color-text: 230 236 247;
+  --color-text-muted: 148 163 184;
+  --color-text-subtle: 125 140 163;
+  --color-primary: 129 140 248;
+  --color-primary-hover: 165 180 252;
+  --color-primary-fg: 15 23 42;
+  --color-success: 52 211 153;
+  --color-warning: 251 191 36;
+  --color-danger: 248 113 113;
+  --color-info: 56 189 248;
+  --color-ring: 129 140 248;
+  --color-shadow: 0 0 0;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: var(--surface);
-  color: var(--text);
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply bg-canvas;
+  }
+
+  body {
+    @apply min-h-screen bg-canvas text-content antialiased;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-canvas;
+  }
 }
 
-.panel {
-  width: min(30rem, calc(100vw - 2rem));
-  padding: 2rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--panel);
-}
-
-.panel h1 {
-  margin: 0 0 0.25rem;
-  font-size: 1.5rem;
-}
-
-.panel > p {
-  margin: 0 0 1.5rem;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  font-weight: 600;
-}
-
-.dot {
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 50%;
-  background: var(--muted);
-}
-
-.dot[data-state='online'] {
-  background: var(--ok);
-}
-
-.dot[data-state='offline'] {
-  background: var(--bad);
-}
-
-.detail {
-  margin: 1rem 0 0;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.375rem 1rem;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.detail dd {
-  margin: 0;
-  color: var(--text);
-}
-
-button {
-  margin-top: 1.5rem;
-  padding: 0.625rem 1rem;
-  border: 0;
-  border-radius: 0.5rem;
-  background: var(--accent);
-  color: #ffffff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-button:focus-visible {
-  outline: 2px solid #ffffff;
-  outline-offset: 2px;
+@layer components {
+  /* Shared skeleton shimmer so no async surface has to hand-roll one. */
+  .skeleton {
+    @apply animate-pulse rounded-control bg-surface-muted;
+  }
 }

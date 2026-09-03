@@ -15,7 +15,11 @@ function readUrl(value: string | undefined, fallback: string, name: string): str
   return candidate.replace(/\/+$/, '');
 }
 
+const apiUrl = readUrl(import.meta.env.VITE_API_URL, 'http://localhost:5000', 'VITE_API_URL');
+
 export const clientEnv = {
-  apiUrl: readUrl(import.meta.env.VITE_API_URL, 'http://localhost:5000', 'VITE_API_URL'),
+  apiUrl,
+  /** Versioned base every request goes through; `/health` sits outside it. */
+  apiBaseUrl: `${apiUrl}/api/v1`,
   appUrl: readUrl(import.meta.env.VITE_APP_URL, 'http://localhost:5173', 'VITE_APP_URL'),
 } as const;

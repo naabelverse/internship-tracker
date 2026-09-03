@@ -301,3 +301,108 @@ verify`; nothing in the stack depends on a version-specific API.
   and style; nothing else on the API is relaxed.
 - **`API_URL` was added to the environment.** Signed download links have to point at the API, and
   `APP_URL` is the client origin.
+
+## Phase 5 - Frontend foundation
+
+### Theme tokens
+
+- **Tailwind 3.4, and every colour is a CSS custom property holding space-separated RGB channels.**
+  `rgb(var(--color-surface) / <alpha-value>)` makes one definition serve three consumers: the
+  utility (`bg-surface`), the opacity modifier (`bg-surface/60`), and Phase 8's charts, which read
+  the same variable off `document.documentElement` and wrap it themselves. A hex value satisfies the
+  first but neither of the other two.
+- **`data-theme` on `<html>` is the only theme switch.** `darkMode` is configured as
+  `['selector', '[data-theme="dark"]']`, so the `dark:` variant and the variable block key off the
+  same attribute. Also setting a `dark` class would be a second source of truth that can disagree
+  with the first.
+- **Dark is the default when nothing is stored**, per SPEC section 6, even though `User.theme`
+  defaults to `system` on the server. The account preference is a separate thing, applied on top of
+  the boot default once `/auth/me` answers; that wiring is Phase 9.
+- **The inline boot script duplicates about fifteen lines of the theme store, deliberately.** It
+  cannot import the store: a module script is deferred, and running after the first paint is the
+  exact flash being avoided. The drift that would actually hurt is a renamed storage key, so a test
+  asserts the literal in `index.html` equals `THEME_STORAGE_KEY`.
+
+### Verifying "no flash of wrong theme" without a browser
+
+- **The shipped `index.html` is parsed by jsdom with `runScripts: 'dangerously'`, and the assertions
+  read `documentElement` afterwards.** No browser is installed on this machine (see the Phase 1
+  note), so the property is split into its two halves and each is checked directly. The logic half
+  runs the real script source from the real file: stored light, stored dark, nothing stored, an
+  unrecognised value, `system` against both OS preferences, and storage that throws. The position
+  half asserts the script is a classic, non-deferred, non-module `<script>` inside `<head>` that
+  appears before both the bundle and `#root`, which the HTML spec requires the parser to run before
+  it reaches `<body>`.
+- **What that leaves untested is the browser's own parse-then-paint ordering**, which is a spec
+  guarantee rather than application code. Phase 15 closes it end to end in Playwright. The built
+  `dist/index.html` was checked by hand this phase: the script survives at byte 806, ahead of the
+  injected module script at 1811 and `#root` at 1981.
+
+### API client and the refresh interceptor
+
+- **One shared promise is the request queue.** `ensureFreshToken()` assigns the in-flight refresh to
+  a module-level slot synchronously before returning it, so every concurrent 401 handler awaits the
+  same promise and the settlement of a single `POST /auth/refresh` releases them all. An explicit
+  array of deferreds carries the same semantics with more bookkeeping and one extra failure mode: a
+  subscriber that is enqueued and never drained if the refresh throws somewhere unexpected.
+- **A replayed request is marked, and the token it used is compared.** The mark stops a genuinely
+  revoked session from looping. The comparison covers the 401 that lands just after the slot was
+  cleared: that request already has a valid token in hand, so it is replayed directly instead of
+  starting a redundant second refresh.
+- **Register, login, refresh and logout go through a second, interceptor-free axios instance.** A
+  401 from any of them is the answer, not a signal to refresh, and routing the refresh call itself
+  through the refreshing interceptor would recurse.
+- **The access token lives in a zustand store with no `persist` middleware**, which is memory-only by
+  construction. A test asserts `localStorage` and `sessionStorage` are still empty after a full
+  refresh-and-replay cycle, so the requirement is proven rather than assumed.
+- **The hard redirect after a failed refresh sits behind a `browserNavigation` object.** Tests spy on
+  it instead of stubbing `window.location`, and the interceptor skips it when already on `/login` so
+  a dead cookie cannot produce a reload loop.
+- **Clearing the session on a failed refresh happens in the coordinator; redirecting happens in the
+  interceptor.** The cold-start bootstrap and a mid-session expiry both need the state cleared, but
+  only the second should throw the user out of the SPA: the first simply means nobody is signed in.
+
+### Routing
+
+- **`pending` is a real third session state, not "anonymous until proven otherwise".** The access
+  token is memory-only, so after a hard refresh the only evidence of a session is the httpOnly
+  cookie. Treating "not yet known" as signed out would eject a signed-in user on every reload, so
+  protected routes render a shell-shaped skeleton until the silent refresh answers.
+- **Not-yet-built pages are real modules at their final paths** rendering a shared `PhasePlaceholder`
+  that carries `data-phase`. Phase 6, 7, 8 and 9 replace the body of one file each; the route table,
+  the guards and the routing tests do not move.
+- **`PublicOnlyRoute` keeps a signed-in user off `/login` and `/register`.** It waits out `pending`
+  for the same reason, so the form is never flashed to someone who does not need it.
+- **The intended path is carried to `/login` in router state and consumed after a successful sign
+  in.** A test signs in from a `/settings` bounce and asserts it lands back on `/settings`.
+
+### Testing
+
+- **The axios adapter is mocked by hand rather than with MSW.** The subject under test is the
+  interceptor chain itself; swapping the adapter exercises all of it (request interceptor,
+  transport, response interceptor, replay) and yields an exact, ordered record of every call, which
+  is what the "exactly one refresh" assertion needs. MSW intercepts a layer below that, at XHR, and
+  would support the same assertions with more setup. It stays available if a later phase needs to
+  mock at the network boundary instead.
+- **`resetClientState()` unmounts before it resets.** The store, the axios adapter and the refresh
+  slot are module-level and shared within a test file; resetting them under a live tree schedules
+  renders outside `act` and let one case perturb the next. Four routing cases failed that way before
+  the ordering was fixed.
+- **`tests/App.test.tsx` was deleted, not weakened.** It covered the Phase 1 health-check boot
+  screen, which the Phase 1 notes already recorded as being replaced by the application shell in
+  this phase. Its subject no longer exists.
+- **`index.html` is loaded into the theme test with Vite's `?raw` import.** `import.meta.url` is an
+  http URL under Vitest, so `fileURLToPath` cannot be used, and `?raw` reads the shipped file rather
+  than a copy kept in the test.
+
+### Client tooling
+
+- **`eslint-plugin-react-hooks` was added for the client glob.** A missing dependency in the session
+  and theme hooks is a stale-closure bug, not a style problem, and nothing else in the toolchain
+  catches it.
+- **The client has its own two-function logger with a single `eslint-disable` for `console`.**
+  `no-console` stays on repo-wide, and there is one place to swap in Sentry in Phase 14. It is quiet
+  under Vitest so a deliberately thrown error in a test does not print a misleading stack.
+- **Icons are hand-drawn inline SVG rather than an icon package.** The locked stack names no icon
+  library, fourteen paths are not worth a dependency, and they inherit `currentColor`, so they
+  follow the theme tokens for free.

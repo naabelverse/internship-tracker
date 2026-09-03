@@ -1,97 +1,51 @@
-import { useCallback, useEffect, useState } from 'react';
-import { clientEnv } from '@/lib/env';
-
-type ConnectionState = 'checking' | 'online' | 'offline';
-
-interface HealthData {
-  service: string;
-  version: string;
-  environment: string;
-  database: { state: string; connected: boolean };
-}
-
-interface HealthEnvelope {
-  success: boolean;
-  data: HealthData;
-}
-
-const STATUS_LABEL: Record<ConnectionState, string> = {
-  checking: 'Checking API',
-  online: 'API reachable',
-  offline: 'API unreachable',
-};
+import { Route, Routes } from 'react-router-dom';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useSessionBootstrap } from '@/hooks/useSession';
+import { useSystemThemeSync } from '@/hooks/useSystemThemeSync';
+import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage';
+import { ApplicationsPage } from '@/pages/ApplicationsPage';
+import { BoardPage } from '@/pages/BoardPage';
+import { CalendarPage } from '@/pages/CalendarPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { ProtectedRoute } from '@/routes/ProtectedRoute';
+import { PublicOnlyRoute } from '@/routes/PublicOnlyRoute';
+import { paths } from '@/routes/paths';
 
 /**
- * Boot screen for the scaffold: it proves the client can reach the API and shows
- * what the API reports about itself. Replaced by the application shell in Phase 5.
+ * The route table. The router itself lives in `main.tsx` so tests can mount this
+ * inside a `MemoryRouter` and drive it from any starting path.
+ *
+ * `/applications/board` and `/applications/calendar` are static segments, which
+ * react-router ranks above the `/applications/:id` pattern regardless of the
+ * order they are declared in.
  */
 export function App(): JSX.Element {
-  const [state, setState] = useState<ConnectionState>('checking');
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const checkHealth = useCallback(async (signal?: AbortSignal): Promise<void> => {
-    setState('checking');
-    setError(null);
-
-    try {
-      const response = await fetch(`${clientEnv.apiUrl}/health`, { signal });
-      if (!response.ok) {
-        throw new Error(`API responded with ${String(response.status)}`);
-      }
-
-      const body = (await response.json()) as HealthEnvelope;
-      setHealth(body.data);
-      setState('online');
-    } catch (cause) {
-      if (cause instanceof DOMException && cause.name === 'AbortError') return;
-      setHealth(null);
-      setError(cause instanceof Error ? cause.message : 'Unknown error');
-      setState('offline');
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void checkHealth(controller.signal);
-    return () => {
-      controller.abort();
-    };
-  }, [checkHealth]);
+  useSessionBootstrap();
+  useSystemThemeSync();
 
   return (
-    <main className="panel">
-      <h1>Internship Tracker</h1>
-      <p>{clientEnv.apiUrl}</p>
+    <Routes>
+      <Route element={<PublicOnlyRoute />}>
+        <Route path={paths.login} element={<LoginPage />} />
+        <Route path={paths.register} element={<RegisterPage />} />
+      </Route>
 
-      <div className="status">
-        <span className="dot" data-state={state} aria-hidden="true" />
-        <span role="status">{STATUS_LABEL[state]}</span>
-      </div>
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path={paths.dashboard} element={<DashboardPage />} />
+          <Route path={paths.applications} element={<ApplicationsPage />} />
+          <Route path={paths.board} element={<BoardPage />} />
+          <Route path={paths.calendar} element={<CalendarPage />} />
+          <Route path="/applications/:applicationId" element={<ApplicationDetailPage />} />
+          <Route path={paths.settings} element={<SettingsPage />} />
+        </Route>
+      </Route>
 
-      {health !== null && (
-        <dl className="detail">
-          <dt>Service</dt>
-          <dd>{health.service}</dd>
-          <dt>Version</dt>
-          <dd>{health.version}</dd>
-          <dt>Environment</dt>
-          <dd>{health.environment}</dd>
-          <dt>Database</dt>
-          <dd>{health.database.state}</dd>
-        </dl>
-      )}
-
-      {error !== null && (
-        <dl className="detail">
-          <dt>Reason</dt>
-          <dd>{error}</dd>
-        </dl>
-      )}
-
-      <button type="button" onClick={() => void checkHealth()} disabled={state === 'checking'}>
-        {state === 'checking' ? 'Checking' : 'Check again'}
-      </button>
-    </main>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
 }

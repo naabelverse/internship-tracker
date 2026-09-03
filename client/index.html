@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark" style="color-scheme: dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +8,43 @@
       name="description"
       content="Track every internship application from saved to offer, with a board, calendar and analytics."
     />
+    <!--
+      Runs before the parser reaches <body>, so the resolved theme is on the
+      document element before anything is laid out or painted. A useEffect would
+      run after the first paint and produce a visible flash of the wrong theme.
+      Keep the storage key in sync with THEME_STORAGE_KEY in src/store/themeStore.ts —
+      tests/theme/themeInitScript.test.ts fails if they drift apart.
+    -->
+    <script data-theme-init>
+      (function applyStoredTheme() {
+        var STORAGE_KEY = 'internship-tracker.theme';
+        var root = document.documentElement;
+        var stored = null;
+
+        try {
+          stored = window.localStorage.getItem(STORAGE_KEY);
+        } catch (error) {
+          // Storage can throw outright in private browsing modes; the default
+          // theme is a better outcome than an exception before React mounts.
+          stored = null;
+        }
+
+        var preference =
+          stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark';
+        var resolved = preference;
+
+        if (preference === 'system') {
+          resolved =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark';
+        }
+
+        root.setAttribute('data-theme', resolved);
+        root.style.colorScheme = resolved;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

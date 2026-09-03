@@ -2,9 +2,9 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 4 complete
-**Current phase:** 5
-**Last updated:** 2026-09-03
+**Status:** Phase 5 complete
+**Current phase:** 6
+**Last updated:** 2026-09-04
 
 ---
 
@@ -101,11 +101,40 @@ Notes:
   no registered route may be undocumented, and no documented path may be stale.
 
 ## Phase 5 — Frontend foundation
-- [ ] Vite + Tailwind theme tokens (light + dark), no flash of wrong theme
-- [ ] Layout shell, router, protected routes, 404 page
-- [ ] TanStack Query setup, axios client with silent-refresh interceptor + request queue
-- [ ] Login and register pages with validation
-- [ ] Toast system + error boundary
+- [x] Vite + Tailwind theme tokens (light + dark), no flash of wrong theme
+- [x] Layout shell, router, protected routes, 404 page
+- [x] TanStack Query setup, axios client with silent-refresh interceptor + request queue
+- [x] Login and register pages with validation
+- [x] Toast system + error boundary
+
+Notes:
+- Every colour is a CSS custom property holding space-separated RGB channels, exposed to Tailwind as
+  `rgb(var(--token) / <alpha-value>)`. One definition serves the utility, the opacity modifier and
+  Phase 8's charts, which will read the same variables off `document.documentElement`.
+- `data-theme` on `<html>` is the only theme switch; `darkMode` is `['selector', '[data-theme="dark"]']`
+  so the `dark:` variant and the variable block cannot disagree.
+- The no-flash guarantee is an inline classic script in `<head>`. It is verified without a browser by
+  parsing the shipped `index.html` in jsdom with scripts enabled and asserting the resolved theme for
+  seven input cases, plus index-of assertions proving the script precedes the bundle and `#root`.
+  Phase 15 closes the remaining parse-then-paint link in Playwright.
+- The 401 interceptor collapses concurrent failures onto one shared promise; a replayed request is
+  marked, and a request whose token has already been rotated is replayed without a second refresh.
+  The concurrent test fires three 401s and asserts `/auth/refresh` was called exactly once.
+- The access token is a memory-only zustand slice with no `persist`; a test asserts both browser
+  storages stay empty across a full refresh-and-replay cycle.
+- `pending` is a real third session state. On a hard refresh the only evidence of a session is the
+  cookie, so protected routes show a shell skeleton rather than bouncing the user to /login.
+- Dashboard, Applications, Detail, Board, Calendar and Settings are real modules at their final paths
+  rendering a shared `PhasePlaceholder` with `data-phase`. Phases 6, 7, 8 and 9 replace one file body
+  each; the route table, guards and routing tests do not move.
+- Found and fixed while wiring the router: `PublicOnlyRoute` raced the post-login navigate and could
+  drop the user on the dashboard instead of the page they were bounced from. Both now read one
+  `readRedirectTarget`, which also refuses a protocol-relative `from` value. Covered by tests.
+- `tests/App.test.tsx` was deleted: it covered the Phase 1 health-check boot screen, which the Phase 1
+  notes already recorded as being replaced by this shell.
+- Deferred to later phases as planned: `react-helmet-async` and per-route head tags (Phase 13), the
+  account theme preference syncing to `/auth/me` (Phase 9), and Terms and Privacy links behind the
+  registration checkbox, which is plain text for now so it links nowhere broken (Phase 13).
 
 ## Phase 6 — Applications UI
 - [ ] Table with server-side pagination, sorting, filters synced to URL

@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
@@ -47,11 +48,16 @@ export default tseslint.config(
     },
   },
   {
+    // The rules-of-hooks and exhaustive-deps checks matter most in the axios and
+    // session hooks, where a missing dependency is a stale-closure bug rather
+    // than a style problem.
     files: ['client/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
     },
+    rules: { ...reactHooks.configs.recommended.rules },
   },
   {
     files: ['**/*.config.{ts,mts,js,mjs}', '**/jest.config.ts', '**/vite.config.ts'],
