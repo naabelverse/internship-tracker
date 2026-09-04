@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderWithProviders, resetClientState } from '../utils/render';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DEFAULT_THEME_PREFERENCE,
@@ -34,6 +35,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetClientState();
 });
 
 describe('theme preference reading', () => {
@@ -73,7 +75,7 @@ describe('theme resolution', () => {
 describe('ThemeToggle', () => {
   it('applies and persists the chosen theme', async () => {
     const user = userEvent.setup();
-    render(<ThemeToggle />);
+    renderWithProviders(<ThemeToggle />);
 
     await user.click(screen.getByRole('radio', { name: 'Light theme' }));
 
@@ -89,7 +91,7 @@ describe('ThemeToggle', () => {
   it('stores the system choice rather than the theme it currently resolves to', async () => {
     stubMatchMedia(true);
     const user = userEvent.setup();
-    render(<ThemeToggle />);
+    renderWithProviders(<ThemeToggle />);
 
     await user.click(screen.getByRole('radio', { name: 'Match system theme' }));
 
@@ -98,7 +100,7 @@ describe('ThemeToggle', () => {
   });
 
   it('exposes the three preferences as a radio group', () => {
-    render(<ThemeToggle />);
+    renderWithProviders(<ThemeToggle />);
 
     expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeInTheDocument();
     expect(screen.getAllByRole('radio')).toHaveLength(3);

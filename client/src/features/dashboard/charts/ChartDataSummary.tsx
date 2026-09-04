@@ -24,23 +24,29 @@ export function ChartDataSummary({
   valueHeading,
   rows,
 }: ChartDataSummaryProps): JSX.Element {
+  // The wrapper carries `sr-only`, not the table. `sr-only` pins width to 1px,
+  // and a `display: table` box treats that as a minimum and grows to its
+  // content anyway, so the table alone kept its full natural width. It stayed
+  // clipped and invisible, but it widened the layout box it sat in.
   return (
-    <table className="sr-only">
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Category</th>
-          <th scope="col">{valueHeading}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.label}>
-            <th scope="row">{row.label}</th>
-            <td>{row.value}</td>
+    <div className="sr-only">
+      <table>
+        <caption>{caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">Category</th>
+            <th scope="col">{valueHeading}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label}>
+              <th scope="row">{row.label}</th>
+              <td>{row.value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

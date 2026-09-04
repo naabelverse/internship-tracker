@@ -22,6 +22,13 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 /**
  * Static rail from `lg` up, off-canvas drawer below it. The drawer is a modal
  * surface, so while it is open it traps focus and closes on Escape.
+ *
+ * While closed below `lg` the panel is `invisible`, not merely translated off
+ * screen. A transform moves pixels but leaves the six nav links and the close
+ * button in the tab order, so Tab from the topbar walked into links nobody could
+ * see. `visibility: hidden` is what actually removes a subtree from the tab
+ * order, and unlike `inert` it needs no polyfill and no JavaScript breakpoint
+ * tracking. `lg:visible` keeps the static rail reachable on a desktop.
  */
 export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -45,8 +52,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
         aria-label="Main navigation"
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-64 max-w-[85vw] flex-col border-r border-border bg-surface',
-          'transition-transform duration-200 lg:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full',
+          'transition-transform duration-200 lg:visible lg:translate-x-0',
+          isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full',
         )}
       >
         <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-4">
@@ -63,9 +70,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
           </button>
         </div>
 
+        {/*
+          Closing on click as well as on a route change matters for the one case
+          the route change misses: tapping the entry for the page you are already
+          on leaves the pathname untouched, so the drawer stayed open over the
+          content on a phone. Found in a real browser during the phase 9 pass.
+        */}
         <nav aria-label="Sections" className="flex-1 space-y-1 overflow-y-auto p-3">
           {NAV_ITEMS.map(({ label, to, icon: ItemIcon, end }) => (
-            <NavLink key={to} to={to} end={end} className={navLinkClass}>
+            <NavLink key={to} to={to} end={end} onClick={onClose} className={navLinkClass}>
               <ItemIcon className="h-5 w-5 shrink-0" />
               {label}
             </NavLink>

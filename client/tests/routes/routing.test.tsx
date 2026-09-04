@@ -74,7 +74,6 @@ describe('protected routing', () => {
     renderWithProviders(<App />, { route: '/applications' });
 
     expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
-    expect(screen.queryByTestId('phase-placeholder')).not.toBeInTheDocument();
   });
 
   it('restores the session from the refresh cookie and renders the protected route', async () => {
@@ -93,23 +92,18 @@ describe('protected routing', () => {
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
   });
 
-  // Phase 6 replaced the Applications and Detail placeholders, Phase 7 the Board
-  // and Calendar ones and Phase 8 the Dashboard, so those paths are covered by
-  // their own suites. Settings still asserts the placeholder contract that
-  // Phase 9 will retire in turn.
-  it.each([['/settings', '9', 'Settings']])(
-    'renders the %s route for a signed-in user',
-    async (route, phase, heading) => {
-      installMockApi({});
-      signIn(makeSession());
+  // Every route now renders its real page: phase 6 replaced Applications and
+  // Detail, phase 7 the Board and Calendar, phase 8 the Dashboard and phase 9
+  // Settings. `PhasePlaceholder` was deleted with the last of them.
+  it('renders the real settings page for a signed-in user', async () => {
+    installMockApi({});
+    signIn(makeSession());
 
-      renderWithProviders(<App />, { route });
+    renderWithProviders(<App />, { route: '/settings' });
 
-      const placeholder = await screen.findByTestId('phase-placeholder');
-      expect(placeholder).toHaveAttribute('data-phase', phase);
-      expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
-    },
-  );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save profile' })).toBeInTheDocument();
+  });
 
   it('resolves the lazy dashboard chunk and renders it at /', async () => {
     installMockApi(dashboardRoutes());
@@ -120,7 +114,6 @@ describe('protected routing', () => {
     // The dashboard is the one route behind React.lazy, so this also proves the
     // Suspense fallback gives way rather than sticking on the skeleton.
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
-    expect(screen.queryByTestId('phase-placeholder')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -140,7 +133,6 @@ describe('protected routing', () => {
     renderWithProviders(<App />, { route });
 
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
-    expect(screen.queryByTestId('phase-placeholder')).not.toBeInTheDocument();
   });
 
   it('renders the 404 page for an unknown path without asking for a session', async () => {

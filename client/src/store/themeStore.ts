@@ -44,6 +44,11 @@ interface ThemeState {
   preference: ThemePreference;
   resolved: ResolvedTheme;
   setPreference: (preference: ThemePreference) => void;
+  /**
+   * Adopts the preference stored on the account, which outranks whatever this
+   * device had cached once it arrives.
+   */
+  adoptAccountPreference: (preference: ThemePreference) => void;
   /** Re-resolves without changing the preference, for OS-level theme changes. */
   syncWithSystem: () => void;
 }
@@ -57,6 +62,26 @@ export const useThemeStore = create<ThemeState>((set, get) => {
     // view of the world identical to the DOM instead of asserting a new one.
     resolved: resolveTheme(preference),
     setPreference: (next) => {
+      const resolved = resolveTheme(next);
+
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      } catch {
+        // A rejected write only costs persistence, not the theme itself.
+      }
+
+      applyTheme(resolved);
+      set({ preference: next, resolved });
+    },
+    // Precedence: local storage wins until the account value arrives, because it
+    // is the only value that exists before the network answers and it is what
+    // stops the flash. From then on the account wins and is written back into
+    // local storage, so the next cold load paints the account's choice. Without
+    // that write-back, changing the theme on one device would never reach
+    // another. A no-op when they already agree, so a refetch cannot loop.
+    adoptAccountPreference: (next) => {
+      if (next === get().preference) return;
+
       const resolved = resolveTheme(next);
 
       try {

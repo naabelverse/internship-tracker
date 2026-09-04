@@ -700,3 +700,102 @@ verify`; nothing in the stack depends on a version-specific API.
   the dashboard" signal.** That placeholder no longer exists. Both now assert the real dashboard
   heading and answer its requests, which is a stronger check than before: the routing case also
   proves the lazy chunk resolves and the Suspense fallback gives way.
+
+## Phase 9 - Settings, polish, accessibility, responsive
+
+### Theme precedence between the device and the account
+
+- **Local storage wins until the account value loads, then the account wins and is written
+  back to local storage.** Local has to win first because it is the only value that exists
+  before `/auth/me` answers, and it is what the inline boot script reads to paint the right
+  theme before React mounts. The account then takes over because it is the durable
+  cross-device preference and the cached copy is only a stand-in for it. Writing it back is
+  what makes the _next_ cold load paint the account's choice with no flash.
+- **A toggle made while signed in applies locally first, then PATCHes.** Waiting for a round
+  trip before repainting makes the control feel broken on a slow connection. The mutation
+  rolls the local value back if the write fails, so the screen and the account cannot end up
+  disagreeing, which is the whole failure this sync exists to prevent.
+- **A toggle made while signed out is local only** and is overridden by the account at the
+  next sign in. Signing in as somebody else therefore lands on their theme rather than on
+  whatever the previous person left on the machine.
+- `adoptAccountPreference` is a no-op when the values already agree, so a refetch cannot loop.
+
+### Settings
+
+- **No server work was required.** `updateMeSchema` already accepted name, avatarUrl,
+  university, gradYear, targetRoles, weeklyGoal, theme, timezone and emailRemindersEnabled,
+  and the password endpoint already existed. Phase 9 is a client phase in full.
+- **The password section states the consequence before the button, and again in the toast.**
+  SPEC section 5 has the server revoke every other refresh token, and silently signing
+  somebody out of their phone while they sit on their laptop is a support complaint waiting to
+  happen. The wording is "you will stay signed in on this device".
+- **Editing the timezone is safe and needed no coordination with phase 4.** The reminder sweep
+  re-reads every distinct timezone each hour and the analytics pipelines take it per request,
+  so nothing derived is cached and a change simply applies from the next tick. Before this
+  page the field was write-once at registration.
+- **Export and delete are disabled affordances, not hidden ones.** A full account export needs
+  a document containing everything the system holds; `GET /applications/export` covers only
+  the applications, so shipping it under that label would under-deliver on a promise the
+  privacy page will make (Phase 14). Deletion needs the soft delete, the purge job and the
+  typed confirmation (Phases 11 and 14). Both are rendered with the reason stated, because
+  somebody looking for "how do I get my data out" needs to find the answer here even while
+  the answer is "not yet".
+- **Forms re-seed from the account only while untouched**, reusing the guard Phase 6 arrived
+  at after a background refetch discarded in-progress typing.
+- **`PhasePlaceholder` was deleted.** Phase 9 replaced the last page using it, so it became
+  dead code.
+
+### Accessibility defects found in phases 5 to 8
+
+- **The nav drawer was keyboard reachable while closed.** Below `lg` it was only translated
+  off screen. A transform moves pixels but leaves everything inside focusable, so Tab from
+  the topbar walked through six invisible links. `visibility: hidden` is what actually removes
+  a subtree from the tab order; `inert` would need a polyfill and JavaScript breakpoint
+  tracking to achieve the same thing.
+- **Tapping the nav entry for the current page left the drawer open**, because it only closed
+  on a pathname change and clicking the active route changes nothing. Found in a real browser.
+  It now closes on click as well.
+- **The token palette failed 4.5:1 in seven places.** Six were in the light theme:
+  `text-subtle` on `surface-muted`, `info` as body text, and the info, warning, success and
+  danger pills measured against their own 15% tint rather than against the plain surface. The
+  tint is the subtle one: a token can pass on a white card and still fail inside its own pill,
+  because the tint lifts the background towards the text. Fixed by darkening four light
+  semantics and nudging `text-subtle` in both themes.
+- **The dark theme put white on the danger button's lighter red at 2.77:1.** `danger` now has
+  a `danger-fg` token mirroring `primary-fg`, rather than the button hardcoding white.
+- Contrast is now asserted by a test that reads the ratios out of `src/index.css`, so a future
+  palette edit that breaks one fails the build instead of shipping.
+
+### What was already compliant
+
+Verified in the components rather than taken from PROGRESS.md: all four modals use the `Modal`
+primitive, every `<button>`, `Button`, `Link` and `<a>` has an accessible name, all five
+phase 8 charts render a real `sr-only` data table with a caption, the skip link targets a
+`main` landmark that exists, the board scrolls sideways at 375, the table becomes stacked
+cards below 768, calendar days are `role="gridcell"` buttons and the popover closes on Escape.
+
+### Real-browser verification
+
+- **It happened this phase; it is not deferred again.** A Chromium build already sits in the
+  Playwright cache and was driven through `executablePath` against the running compose stack,
+  at 375, 768 and 1440 in both themes across all five routes.
+- **Two blockers had to be cleared, both worth recording.** The Playwright MCP tool insists on
+  Chrome, which is not installed on this machine. And both container images were stale: the
+  api had been in a crash loop for hours against a missing `swagger-ui-express`, and the web
+  image predated axios, date-fns and dnd-kit. Both were rebuilt, so the compose stack actually
+  works again.
+- **No Playwright dependency was added to the repository.** The browser was driven from a
+  throwaway script outside the repo. The committed suite, its fixtures and CI wiring stay
+  Phase 15; this phase borrowed a browser, it did not build the harness.
+- **The first metric used was wrong and was corrected.** `documentElement.scrollWidth` counts
+  descendants a scroll container has already clipped, so it reported large overflows on the
+  board that no user could reach. The honest test is `body.scrollWidth` against the viewport
+  plus actually attempting to scroll, which is what the final pass used.
+
+### Known open defect
+
+- **The document scrolls horizontally on the board route at every width**, and on applications
+  at 768, even though `body.scrollWidth` equals the viewport and the board's own strip scrolls
+  correctly. `overflow-x-clip` on `main` did not fix it and was reverted rather than left in
+  place with a comment claiming a fix it did not deliver. The root cause is not isolated; it
+  is carried to Phase 15 alongside the rest of the responsive and E2E work.

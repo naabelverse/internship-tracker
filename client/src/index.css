@@ -9,6 +9,13 @@
  *
  * `:root` carries the light palette. The dark palette is applied by attribute,
  * which the inline script in `index.html` sets before the first paint.
+ *
+ * Every foreground token here clears WCAG AA (4.5:1) against every surface it is
+ * painted on, in both themes, including the 15% tint the status pills use as a
+ * background. `tests/a11y/tokenContrast.test.ts` computes those ratios from this
+ * file, so a palette edit that breaks one fails the build rather than shipping.
+ * Phase 9 darkened four light-theme semantics and nudged both `text-subtle`
+ * values for exactly that reason.
  */
 :root {
   --color-canvas: 248 250 252;
@@ -18,14 +25,15 @@
   --color-border-strong: 203 213 225;
   --color-text: 15 23 42;
   --color-text-muted: 71 85 105;
-  --color-text-subtle: 100 116 139;
+  --color-text-subtle: 93 108 130;
   --color-primary: 79 70 229;
   --color-primary-hover: 67 56 202;
   --color-primary-fg: 255 255 255;
-  --color-success: 21 128 61;
-  --color-warning: 180 83 9;
-  --color-danger: 220 38 38;
-  --color-info: 2 132 199;
+  --color-success: 22 101 52;
+  --color-warning: 146 64 14;
+  --color-danger: 185 28 28;
+  --color-danger-fg: 255 255 255;
+  --color-info: 3 105 161;
   --color-ring: 79 70 229;
   --color-shadow: 15 23 42;
 
@@ -57,13 +65,14 @@
   --color-border-strong: 51 65 96;
   --color-text: 230 236 247;
   --color-text-muted: 148 163 184;
-  --color-text-subtle: 125 140 163;
+  --color-text-subtle: 138 152 174;
   --color-primary: 129 140 248;
   --color-primary-hover: 165 180 252;
   --color-primary-fg: 15 23 42;
   --color-success: 52 211 153;
   --color-warning: 251 191 36;
   --color-danger: 248 113 113;
+  --color-danger-fg: 15 23 42;
   --color-info: 56 189 248;
   --color-ring: 129 140 248;
   --color-shadow: 0 0 0;

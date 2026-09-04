@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { useAccountTheme } from '@/hooks/useAccountTheme';
 import { useSessionBootstrap } from '@/hooks/useSession';
 import { useSystemThemeSync } from '@/hooks/useSystemThemeSync';
 import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage';
@@ -33,6 +34,7 @@ const DashboardPage = lazy(async () => import('@/pages/DashboardPage'));
  */
 export function App(): JSX.Element {
   useSessionBootstrap();
+  useAccountTheme();
   useSystemThemeSync();
 
   return (

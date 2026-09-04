@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 8 complete
-**Current phase:** 9
+**Status:** Phase 9 complete
+**Current phase:** 10
 **Last updated:** 2026-09-04
 
 ---
@@ -261,10 +261,72 @@ Notes:
   both themes stays Phase 9/15.
 
 ## Phase 9 — Settings, polish, a11y, responsive
-- [ ] Settings: profile, password, preferences, timezone
-- [ ] Theme toggle persisted
-- [ ] Keyboard nav, focus traps, aria labels, contrast pass
-- [ ] Verified at 375 / 768 / 1440 px in both themes
+- [x] Settings: profile, password, preferences, timezone
+- [x] Theme toggle persisted
+- [x] Keyboard nav, focus traps, aria labels, contrast pass
+- [x] Verified at 375 / 768 / 1440 px in both themes
+
+Notes:
+- No server changes were needed: `PATCH /auth/me` already accepted every field the
+  settings page edits, and `PATCH /auth/me/password` already existed.
+- Theme precedence: local storage wins until the account value loads, then the account wins
+  and is written back to local storage. Local has to win first because it is the only value
+  that exists before `/auth/me` answers, and it is what the inline boot script reads to avoid
+  the flash. The account then takes over because it is the durable cross-device preference;
+  without the write-back, changing the theme on one device would never reach another. Covered
+  by a test that boots with a stale local value and asserts the account value wins.
+- The timezone was previously set once, at registration, from the browser. Editing it here is
+  safe: the reminder sweep re-reads every distinct timezone each hour and the analytics
+  pipelines take it per request, so nothing derived is cached.
+- Data export and account deletion are rendered as disabled affordances with the reason
+  stated, not hidden. Full account export needs a document containing everything the system
+  holds (Phase 14); deletion needs the soft delete, purge job and typed confirmation
+  (Phases 11 and 14). Neither destructive path was half-built.
+- `PhasePlaceholder` was deleted. Phase 9 replaced the last page that used it, so it became
+  dead code.
+
+**Real-browser verification happened this phase — it is no longer deferred.** A Chromium
+build already sits in the Playwright cache and was driven via `executablePath`, against the
+running compose stack, at 375/768/1440 in both themes across all five routes. Two blockers
+had to be cleared first, both worth recording: the Playwright MCP tool insists on Chrome,
+which is not installed, and **both the api and web container images were stale** — the api
+was in a crash loop against a missing `swagger-ui-express` and the web image predated axios,
+date-fns and dnd-kit. Both were rebuilt. No Playwright dependency was added to the repo; the
+committed E2E suite remains Phase 15.
+
+Accessibility findings — three real defects from earlier phases, all fixed:
+- The nav drawer was keyboard reachable while closed. Below `lg` it was only translated
+  off screen, which moves pixels but leaves its six links and close button in the tab order.
+  It is `invisible` now, which is what actually removes a subtree from the tab order.
+- The token palette failed 4.5:1 in seven places, six of them in the light theme:
+  `text-subtle` on `surface-muted` in both themes, `info` as text, and the info, warning,
+  success and danger status pills against their own 15% tint. Fixed at the token level.
+- The dark theme put white text on the danger button's light red at 2.77:1. A `danger-fg`
+  token now mirrors `primary-fg`.
+- Also found in the real browser: tapping the nav entry for the page you are already on left
+  the drawer open, because it only closed on a pathname *change*.
+Already compliant, verified in the components rather than taken on trust: all four modals use
+the `Modal` primitive (four focus-trap and four Escape cases now prove it), every button and
+link has an accessible name, all five Phase 8 charts ship a real `sr-only` data table, and the
+skip link targets a `main` landmark that exists.
+
+Responsive results, measured in Chromium (body scroll width against the viewport, plus an
+actual attempted scroll):
+- 375: applications, calendar and settings clean; table renders as stacked cards; board
+  scrolls inside itself.
+- 768: dashboard, calendar and settings clean; the applications table scrolls inside its own
+  container.
+- 1440: every route clean; sidebar rail visible and reachable.
+- Both themes behave identically at every breakpoint.
+
+Deferred / open:
+- **The document scrolls horizontally on the board route at every width**, even though the
+  board's own strip scrolls correctly and `body.scrollWidth` equals the viewport. The
+  applications route does the same at 768. `overflow-x-clip` on `main` did not resolve it and
+  was reverted rather than left in place claiming a fix it did not deliver. Root cause not
+  isolated; carried to Phase 15 with the rest of the responsive work.
+- `sr-only` on a `<table>` does not constrain its width, because a `display: table` box treats
+  `width: 1px` as a minimum. The chart summaries now wrap the table in an `sr-only` div.
 
 ## Phase 10 — Seed, tests, docs, CI
 - [ ] Seed: demo user + 60+ realistic applications, every chart populated

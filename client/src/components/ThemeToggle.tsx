@@ -1,5 +1,7 @@
 import { cn } from '@/lib/cn';
 import { MonitorIcon, MoonIcon, SunIcon } from '@/components/ui/icons';
+import { useUpdatePreferences } from '@/features/settings/useSettingsMutations';
+import { useSession } from '@/hooks/useSession';
 import { useThemeStore } from '@/store/themeStore';
 import { THEME_PREFERENCES, type ThemePreference } from '@/types/user';
 
@@ -11,11 +13,33 @@ const OPTIONS: Record<ThemePreference, { label: string; Icon: typeof SunIcon }> 
 
 /**
  * A three-way segmented control rather than a two-state switch, because the
- * account carries `light | dark | system` and Phase 9 syncs this to the server.
+ * account carries `light | dark | system`.
+ *
+ * A choice is applied to this device immediately and then written to the
+ * account, so it follows the user to their other devices. Applying first is
+ * deliberate: waiting for the round trip before repainting would make the
+ * control feel broken on a slow connection. `useUpdatePreferences` rolls the
+ * local value back if the write fails, so the two cannot end up disagreeing.
+ *
+ * Signed out there is no account to write to, and the local preference is all
+ * there is; it is overridden by the account's own value at the next sign in.
  */
 export function ThemeToggle(): JSX.Element {
   const preference = useThemeStore((state) => state.preference);
   const setPreference = useThemeStore((state) => state.setPreference);
+  const { isAuthenticated } = useSession();
+  const updatePreferences = useUpdatePreferences();
+
+  const choose = (option: ThemePreference): void => {
+    if (option === preference) return;
+
+    if (isAuthenticated) {
+      updatePreferences.mutate({ theme: option });
+      return;
+    }
+
+    setPreference(option);
+  };
 
   return (
     <div
@@ -35,7 +59,7 @@ export function ThemeToggle(): JSX.Element {
             aria-checked={selected}
             aria-label={label}
             onClick={() => {
-              setPreference(option);
+              choose(option);
             }}
             className={cn(
               'rounded-[0.4rem] p-1.5 transition-colors',

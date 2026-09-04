@@ -33,6 +33,7 @@ export default {
         success: token('color-success'),
         warning: token('color-warning'),
         danger: token('color-danger'),
+        'danger-fg': token('color-danger-fg'),
         info: token('color-info'),
         // Chart series and heatmap levels, so a chart colour is a token like
         // every other colour in the app rather than a literal in a JS object.

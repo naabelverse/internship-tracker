@@ -59,8 +59,7 @@ describe('LoginForm', () => {
     await user.type(screen.getByLabelText('Password'), 'Password1');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    const placeholder = await screen.findByTestId('phase-placeholder');
-    expect(placeholder).toHaveAttribute('data-phase', '9');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
     expect(useAuthStore.getState().accessToken).toBe('access-1');
   });
 
