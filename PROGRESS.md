@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 10 complete
-**Current phase:** 11
+**Status:** Phase 11 backend complete, UI outstanding
+**Current phase:** 11 (client pages)
 **Last updated:** 2026-09-04
 
 ---
@@ -474,13 +474,34 @@ The hoist into `BoardPage` was the shape chosen, for a third reason not visible 
 conflict being raised at all. Carrying the payload on the conflict object would not have fixed that.
 
 ## Phase 11 — Account lifecycle
-- [ ] Email verification (hashed single-use token, 24 h, resend limited)
-- [ ] Forgot + reset password pages and endpoints
-- [ ] No user enumeration on forgot-password (test proves it)
-- [ ] Email change with pending-email confirmation
-- [ ] Session list + revoke, account lock after repeated failures
-- [ ] Soft delete + 30-day purge job
-- [ ] Tests green
+- [x] Email verification (hashed single-use token, 24 h, resend limited)
+- [x] Forgot + reset password endpoints — **pages deferred**, see the note below
+- [x] No user enumeration on forgot-password (test proves it)
+- [x] Email change with pending-email confirmation
+- [x] Session list + revoke, account lock after repeated failures
+- [x] Soft delete + 30-day purge job
+- [x] Tests green
+
+Notes:
+- **This phase was split at your instruction: the backend landed, the UI did not.** SPEC section
+  16 phase 11 also lists the `/forgot-password` and `/reset-password` pages, plus the verification
+  banner, sessions panel and delete-account flow the endpoints exist for. None of that is built.
+  The second box above is ticked for the endpoints only and says so; the phase is **not** complete
+  until the client work lands, so Phase 12 should not start ahead of it.
+- **Account lockout was already built.** Phase 2 implemented `failedLoginAttempts` and
+  `lockedUntil` in `auth.service.ts`. This phase proved it rather than rebuilding it, and added
+  the interaction test that separates it from the rate limiter.
+- **The purge job is here, not Phase 14.** SPEC section 16 phase 11 says "soft delete + purge
+  job" outright; section 14 has no job list at all.
+- The `deletedAt` audit found the applications, analytics, calendar and reminder services need no
+  filter — `requireAuth` already refuses a deleted user and every query is scoped to its own
+  caller. Proven from the outside by `auth.softDelete.test.ts` rather than by adding filters.
+  Registration's uniqueness check stays unfiltered on purpose, so a closed account's address is
+  reserved until the purge releases it.
+- Email sending is a seam, not a system: `mailer.service.ts` is a bounded queue plus a console
+  transport, which is the shape Phase 12 fills in with the real transport and templates.
+- A Phase 2 test that asserted `PATCH /auth/me` rejects an email change was rewritten, not
+  deleted — it was an explicit placeholder for this phase's flow. Recorded in `DECISIONS.md`.
 
 ## Phase 12 — Email system
 - [ ] Provider-agnostic transport + console fallback (app boots with no SMTP)

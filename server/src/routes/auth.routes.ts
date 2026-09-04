@@ -1,27 +1,42 @@
 import { Router } from 'express';
 import {
   changePassword,
+  deleteMe,
+  forgotPassword,
+  listSessions,
   login,
   logout,
   logoutAll,
   me,
   refresh,
   register,
+  resendVerification,
+  resetPassword,
+  revokeSession,
   updateMe,
+  verifyEmail,
 } from '@/controllers/auth.controller';
 import {
+  forgotPasswordEmailLimiter,
+  forgotPasswordIpLimiter,
   loginEmailLimiter,
   loginIpLimiter,
   registerEmailLimiter,
   registerIpLimiter,
+  resendVerificationLimiter,
+  resetPasswordIpLimiter,
 } from '@/middleware/rateLimit';
 import { requireAuth } from '@/middleware/requireAuth';
 import { validateBody } from '@/middleware/validate';
 import {
   changePasswordSchema,
+  deleteAccountSchema,
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
   updateMeSchema,
+  verifyEmailSchema,
 } from '@/schemas/auth.schema';
 
 const router = Router();
@@ -47,5 +62,31 @@ router.post('/logout-all', requireAuth, logoutAll);
 router.get('/me', requireAuth, me);
 router.patch('/me', requireAuth, validateBody(updateMeSchema), updateMe);
 router.patch('/me/password', requireAuth, validateBody(changePasswordSchema), changePassword);
+
+// Verification and reset are unauthenticated on purpose: the token in the body
+// is the credential, and requiring a session would make a reset useless to the
+// person who cannot get in.
+router.post('/verify-email', validateBody(verifyEmailSchema), verifyEmail);
+router.post('/resend-verification', requireAuth, resendVerificationLimiter, resendVerification);
+
+router.post(
+  '/forgot-password',
+  forgotPasswordIpLimiter,
+  forgotPasswordEmailLimiter,
+  validateBody(forgotPasswordSchema),
+  forgotPassword,
+);
+
+router.post(
+  '/reset-password',
+  resetPasswordIpLimiter,
+  validateBody(resetPasswordSchema),
+  resetPassword,
+);
+
+router.get('/sessions', requireAuth, listSessions);
+router.delete('/sessions/:id', requireAuth, revokeSession);
+
+router.delete('/me', requireAuth, validateBody(deleteAccountSchema), deleteMe);
 
 export default router;

@@ -1178,3 +1178,105 @@ first success. **Left as it is, deliberately**, because there is no reachable de
 and restructuring it would be a change with no failing test behind it. The hazard is latent
 rather than live: adding a `resetQueries` on details, or changing that `?? data`, would
 reintroduce the board's defect on this page with nothing to catch it.
+
+## Phase 11 - account lifecycle (backend)
+
+Split from the phase's UI at your instruction: the server side and its tests land here, the
+`/forgot-password` and `/reset-password` pages SPEC section 16 also lists are a follow-up.
+
+### Two premises in the brief that the code disagreed with
+
+- **The lifecycle fields were not all unused.** They are all present as SPEC section 4 lists
+  them, but `failedLoginAttempts` and `lockedUntil` were already fully implemented in
+  `auth.service.ts` - Phase 2 built the ten failure, fifteen minute soft lock. Account lockout
+  was therefore a verify-and-test item this phase, not a build item, and no lockout logic was
+  written. `emailVerified` was half wired: set by the seed and exposed in the OpenAPI schema,
+  never enforced. Only the five token and `pendingEmail` fields were genuinely untouched.
+- **The purge job belongs to this phase, not Phase 14.** SPEC section 16 phase 11 reads "soft
+  delete + purge job" in as many words. Section 14 has no job list at all - it is Observability
+  and operations, covering logs, Sentry, the health probes, the backup script and `npm run
+stats`. Phase 14 lists the account deletion _UI_ and data export, not the purge.
+
+### Forgot-password: how the responses are identical
+
+- **One path, no branch.** The handler never asks whether the account exists. It writes a fixed
+  literal message with `{ requested: true }` and only then hands the address to the service,
+  which does the token work for a real account and returns immediately for anything else. The
+  responses cannot disagree because there is only one of them. The test asserts equal status,
+  equal body, equal key ordering, and equal `content-type` and `content-length`.
+- **On the timing channel, the honest answer is that it is small here and it was closed anyway.**
+  There is **no bcrypt on this path**. Unlike login, nothing on forgot-password derives a key, so
+  the asymmetry is not "fast miss versus slow hash" - it is one indexed lookup that misses versus
+  a lookup that hits plus a `randomBytes`, a SHA-256 and one `save`. That is microseconds of CPU
+  and a millisecond of round trip, inside network noise. It is closed regardless by sending the
+  response before the divergent work starts, so the difference is outside anything a client can
+  measure, and the route's latency stops depending on the mail queue as a side benefit. The
+  test measures five samples each way and compares medians rather than means, so one scheduling
+  hiccup cannot decide it.
+- **The consequence for tests is stated rather than hidden.** Because the write happens after
+  the response, a test cannot assume the token exists the moment the request returns. The reset
+  tests poll the mail queue for it instead of guessing a number of ticks.
+
+### The deletedAt audit, and why almost nothing needed changing
+
+Already filtered before this phase: `requireAuth`, `login`, `getMe`, `updateMe`,
+`changePassword`, and both queries in the reminder job.
+
+**The applications, analytics, calendar and reminder services need no `deletedAt` filter, and
+none was added.** Not an oversight - a structural argument. Every one of them is scoped
+`user: userId`, and the only route to them is `requireAuth`, which already refuses a user with
+`deletedAt` set. Another account's query cannot surface a deleted user's rows because it is
+scoped to its own id. Adding filters there would be defensive noise that implies a threat the
+architecture has already closed. `auth.softDelete.test.ts` proves the property from the outside
+instead: a closed account's applications stay out of a second account's list and its analytics.
+
+**One site was left deliberately unfiltered.** `auth.service.ts`'s registration uniqueness check
+still matches soft deleted users, so a closed account's address stays reserved for its 30 day
+window and is released by the purge. Filtering it would let a stranger register an address whose
+data is still recoverable, and would collide with the unique index on the retained document.
+Your call, recorded here with the reason, and covered by a test.
+
+### Assumptions and judgement calls
+
+- **A mail seam, not a mail system.** Phase 11 has to send four messages and Phase 12 owns the
+  transport, templates and retry queue. `mailer.service.ts` is the shape Phase 12 fills in: a
+  bounded queue plus a console transport. Two rules it already keeps because they are security
+  properties rather than delivery details - a send never throws into the request that triggered
+  it, and the body is printed only outside production, since these bodies carry tokens and
+  section 14 forbids logging tokens or full email bodies. Section 13's "print the full email in
+  development" and section 14's prohibition are reconciled by environment rather than ignored.
+- **SPEC section 5 and section 4 disagree about `DELETE /auth/me`.** Section 5 says it
+  "cascade-deletes all user data and uploaded files"; section 4 and section 16 say soft delete
+  with a purge after 30 days. Resolved as soft delete now, cascade at purge, which satisfies both
+  in sequence and is the only reading in which a 30 day window means anything.
+- **`verify-email` distinguishes an unknown token from an expired one.** `INVALID_TOKEN` and
+  `TOKEN_EXPIRED` are different codes, deliberately, so the UI can offer "send me a new link"
+  rather than a dead end. It leaks nothing: holding the token is already proof of access to the
+  mailbox, so there is no third party to protect the distinction from.
+- **The verification gate is a router level middleware on writes only.** Applied to the
+  applications and reminders routers, which own every write; analytics and calendar are read
+  only and take no gate. Safe methods pass unconditionally, so an unverified user past the grace
+  period can always still read their own data, and login is never gated at all.
+- **Three new `RevokedReason` values** - `password_reset`, `session_revoked`, `account_deleted`.
+  Overloading `logout_all` would have worked and destroyed the audit trail that makes the
+  sessions list worth showing.
+- **Sessions expose the existing mechanism rather than a second one.** "Active" in
+  `GET /auth/sessions` means exactly what it means to `rotateSession`: unrevoked and unexpired.
+  Revocation is scoped by `user` as well as `_id`, so another account's session id is reported
+  as not found rather than forbidden, matching the applications rule.
+- **Lockout and rate limiting are kept separate and report differently.** The limiter is per IP
+  and per email at five attempts in fifteen minutes and trips first; the account lock is ten
+  consecutive _credential_ failures and answers `423 ACCOUNT_LOCKED` with a `lockedUntil`, where
+  the limiter answers `429 RATE_LIMITED_*`. A throttled request never reaches the credential
+  check, so the limiter cannot lock an account by proxy - proven by a test. Attempts below the
+  threshold return an ordinary `INVALID_CREDENTIALS`, so the response never counts down for an
+  attacker.
+
+### A Phase 2 test was rewritten, deliberately
+
+`auth.session.test.ts` asserted that `PATCH /auth/me` _rejects_ an email change. That was a
+Phase 2 placeholder for a flow that did not exist yet, recorded as such in PROGRESS at the time.
+Phase 11 is chartered to build it, so the case was rewritten rather than deleted: it now asserts
+the address is accepted, parked on `pendingEmail`, and does not take effect until confirmed.
+Saying so here because CLAUDE.md forbids weakening a test to make a build pass, and the
+difference between that and correcting a superseded one is worth being explicit about.

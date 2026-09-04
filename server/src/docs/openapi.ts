@@ -3,7 +3,7 @@ import { env } from '@/config/env';
 import { components } from '@/docs/components';
 import { analyticsPaths } from '@/docs/paths/analytics';
 import { applicationPaths } from '@/docs/paths/applications';
-import { authPaths } from '@/docs/paths/auth';
+import { accountLifecyclePaths, authPaths } from '@/docs/paths/auth';
 import { metaPaths } from '@/docs/paths/meta';
 
 /**
@@ -34,6 +34,7 @@ export const openApiDocument = {
   paths: {
     ...metaPaths,
     ...authPaths,
+    ...accountLifecyclePaths,
     ...applicationPaths,
     ...analyticsPaths,
   },

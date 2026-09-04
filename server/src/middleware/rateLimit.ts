@@ -88,6 +88,49 @@ export const registerEmailLimiter = createAuthLimiter(
   emailLimiterExtras,
 );
 
+export const forgotPasswordIpLimiter = createAuthLimiter(
+  'RATE_LIMITED_IP',
+  'Too many reset requests from this network. Try again in 15 minutes.',
+);
+
+export const forgotPasswordEmailLimiter = createAuthLimiter(
+  'RATE_LIMITED_EMAIL',
+  'Too many reset requests for this account. Try again in 15 minutes.',
+  emailLimiterExtras,
+);
+
+export const resetPasswordIpLimiter = createAuthLimiter(
+  'RATE_LIMITED_IP',
+  'Too many reset attempts from this network. Try again in 15 minutes.',
+);
+
+/**
+ * SPEC section 5: 3 per hour, per account rather than per IP, so a shared
+ * network cannot exhaust one user's budget. Keyed on the authenticated id
+ * because the route carries no email in its body.
+ */
+export const resendVerificationLimiter = (() => {
+  const store = new MemoryStore();
+  authStores.push(store);
+
+  return rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 3,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    store,
+    keyGenerator: (req) => (req as { user?: { id?: string } }).user?.id ?? req.ip ?? '',
+    handler: (_req, _res, next) => {
+      next(
+        ApiError.tooManyRequests(
+          'You have asked for a confirmation link three times in the last hour. Try again later.',
+          'RATE_LIMITED_ACCOUNT',
+        ),
+      );
+    },
+  });
+})();
+
 /** Clears every auth counter. Used by tests so one case cannot throttle the next. */
 export function resetAuthRateLimiters(): void {
   for (const store of authStores) store.resetAll();

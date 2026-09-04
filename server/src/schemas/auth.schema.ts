@@ -51,6 +51,7 @@ export const updateMeSchema = z
     theme: z.enum(THEMES).optional(),
     timezone: ianaTimezone.optional(),
     emailRemindersEnabled: z.boolean().optional(),
+    email: email.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'at least one field must be provided');
@@ -65,6 +66,23 @@ export const changePasswordSchema = z
     (value) => value.currentPassword !== value.newPassword,
     'the new password must be different from the current one',
   );
+
+const singleUseToken = z.string().trim().min(1, 'is required').max(512);
+
+export const verifyEmailSchema = z.object({ token: singleUseToken }).strict();
+
+export const forgotPasswordSchema = z.object({ email }).strict();
+
+export const resetPasswordSchema = z.object({ token: singleUseToken, password }).strict();
+
+export const deleteAccountSchema = z
+  .object({ password: z.string().min(1, 'is required').max(128) })
+  .strict();
+
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

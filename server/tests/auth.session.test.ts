@@ -127,15 +127,22 @@ describe('PATCH /auth/me', () => {
     });
   });
 
-  it('refuses to change the email here, since that needs the verification flow', async () => {
-    const { accessToken } = await registerUser(app);
+  /**
+   * Phase 2 rejected `email` outright, as a placeholder for a flow that did not
+   * exist yet. Phase 11 built that flow, so the case was rewritten rather than
+   * deleted: the address is now accepted and parked, and the assertion that
+   * matters is that it does not take effect here.
+   */
+  it('parks a new email as pending rather than applying it', async () => {
+    const { accessToken, payload } = await registerUser(app);
 
     const response = await authed('patch', '/me', accessToken).send({
       email: 'newaddress@example.com',
     });
 
-    expect(response.status).toBe(400);
-    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.status).toBe(200);
+    expect(response.body.data.user.email).toBe(payload.email);
+    expect(response.body.data.user.pendingEmail).toBe('newaddress@example.com');
   });
 
   it('refuses privilege fields such as isDemo', async () => {

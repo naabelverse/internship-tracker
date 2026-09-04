@@ -2,11 +2,17 @@ import type { Request } from 'express';
 import { getAuthenticatedUser } from '@/middleware/requireAuth';
 import type {
   ChangePasswordInput,
+  DeleteAccountInput,
+  ForgotPasswordInput,
   LoginInput,
   RegisterInput,
+  ResetPasswordInput,
   UpdateMeInput,
+  VerifyEmailInput,
 } from '@/schemas/auth.schema';
+import * as accountLifecycle from '@/services/accountLifecycle.service';
 import * as authService from '@/services/auth.service';
+import * as sessionService from '@/services/session.service';
 import { rotateSession, type SessionContext } from '@/services/token.service';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -108,5 +114,83 @@ export const changePassword = asyncHandler(async (req, res) => {
     res,
     { user: user.toJSON(), accessToken: session.accessToken },
     { message: 'Password changed. Every other session has been signed out.' },
+  );
+});
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const user = await accountLifecycle.verifyEmail((req.body as VerifyEmailInput).token);
+
+  sendSuccess(res, { user: user.toJSON() }, { message: 'Email address confirmed' });
+});
+
+export const resendVerification = asyncHandler(async (req, res) => {
+  await accountLifecycle.resendVerification(getAuthenticatedUser(req)._id);
+
+  sendSuccess(res, { sent: true }, { message: 'A new confirmation link is on its way' });
+});
+
+/**
+ * SPEC section 5 and the definition of done: this must be indistinguishable for
+ * an address that exists and one that does not.
+ *
+ * Identity is structural rather than two branches that happen to agree. The
+ * handler never asks whether the account exists; it answers with one fixed
+ * literal and only then hands the address to the service, which does the token
+ * work for a real account and nothing for anything else. Because the response is
+ * already written, the one operation whose cost depends on the answer - a token
+ * write - is outside anything a client can time. Note there is no bcrypt on this
+ * path at all: unlike login, nothing here hashes a password, so the difference
+ * being hidden is a single indexed write rather than a key derivation.
+ */
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body as ForgotPasswordInput;
+
+  sendSuccess(
+    res,
+    { requested: true },
+    { message: 'If that address has an account, a reset link is on its way.' },
+  );
+
+  await accountLifecycle.startPasswordReset(email);
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body as ResetPasswordInput;
+  await accountLifecycle.resetPassword(token, password);
+
+  clearRefreshCookie(res);
+  sendSuccess(
+    res,
+    { reset: true },
+    { message: 'Password reset. Every signed in device has been signed out.' },
+  );
+});
+
+export const listSessions = asyncHandler(async (req, res) => {
+  const sessions = await sessionService.listSessions(
+    getAuthenticatedUser(req)._id,
+    readRefreshCookie(req),
+  );
+
+  sendSuccess(res, { sessions });
+});
+
+export const revokeSession = asyncHandler(async (req, res) => {
+  await sessionService.revokeSession(getAuthenticatedUser(req)._id, req.params.id);
+
+  sendSuccess(res, { revoked: true }, { message: 'That device has been signed out' });
+});
+
+export const deleteMe = asyncHandler(async (req, res) => {
+  await accountLifecycle.deleteAccount(
+    getAuthenticatedUser(req)._id,
+    (req.body as DeleteAccountInput).password,
+  );
+
+  clearRefreshCookie(res);
+  sendSuccess(
+    res,
+    { deleted: true },
+    { message: 'Your account is closed. Your data is removed permanently after 30 days.' },
   );
 });

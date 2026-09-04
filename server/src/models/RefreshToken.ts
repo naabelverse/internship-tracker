@@ -5,7 +5,10 @@ export const REVOKED_REASONS = [
   'logout',
   'logout_all',
   'password_changed',
+  'password_reset',
   'reuse_detected',
+  'session_revoked',
+  'account_deleted',
 ] as const;
 
 export type RevokedReason = (typeof REVOKED_REASONS)[number];

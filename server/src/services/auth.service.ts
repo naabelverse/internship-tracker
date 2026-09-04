@@ -14,6 +14,7 @@ import type {
   RegisterInput,
   UpdateMeInput,
 } from '@/schemas/auth.schema';
+import { issueVerification } from '@/services/accountLifecycle.service';
 import {
   createSession,
   revokeAllForUser,
@@ -47,7 +48,7 @@ export async function register(input: RegisterInput, context: SessionContext): P
     throw ApiError.conflict('An account with that email already exists', 'EMAIL_IN_USE');
   }
 
-  const user = await User.create({
+  const user = new User({
     name: input.name,
     email: input.email,
     password: input.password,
@@ -55,6 +56,9 @@ export async function register(input: RegisterInput, context: SessionContext): P
     acceptedTermsAt: new Date(),
     lastLoginAt: new Date(),
   });
+
+  issueVerification(user, user.email);
+  await user.save();
 
   const session = await createSession(user._id, context);
 
@@ -121,19 +125,37 @@ export async function getMe(userId: Types.ObjectId): Promise<UserDocument> {
   return user;
 }
 
+/**
+ * Applies a profile patch. A new email address is the one field that does not
+ * take effect here: it is parked on `pendingEmail` and confirmed through the
+ * ordinary verification flow, so the address the user can still log in with
+ * stays the one they have already proven.
+ */
 export async function updateMe(
   userId: Types.ObjectId,
   input: UpdateMeInput,
 ): Promise<UserDocument> {
-  const user = await User.findOneAndUpdate(
-    { _id: userId, deletedAt: null },
-    { $set: input },
-    { new: true, runValidators: true },
-  );
+  const { email, ...profile } = input;
+
+  const user = await User.findOne({ _id: userId, deletedAt: null });
 
   if (!user) {
     throw ApiError.notFound('Account not found', 'USER_NOT_FOUND');
   }
+
+  if (email !== undefined && email !== user.email) {
+    const taken = await User.findOne({ _id: { $ne: user._id }, email });
+
+    if (taken) {
+      throw ApiError.conflict('An account with that email already exists', 'EMAIL_IN_USE');
+    }
+
+    user.pendingEmail = email;
+    issueVerification(user, email);
+  }
+
+  user.set(profile);
+  await user.save();
 
   return user;
 }

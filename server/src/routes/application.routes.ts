@@ -6,6 +6,7 @@ import * as demoData from '@/controllers/demoData.controller';
 import { csvUpload } from '@/middleware/csvUpload';
 import { attachmentUpload } from '@/middleware/upload';
 import { requireAuth } from '@/middleware/requireAuth';
+import { requireVerifiedEmail } from '@/middleware/requireVerifiedEmail';
 import { validateBody, validateParams, validateQuery } from '@/middleware/validate';
 import {
   applicationIdParams,
@@ -26,6 +27,8 @@ const router = Router();
 // Every route below is owner-scoped; the service layer takes the user id and
 // filters on it, so there is no unauthenticated path into this resource.
 router.use(requireAuth);
+// Reads stay open for ever; writes close after the seven day grace period.
+router.use(requireVerifiedEmail);
 
 // Literal paths must be declared before /:id or they would be read as an id.
 router.get('/export', validateQuery(exportQuerySchema), applications.exportAll);
