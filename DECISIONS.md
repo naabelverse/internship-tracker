@@ -948,3 +948,75 @@ cards below 768, calendar days are `role="gridcell"` buttons and the popover clo
   `pendingDrop` living in a subtree the loading state can unmount: hoist it and the dialog into
   `BoardPage`, or carry the attempted payload on the conflict object so the retry does not depend on
   separate state surviving a remount.
+
+## Blocking fix - board conflict dialog lost on remount
+
+Not a phase. A data-loss defect in Phase 7's drag and drop, found by the first real CI run
+at the end of Phase 10 and fixed before Phase 11 started.
+
+### Root cause
+
+`BoardPage` renders `KanbanBoard` only under `query.isSuccess && applications.length > 0`.
+An optimistic write cancels every application query and its rollback restores them, which
+leaves the board's query briefly with no data at all: `isPending` flips back to true and the
+skeleton replaces the board. Everything `KanbanBoard` owned was destroyed at that moment,
+and it owned the version-conflict state, the pending drop and the dialog itself. So a drag
+that hit a 409 could have its prompt vanish before the user answered it, and because
+`pendingDrop` died with the old instance, "Overwrite with my changes" then did nothing at
+all - the prompt closed and the drag was discarded with no error and no toast.
+
+### The fix, and why this shape
+
+- **The mutation, both pieces of state and the dialog moved up into `BoardPage`.**
+  `KanbanBoard` is now presentational and takes an `onMove` callback. `BoardPage` owns the
+  query, so nothing that query does can unmount it, and the dialog renders outside every one
+  of the branches that toggle.
+- **Carrying the payload on the conflict object was rejected as the primary fix.** It would
+  have saved the payload but not the dialog, which is rendered by the component that
+  unmounts. The requirement was that both survive.
+- **A third reason decided it.** The `useUpdateApplication` observer lived in `KanbanBoard`
+  too, and `onError` - the callback that raises the conflict - belongs to that observer. If
+  the board unmounted while the PATCH was in flight the conflict could never be raised at
+  all, so no dialog would appear in the first place. Only hoisting fixes that.
+
+### The regression test
+
+`client/tests/board/conflictDialogSurvival.test.tsx` constructs the failure rather than
+waiting for it. The list responder is gated so every refetch after the first hangs, then
+`resetQueries` empties the board's query while the 409 prompt is open. The board is
+therefore unmounted for exactly as long as the test wants, with no reliance on scheduling.
+It asserts the skeleton is showing and the board is gone - so the reproduction cannot
+silently stop reproducing - then that the dialog is still present with the right document,
+and that overwrite still sends the original `{ status: 'interview' }`.
+
+- **`resetQueries`, not `removeQueries`.** Removing a query that still has a mounted observer
+  drops the cache entry but leaves that observer rendering its last result, so the component
+  never reaches its loading branch and the test would have quietly proved nothing. Found by
+  probing the cache directly rather than assuming.
+- **Checked against the unfixed code.** All three cases fail on the pre-fix components with
+  "Unable to find role=dialog": the prompt is simply gone. They pass on the fixed ones.
+
+### Audit of the same pattern elsewhere
+
+- `ApplicationsPage` inline status dropdown and bulk bar: **safe.** `useChangeStatus` and
+  `useBulkAction` are called at page level, above the conditional, and neither owns a dialog
+  - failures go to a toast rendered globally.
+- `ApplicationsPage` edit modal: **same class, real.** `const editing = applications.find(...)`
+  with `isOpen={editing !== undefined}`, so if the list blinks empty the modal closes
+  mid-edit, taking the in-progress form and its own `VersionConflictDialog` with it.
+- `ApplicationDetailPage`: **same class, lower likelihood.** `if (query.isPending) return
+<DetailSkeleton/>` sits above `ApplicationFormModal`, `InterviewFormModal` and the delete
+  `ConfirmDialog`, so all three unmount if that query ever returns to pending.
+
+Both were reported rather than fixed, to keep this change to the defect it was scoped to.
+
+### Still open
+
+`dragAndDrop.test.tsx`'s overwrite case remains intermittent, and the required twenty-run
+clean loop was **not** achieved. It is not this defect: the case passes 8 runs out of 8 on
+its own and fails about three in four when the two cases before it run first - both of which
+end with the modal still open. At the failure the clicked button is attached, enabled and
+correctly labelled, yet no React handler runs and no dialog callback fires, which is the
+signature of a node belonging to a tree React has already unmounted. Sweeping
+`document.body` in `resetClientState` did not help and was reverted rather than left in place
+claiming a fix it did not deliver.

@@ -501,6 +501,19 @@ _Anything intentionally postponed, with the reason._
   installed on this machine yet, so Phase 1 proved the stack with HTTP-level checks against the
   compose containers instead. Phase 15 installs the Playwright browsers and covers this properly.
 - Production Docker image stages and the split-host deployment configuration are Phase 16 work.
+- **FIXED before Phase 11 began — the board's version-conflict dialog vanishing mid-interaction.**
+  The mutation, the conflict state, the pending drop and the dialog were hoisted out of
+  `KanbanBoard` into `BoardPage`, which owns the query and so cannot be unmounted by it;
+  `KanbanBoard` is now presentational with an `onMove` callback.
+  `client/tests/board/conflictDialogSurvival.test.tsx` reproduces the failure deterministically —
+  a gated list responder plus `resetQueries` while the prompt is open — and all three of its cases
+  fail against the pre-fix components with "Unable to find role=dialog" and pass against the fixed
+  ones. The audit found the same pattern in `ApplicationsPage`'s edit modal (`editing` derived from
+  the list, so a blink closes it mid-edit) and in `ApplicationDetailPage`'s early return above its
+  three modals; both are reported, neither is fixed. **`dragAndDrop.test.tsx`'s overwrite case is
+  still intermittent and the required 20-run clean loop was not achieved** — it passes 8/8 alone and
+  fails ~3-in-4 when the two cases before it run first, which is test isolation, not this defect.
+  Details in `DECISIONS.md`. The original description follows.
 - **The board's version-conflict dialog can vanish mid-interaction, discarding the user's move.**
   Found by the first real CI run in Phase 10. `BoardPage` renders `KanbanBoard` only while the query
   has data, and the optimistic write plus rollback leaves that query briefly with none, so the board

@@ -10,7 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { AuthSession } from '@/types/user';
 
 /** Retries and caching would hide the very ordering these tests assert on. */
-function createTestQueryClient(): QueryClient {
+export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
@@ -21,14 +21,19 @@ function createTestQueryClient(): QueryClient {
 
 interface RenderOptions {
   route?: string;
+  /**
+   * Supply the client when the test needs to drive the cache itself — removing a
+   * query to force a component into its loading branch, for instance, which is
+   * how the board's unmount-mid-mutation case is reproduced without leaning on
+   * timing. Omit it and each render gets its own fresh client, as before.
+   */
+  queryClient?: QueryClient;
 }
 
 export function renderWithProviders(
   ui: ReactElement,
-  { route = '/' }: RenderOptions = {},
+  { route = '/', queryClient = createTestQueryClient() }: RenderOptions = {},
 ): RenderResult {
-  const queryClient = createTestQueryClient();
-
   function Wrapper({ children }: { children: ReactNode }): JSX.Element {
     return (
       <QueryClientProvider client={queryClient}>
