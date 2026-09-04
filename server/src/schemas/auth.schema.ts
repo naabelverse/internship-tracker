@@ -51,6 +51,7 @@ export const updateMeSchema = z
     theme: z.enum(THEMES).optional(),
     timezone: ianaTimezone.optional(),
     emailRemindersEnabled: z.boolean().optional(),
+    weeklySummaryEnabled: z.boolean().optional(),
     email: email.optional(),
   })
   .strict()

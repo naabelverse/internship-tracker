@@ -4,6 +4,7 @@ import { components } from '@/docs/components';
 import { analyticsPaths } from '@/docs/paths/analytics';
 import { applicationPaths } from '@/docs/paths/applications';
 import { accountLifecyclePaths, authPaths } from '@/docs/paths/auth';
+import { emailPaths } from '@/docs/paths/email';
 import { metaPaths } from '@/docs/paths/meta';
 
 /**
@@ -28,6 +29,7 @@ export const openApiDocument = {
     { name: 'Interviews', description: 'Interviews embedded in an application' },
     { name: 'Analytics', description: 'Aggregations behind the dashboard' },
     { name: 'Calendar and reminders', description: 'Upcoming work and nudges' },
+    { name: 'Email', description: 'Unsubscribing from non-transactional mail' },
   ],
   components,
   security: [{ bearerAuth: [] }],
@@ -37,5 +39,6 @@ export const openApiDocument = {
     ...accountLifecyclePaths,
     ...applicationPaths,
     ...analyticsPaths,
+    ...emailPaths,
   },
 };

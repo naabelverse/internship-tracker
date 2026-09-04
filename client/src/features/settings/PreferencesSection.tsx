@@ -29,11 +29,12 @@ function toValues(user: User): PreferencesValues {
     weeklyGoal: String(user.weeklyGoal),
     timezone: user.timezone,
     emailRemindersEnabled: user.emailRemindersEnabled,
+    weeklySummaryEnabled: user.weeklySummaryEnabled,
   };
 }
 
 /**
- * Theme, weekly goal, reminder emails and timezone.
+ * Theme, weekly goal, timezone, and the two optional email streams.
  *
  * The timezone is the field SPEC section 7 builds the day boundaries on. It is
  * captured from the browser at registration and this is the first place it can
@@ -63,6 +64,7 @@ export function PreferencesSection({ user }: PreferencesSectionProps): JSX.Eleme
         weeklyGoal: Number(values.weeklyGoal),
         timezone: values.timezone,
         emailRemindersEnabled: values.emailRemindersEnabled,
+        weeklySummaryEnabled: values.weeklySummaryEnabled,
       },
       {
         onSuccess: (saved) => {
@@ -127,21 +129,45 @@ export function PreferencesSection({ user }: PreferencesSectionProps): JSX.Eleme
         )}
       </div>
 
-      <Controller
-        control={form.control}
-        name="emailRemindersEnabled"
-        render={({ field }) => (
-          <Checkbox
-            label="Email me reminders about upcoming deadlines and interviews"
-            checked={field.value}
-            onChange={(event) => {
-              field.onChange(event.target.checked);
-            }}
-            onBlur={field.onBlur}
-            ref={field.ref}
-          />
-        )}
-      />
+      <div className="space-y-3">
+        <Controller
+          control={form.control}
+          name="emailRemindersEnabled"
+          render={({ field }) => (
+            <Checkbox
+              label="Email me reminders about upcoming deadlines and interviews"
+              checked={field.value}
+              onChange={(event) => {
+                field.onChange(event.target.checked);
+              }}
+              onBlur={field.onBlur}
+              ref={field.ref}
+            />
+          )}
+        />
+
+        <Controller
+          control={form.control}
+          name="weeklySummaryEnabled"
+          render={({ field }) => (
+            <Checkbox
+              label="Email me a weekly summary of my stats"
+              checked={field.value}
+              onChange={(event) => {
+                field.onChange(event.target.checked);
+              }}
+              onBlur={field.onBlur}
+              ref={field.ref}
+            />
+          )}
+        />
+
+        <p className="text-xs text-content-subtle">
+          Both arrive in the morning in your timezone, and every one carries an unsubscribe link.
+          Emails about your account — verifying your address, password changes, closing the account
+          — are sent either way.
+        </p>
+      </div>
     </SettingsSection>
   );
 }

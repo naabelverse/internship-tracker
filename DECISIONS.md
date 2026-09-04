@@ -1338,3 +1338,88 @@ The half deferred when the phase was split. Closes Phase 11.
 - **Device labels are matched crudely on purpose.** A UA parsing dependency for a decoration
   nobody makes a decision on is not worth the bundle; the IP and last-used time are what identify
   a device to its owner, and "this device" is authoritative.
+
+## Phase 12 - email system
+
+- **Phase 11's mailer was a seam, not a system, and was rewritten rather than extended.** It had
+  no transport at all - `nodemailer` was not a dependency until this phase - no HTML, no layout,
+  no retry, no attempt count, and no preference check. What it did have, and what was kept, are
+  the two properties that were already security-shaped: a send never throws into the request, and
+  bodies are printed only outside production. `queuedMail`, `clearMailQueue` and `MailKind` kept
+  their names and their fields specifically so the six Phase 11 test files still compile and still
+  assert what they always asserted.
+- **`changePassword` was sending nothing.** SPEC lists "password changed" as a template, and
+  Phase 11 sent it only after a _reset_. The deliberate change from Settings - the one an attacker
+  holding a live session would make - was silent. That is now sent too, with `via: 'settings'`
+  wording that differs from the reset wording, because the two are different events to the reader.
+- **Account closure is treated as security-critical.** SPEC section 13's parenthetical names
+  "verification, reset, password changed"; the template list a line above it includes account
+  deletion among the transactional four. Suppressing the only notice that an account was destroyed
+  because a _reminder_ preference was off would hide precisely the event a person whose account was
+  taken over most needs to see. It always sends.
+- **One block model renders both bodies.** Templates emit `MailBlock[]`; the layout projects that
+  list to HTML and to text. The plain-text alternative therefore cannot drift from the HTML,
+  because it is not written separately - a test asserts every link and every digest line appears
+  in both. Only the registry calls `renderHtml`, so no template can grow its own masthead.
+- **The logo is type, not an image.** There is no hosted logo asset, and mail clients block remote
+  images by default; a broken image in the masthead is worse than none. `APP_LOGO_MARK` draws a
+  two-letter badge with a background colour instead. `APP_PRODUCT_NAME` was added beside the
+  existing `APP_NAME`, which is the service identifier used in logs and OpenAPI, not a product name.
+- **`MAIL_TRANSPORT` is optional rather than defaulted.** Unset means "decide from whether
+  `SMTP_HOST` is present", which is what makes zero email configuration a working state instead of
+  a boot failure. The one combination that fails validation is `MAIL_TRANSPORT=smtp` with no host,
+  because that is someone believing mail is being delivered when none of it can be.
+- **The console transport still builds the real message.** It is nodemailer's `jsonTransport`, not
+  a `console.log`, so the MIME build - both alternatives, the headers, the encoding - runs on the
+  no-SMTP path exactly as it does on the SMTP one. A message that would fail to build fails in
+  development rather than only once there is a production relay to discover it on.
+- **The retry backoff is an injected seam, and the tests assert the delays rather than measure
+  them.** `MailQueue` takes `delay`, so `mail.queue.test.ts` asserts it _asked_ to wait 1000ms then
+  2000ms. Given this project's history with timing-sensitive tests, there is deliberately no wall
+  clock to run slow and no timer to fire late under load.
+- **A reminder batch is claimed before it is mailed, and the weekly summary is stamped before it is
+  sent.** Both are at-most-once on purpose: the queue already gives a transient failure three
+  attempts, and a duplicated deadline reminder is worse than a missed one. `lastWeeklySummaryAt`
+  exists so a redeploy inside the send hour cannot mail everyone in that zone twice; six days
+  rather than seven, so the gap survives a daylight saving shift without skipping a week.
+- **The weekly summary is a second task on Phase 4's cron, not a second scheduler.** Same
+  `'0 * * * *'` UTC expression, same `startScheduledJobs`, and it imports `isDigestHourIn` from
+  `reminderJob` rather than copying it - that function is the one place daylight saving is handled,
+  and a second copy is a second chance to get it wrong. It is a separate task because the two
+  select on different things: the sweep on `Reminder` documents and `emailRemindersEnabled`, the
+  summary on the calendar and `weeklySummaryEnabled`.
+- **The summary reports the week that ended, by shifting `now` back one millisecond.** Passing
+  `startOfLocalWeek(now) - 1ms` to Phase 8's `getSummary` puts the 7-day period, the weekly goal
+  window and the streak all inside the reported week at once, with no per-figure special case. The
+  numbers come from the same pipeline the dashboard reads; a summary that disagreed with the
+  dashboard would be worse than no summary.
+- **Templates never see an instant.** Every `dueAt` is rendered to a label in the recipient's zone
+  by the job that builds the payload, so there is no second place for a UTC assumption to reappear.
+  The test proves it with one shared instant read as `1 Jan, 08:00` in Kuala Lumpur and
+  `31 Dec, 16:00` in Los Angeles - a different hour and a different day.
+- **The unsubscribe link is a real endpoint, which is slightly more than SPEC asked for.** SPEC
+  section 13 says "unsubscribe/preferences link". A link to `/settings` sits behind a sign-in wall,
+  and the person most wanting out is the one least willing to log in, so that would be a
+  preferences link wearing an unsubscribe label. `GET|POST /api/v1/email/unsubscribe` takes an
+  HMAC-signed token instead. It is the only unauthenticated write in the API, and it is safe to be:
+  the token is the credential, and the single field it reaches can only be set to false.
+- **The unsubscribe token never expires and is keyed separately from the JWTs.** An unsubscribe
+  link has to work for as long as the message carrying it exists, and there is nothing to protect
+  by ageing it out. Its key is derived from `JWT_ACCESS_SECRET` through a fixed label rather than
+  being that secret, so an unsubscribe token can never be confused with one that grants access.
+- **The confirmation page is served by the API, not the client.** The whole point is that it works
+  with no session; redirecting to a protected route would bounce the reader into a sign-in form
+  immediately after they asked to stop hearing from us. It is a small self-contained page, so
+  Phase 13 needs no new client route for it.
+- **A well-formed token for an account that is gone answers 200, same as a real one.** Reporting
+  404 would turn the unsubscribe link into an account-existence oracle. The log records the truth
+  via `matchedCount`.
+- **`weeklySummaryEnabled` defaults to false.** SPEC calls the weekly summary opt-in, and a default
+  of true would opt in every account that already exists. The two optional streams are independent
+  preferences, so turning off reminders does not silently also cancel the summary - proved both
+  ways in `mail.preferences.test.ts`.
+- **The server mirrors three client route paths rather than importing them.** The workspaces share
+  no code and the server build has its own `rootDir`. `MAIL_LINK_PATHS` holds the three paths email
+  links at, and a test reads `client/src/routes/paths.ts` as text to assert the mirror still
+  matches - the same technique `app-info.test.ts` already uses against `package.json`. A client
+  route rename cannot quietly turn every button in every email into a 404.

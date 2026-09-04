@@ -3,6 +3,7 @@ import { env } from '@/config/env';
 import { logger } from '@/config/logger';
 import { startPurgeCron } from '@/jobs/purgeDeletedUsersJob';
 import { startReminderCron } from '@/jobs/reminderJob';
+import { startWeeklySummaryCron } from '@/jobs/weeklySummaryJob';
 
 const tasks: ScheduledTask[] = [];
 
@@ -13,6 +14,7 @@ export function startScheduledJobs(): void {
   }
 
   tasks.push(startReminderCron());
+  tasks.push(startWeeklySummaryCron());
   tasks.push(startPurgeCron());
   logger.info('Scheduled jobs started', { count: tasks.length });
 }

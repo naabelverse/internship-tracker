@@ -26,6 +26,9 @@ export function makeUser(overrides: Partial<User> = {}): User {
     theme: 'system',
     timezone: 'Asia/Kuala_Lumpur',
     emailRemindersEnabled: true,
+    // Off by default, matching the server: the weekly summary is opt-in, so a
+    // factory that turned it on would be describing an account nobody has.
+    weeklySummaryEnabled: false,
     // Verified by default: the ordinary account most cases are about. Left
     // unverified, every authenticated page carries Phase 11's banner - which is
     // correct behaviour, but noise in a test about something else, and its

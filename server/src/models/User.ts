@@ -23,6 +23,13 @@ export interface UserAttributes {
   theme: Theme;
   timezone: string;
   emailRemindersEnabled: boolean;
+  weeklySummaryEnabled: boolean;
+  /**
+   * When the weekly summary last went out. The job selects on a local weekday
+   * and hour, which already narrows to one tick a week; this stops a restart
+   * inside that hour from sending the same summary twice.
+   */
+  lastWeeklySummaryAt?: Date;
   lastLoginAt?: Date;
   emailVerified: boolean;
   emailVerificationTokenHash?: string;
@@ -80,6 +87,10 @@ const userSchema = new Schema<UserAttributes, UserModelType, UserMethods>(
     theme: { type: String, enum: THEMES, default: 'system' },
     timezone: { type: String, default: 'UTC' },
     emailRemindersEnabled: { type: Boolean, default: true },
+    // Opt-in, so the default has to be false: SPEC section 13 calls the weekly
+    // summary opt-in, and a default of true would opt every existing account in.
+    weeklySummaryEnabled: { type: Boolean, default: false },
+    lastWeeklySummaryAt: { type: Date },
     lastLoginAt: { type: Date },
     emailVerified: { type: Boolean, default: false },
     emailVerificationTokenHash: { type: String, select: false },

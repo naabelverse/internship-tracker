@@ -64,6 +64,7 @@ export const preferencesSchema = z.object({
     .refine((value) => Number(value) <= 100, 'Use 100 or fewer'),
   timezone: z.string().min(1, 'Choose a timezone'),
   emailRemindersEnabled: z.boolean(),
+  weeklySummaryEnabled: z.boolean(),
 });
 
 export type ProfileValues = z.infer<typeof profileSchema>;

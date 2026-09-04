@@ -143,7 +143,9 @@ describe('settings preferences', () => {
     await user.clear(goal);
     await user.type(goal, '8');
     await user.selectOptions(screen.getByLabelText('Timezone'), 'America/Los_Angeles');
-    await user.click(screen.getByRole('checkbox'));
+    // Named rather than positional: Phase 12 added the weekly summary opt-in
+    // beside this one, so a bare checkbox query is now ambiguous.
+    await user.click(screen.getByRole('checkbox', { name: /reminders about upcoming deadlines/i }));
     await user.click(screen.getByRole('button', { name: 'Save preferences' }));
 
     await waitFor(() => {
@@ -154,7 +156,26 @@ describe('settings preferences', () => {
       weeklyGoal: 8,
       timezone: 'America/Los_Angeles',
       emailRemindersEnabled: false,
+      // Untouched by this case, and sent as it stands: the two streams are
+      // independent preferences saved by one form.
+      weeklySummaryEnabled: false,
     });
+  });
+
+  it('sends the weekly summary opt-in independently of the reminder flag', async () => {
+    const user = userEvent.setup();
+    const api = renderSettings({ [PATCH_ME]: saved() });
+
+    await user.click(await screen.findByRole('checkbox', { name: /weekly summary of my stats/i }));
+    await user.click(screen.getByRole('button', { name: 'Save preferences' }));
+
+    await waitFor(() => {
+      expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(1);
+    });
+
+    const body = api.callsTo('PATCH', '/auth/me')[0].data as Record<string, unknown>;
+    expect(body.weeklySummaryEnabled).toBe(true);
+    expect(body.emailRemindersEnabled).toBe(true);
   });
 
   it('keeps the account timezone in the list even though it is unusual', async () => {

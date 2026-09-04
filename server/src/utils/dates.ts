@@ -52,6 +52,34 @@ export function previousDayKey(dayKey: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * A due time as the recipient's own clock shows it, e.g. `Fri 11 Sep, 09:00`.
+ *
+ * Emails are the one place a stored UTC instant is read by a person rather than
+ * by a query, so the formatting happens here, once, against their zone — never
+ * in a template, which has no zone to format against.
+ */
+export function localDateTimeLabel(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(instant);
+}
+
+/** A calendar day without the time, e.g. `11 Sep`. Used for week ranges. */
+export function localDateLabel(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    day: 'numeric',
+    month: 'short',
+  }).format(instant);
+}
+
 /** ISO weekday in the given zone, 1 for Monday through 7 for Sunday. */
 export function localWeekday(instant: Date, timeZone: string): number {
   const parts = partsFor(instant, timeZone, { weekday: 'short' });

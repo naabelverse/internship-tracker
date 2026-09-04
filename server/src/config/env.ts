@@ -52,8 +52,30 @@ const baseSchema = z.object({
   DEMO_EMAIL: z.string().email().default('demo@tracker.dev'),
   DEMO_PASSWORD: z.string().min(8).default('Demo@1234'),
 
+  /**
+   * Mail. Nodemailer speaks SMTP, and Resend, SendGrid and Mailgun all publish
+   * an SMTP endpoint, so this one set of variables covers every provider without
+   * a provider-specific SDK.
+   *
+   * `MAIL_TRANSPORT` is deliberately optional rather than defaulted: leaving it
+   * unset means "decide from whether SMTP_HOST is present", which is what lets
+   * the app boot and register with zero email configuration, per SPEC section 13.
+   */
+  MAIL_FROM: z.string().min(1).default('Internship Tracker <no-reply@localhost>'),
+  MAIL_TRANSPORT: z.enum(['smtp', 'console']).optional(),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_USER: z.string().min(1).optional(),
+  SMTP_PASS: z.string().min(1).optional(),
+
   /** Local hour at which a user receives their reminder digest. */
   REMINDER_DIGEST_HOUR: z.coerce.number().int().min(0).max(23).default(8),
+  /**
+   * ISO weekday, 1 for Monday through 7 for Sunday, on whose local morning the
+   * weekly summary goes out. The hour is `REMINDER_DIGEST_HOUR`: a user has one
+   * opinion about when mail from us should arrive, not two.
+   */
+  WEEKLY_SUMMARY_WEEKDAY: z.coerce.number().int().min(1).max(7).default(1),
   ENABLE_CRON: z.preprocess(
     (value) => (value === undefined ? undefined : value !== 'false' && value !== false),
     z.boolean().default(true),
@@ -137,6 +159,23 @@ export const envSchemaWithStorage = envSchema.superRefine((value, ctx) => {
   }
 });
 
+/**
+ * Asking for SMTP without a host is the one mail misconfiguration worth refusing
+ * to boot over. Every other combination has a defensible reading — no host at
+ * all means the console transport, which SPEC section 13 requires to work — but
+ * `MAIL_TRANSPORT=smtp` with nothing to connect to is someone believing mail is
+ * being delivered when none of it can be.
+ */
+export const envSchemaWithMail = envSchemaWithStorage.superRefine((value, ctx) => {
+  if (value.MAIL_TRANSPORT === 'smtp' && !value.SMTP_HOST) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['SMTP_HOST'],
+      message: 'is required when MAIL_TRANSPORT is smtp',
+    });
+  }
+});
+
 export type Env = z.infer<typeof envSchema>;
 
 /**
@@ -164,7 +203,7 @@ function withoutBlanks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
  * in a single pass instead of one variable per restart.
  */
 export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchemaWithStorage.safeParse(withoutBlanks(source));
+  const result = envSchemaWithMail.safeParse(withoutBlanks(source));
 
   if (!result.success) {
     const details = result.error.issues

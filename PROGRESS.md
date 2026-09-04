@@ -2,9 +2,9 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 11 complete
-**Current phase:** 12
-**Last updated:** 2026-09-04
+**Status:** Phase 12 complete
+**Current phase:** 13
+**Last updated:** 2026-09-05
 
 ---
 
@@ -512,10 +512,44 @@ Notes:
   and the typed-confirmation label and its error message were identical text.
 
 ## Phase 12 — Email system
-- [ ] Provider-agnostic transport + console fallback (app boots with no SMTP)
-- [ ] All six templates, HTML + plain text
-- [ ] Retry queue; a failed send never fails the HTTP request
-- [ ] Preferences respected except for security mail
+- [x] Provider-agnostic transport + console fallback (app boots with no SMTP)
+- [x] All six templates, HTML + plain text
+- [x] Retry queue; a failed send never fails the HTTP request
+- [x] Preferences respected except for security mail
+- [x] Unsubscribe link on the two non-transactional emails
+- [x] Tests green
+
+Notes:
+- **Phase 11's `mailer.service.ts` was a seam, not a mail system, and was rewritten.** It had no
+  transport at all — `nodemailer` was not a dependency before this phase — no HTML, no shared
+  layout, no retry, and no preference check. Its two real properties were kept: a send never
+  throws into the request, and bodies print only outside production. `queuedMail`,
+  `clearMailQueue` and `MailKind` kept their names and fields so all six Phase 11 test files still
+  compile and still assert what they did before.
+- **Templates 1–4 existed as bare `text` strings and were upgraded, not accepted.** Each is now
+  responsive HTML plus a plain-text alternative through the shared layout. Templates 5 and 6 are
+  new.
+- **A missing send was found and fixed: `changePassword` mailed nothing.** Phase 11 sent
+  "password changed" only after a *reset*, so the deliberate change from Settings was silent.
+- **The digest is delivered from inside Phase 4's existing sweep**, after the same
+  `selectDueReminders` that Phase 4's timezone test already covers — not on a new path.
+  `mail.digestTimezone.test.ts` reuses that test's two-zone fixture and proves the same instant
+  renders as `1 Jan, 08:00` in Kuala Lumpur and `31 Dec, 16:00` in Los Angeles.
+- **The weekly summary is a second task on the same cron**, on the same `'0 * * * *'` UTC
+  expression and registered by the same `startScheduledJobs`. It imports `isDigestHourIn` from
+  `reminderJob` rather than copying it, and adds only a local-weekday predicate. Cadence: Monday
+  (`WEEKLY_SUMMARY_WEEKDAY`) at `REMINDER_DIGEST_HOUR` local, de-duplicated by
+  `lastWeeklySummaryAt`.
+- **The unsubscribe link is a signed endpoint, slightly beyond the "link" SPEC asked for.** A link
+  to `/settings` sits behind a sign-in wall. `GET|POST /api/v1/email/unsubscribe` takes an
+  HMAC-signed token, needs no session, and can only switch a preference off. Recorded in
+  `DECISIONS.md`.
+- **New user fields:** `weeklySummaryEnabled` (opt-in, defaults false) and `lastWeeklySummaryAt`.
+  Both additive with defaults, so no migration. The Settings preferences section gained the
+  opt-in checkbox.
+- Nothing is deferred. `MAIL_FROM`, `MAIL_TRANSPORT`, `SMTP_*` and `WEEKLY_SUMMARY_WEEKDAY` are
+  documented in `server/.env.example`; all are optional, and the app boots and registers with
+  none of them set.
 
 ## Phase 13 — Public surface
 - [ ] Landing page (hero, features, screenshots, FAQ, footer)

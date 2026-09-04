@@ -4,10 +4,16 @@ import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
 import { startScheduledJobs, stopScheduledJobs } from '@/jobs';
+import { initMailer } from '@/services/mailer.service';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 const app = createApp();
+
+// Resolves and announces the transport now rather than on the first send, so a
+// deploy that meant to configure SMTP and did not says so in the startup log
+// instead of quietly printing every verification email to stdout.
+initMailer();
 
 const server: Server = app.listen(env.PORT, () => {
   logger.info('API listening', { port: env.PORT, environment: env.NODE_ENV });

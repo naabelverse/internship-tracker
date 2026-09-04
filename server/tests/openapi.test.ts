@@ -4,6 +4,7 @@ import analyticsRouter from '@/routes/analytics.routes';
 import applicationRouter from '@/routes/application.routes';
 import authRouter from '@/routes/auth.routes';
 import calendarRouter from '@/routes/calendar.routes';
+import emailRouter from '@/routes/email.routes';
 import fileRouter from '@/routes/file.routes';
 import healthRouter from '@/routes/health.routes';
 import apiRouter from '@/routes/index';
@@ -18,6 +19,7 @@ const MOUNTS: { prefix: string; router: Router }[] = [
   { prefix: '/api/v1/analytics', router: analyticsRouter },
   { prefix: '/api/v1/calendar', router: calendarRouter },
   { prefix: '/api/v1/reminders', router: reminderRouter },
+  { prefix: '/api/v1/email', router: emailRouter },
   { prefix: '/api/v1/files', router: fileRouter },
 ];
 

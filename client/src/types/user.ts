@@ -14,6 +14,8 @@ export interface User {
   theme: ThemePreference;
   timezone: string;
   emailRemindersEnabled: boolean;
+  /** Opt-in, so this stays false until the user asks for it in Settings. */
+  weeklySummaryEnabled: boolean;
   emailVerified: boolean;
   /**
    * An address the user has asked to move to, held until they confirm it. The

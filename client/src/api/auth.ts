@@ -46,6 +46,7 @@ export interface UpdateMePayload {
   theme?: ThemePreference;
   timezone?: string;
   emailRemindersEnabled?: boolean;
+  weeklySummaryEnabled?: boolean;
   /** Parked as `pendingEmail` by the server until it is confirmed. */
   email?: string;
 }

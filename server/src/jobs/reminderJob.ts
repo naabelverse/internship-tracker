@@ -1,14 +1,25 @@
 import cron, { type ScheduledTask } from 'node-cron';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
+import type { DigestItem } from '@/mail/types';
+import { Application } from '@/models/Application';
 import { Reminder, type ReminderDocument } from '@/models/Reminder';
 import { User } from '@/models/User';
-import { localHour } from '@/utils/dates';
+import { mailRecipientFor, sendMail } from '@/services/mailer.service';
+import { localDateTimeLabel, localHour } from '@/utils/dates';
 
 /** Hourly, on the hour, in UTC. The per-user local hour is resolved inside the sweep. */
 export const REMINDER_CRON_EXPRESSION = '0 * * * *';
 
-function isDigestHourIn(timeZone: string, now: Date): boolean {
+/**
+ * Whether this zone's wall clock currently reads the digest hour.
+ *
+ * Exported because the weekly summary job asks exactly the same question.
+ * Sharing the function rather than the idea is deliberate: this is the one place
+ * daylight saving is handled correctly, and a second copy would be a second
+ * chance to get it wrong.
+ */
+export function isDigestHourIn(timeZone: string, now: Date): boolean {
   try {
     return localHour(now, timeZone) === env.REMINDER_DIGEST_HOUR;
   } catch {
@@ -63,9 +74,67 @@ export async function selectDueReminders(now: Date): Promise<ReminderDocument[]>
 }
 
 /**
- * Selects and claims the current batch. Delivery itself is Phase 12: this marks
- * the batch as sent and records it, and the mail queue replaces the log sink
- * once a transport exists.
+ * The company and role behind each reminder, so a digest line reads as more than
+ * a bare title. One query for the whole batch rather than a populate per row.
+ */
+async function contextByApplication(due: ReminderDocument[]): Promise<Map<string, string>> {
+  const ids = due
+    .map((reminder) => reminder.application)
+    .filter((id): id is NonNullable<typeof id> => id !== undefined && id !== null);
+
+  if (ids.length === 0) return new Map();
+
+  const applications = await Application.find({ _id: { $in: ids } }).select('company role');
+
+  return new Map(
+    applications.map((application) => [
+      application._id.toString(),
+      `${application.company} — ${application.role}`,
+    ]),
+  );
+}
+
+/**
+ * Turns the claimed batch into one digest per recipient.
+ *
+ * Every `dueAt` is rendered against that user's own timezone here, which is the
+ * same zone the batch was selected by. The template never sees an instant, so
+ * the digest cannot drift back onto a server clock.
+ */
+async function deliverDigests(due: ReminderDocument[]): Promise<void> {
+  const recipients = await User.find({
+    _id: { $in: [...new Set(due.map((reminder) => reminder.user.toString()))] },
+    deletedAt: null,
+  });
+
+  const context = await contextByApplication(due);
+
+  for (const user of recipients) {
+    const items: DigestItem[] = due
+      .filter((reminder) => reminder.user.toString() === user._id.toString())
+      .map((reminder) => ({
+        title: reminder.title,
+        dueLabel: localDateTimeLabel(reminder.dueAt, user.timezone),
+        context: reminder.application ? context.get(reminder.application.toString()) : undefined,
+      }));
+
+    if (items.length === 0) continue;
+
+    sendMail({
+      to: user.email,
+      recipient: mailRecipientFor(user),
+      message: { kind: 'reminder_digest', data: { name: user.name, items } },
+    });
+  }
+}
+
+/**
+ * Selects the current batch, claims it, and mails it.
+ *
+ * The batch is marked sent before delivery is attempted, which makes this
+ * at-most-once on purpose: the retry queue already gives a transient failure
+ * three attempts, and a reminder delivered twice is worse than one missed. The
+ * claim is also what stops the next hourly tick re-sending the same batch.
  */
 export async function runReminderSweep(now: Date = new Date()): Promise<ReminderDocument[]> {
   const due = await selectDueReminders(now);
@@ -82,6 +151,8 @@ export async function runReminderSweep(now: Date = new Date()): Promise<Reminder
     at: now.toISOString(),
     digestHour: env.REMINDER_DIGEST_HOUR,
   });
+
+  await deliverDigests(due);
 
   return due;
 }

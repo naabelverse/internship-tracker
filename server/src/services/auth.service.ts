@@ -15,6 +15,7 @@ import type {
   UpdateMeInput,
 } from '@/schemas/auth.schema';
 import { issueVerification } from '@/services/accountLifecycle.service';
+import { sendMail } from '@/services/mailer.service';
 import {
   createSession,
   revokeAllForUser,
@@ -185,6 +186,13 @@ export async function changePassword(
   await user.save();
 
   await revokeAllForUser(user._id, 'password_changed');
+
+  // Phase 11 sent this only after a reset, which left the deliberate change —
+  // the one an attacker holding a live session would make — entirely silent.
+  sendMail({
+    to: user.email,
+    message: { kind: 'password_changed', data: { name: user.name, via: 'settings' } },
+  });
 
   const session = await createSession(user._id, context);
 

@@ -1,6 +1,7 @@
 import type { Types } from 'mongoose';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
+import { PURGE_AFTER_MS } from '@/jobs/purgeDeletedUsersJob';
 import { User, type UserDocument } from '@/models/User';
 import { sendMail } from '@/services/mailer.service';
 import { revokeAllForUser } from '@/services/token.service';
@@ -14,6 +15,10 @@ import {
 
 /** SPEC section 5: unverified accounts keep full access for this long. */
 export const VERIFICATION_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const MS_PER_HOUR = 60 * 60 * 1000;
+const MS_PER_MINUTE = 60 * 1000;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 function verificationLink(token: string): string {
   return `${env.APP_URL}/verify-email?token=${token}`;
@@ -36,9 +41,17 @@ export function issueVerification(user: UserDocument, address: string): void {
 
   sendMail({
     to: address,
-    kind: 'verify_email',
-    subject: 'Confirm your email address',
-    text: `Confirm your email address to finish setting up your account:\n\n${verificationLink(token)}\n\nThe link works once and expires in 24 hours.`,
+    message: {
+      kind: 'verify_email',
+      data: {
+        name: user.name,
+        verifyUrl: verificationLink(token),
+        expiresInHours: EMAIL_VERIFICATION_TTL_MS / MS_PER_HOUR,
+        // A pending address means this is an email change, not a new account, so
+        // the message is a confirmation rather than a welcome.
+        isNewAccount: !user.pendingEmail,
+      },
+    },
   });
 }
 
@@ -110,9 +123,14 @@ export async function startPasswordReset(email: string): Promise<void> {
 
   sendMail({
     to: user.email,
-    kind: 'password_reset',
-    subject: 'Reset your password',
-    text: `Someone asked to reset the password on your account. If it was you, use this link:\n\n${resetLink(token)}\n\nThe link works once and expires in 30 minutes. If it was not you, nothing has changed and you can ignore this message.`,
+    message: {
+      kind: 'password_reset',
+      data: {
+        name: user.name,
+        resetUrl: resetLink(token),
+        expiresInMinutes: PASSWORD_RESET_TTL_MS / MS_PER_MINUTE,
+      },
+    },
   });
 }
 
@@ -147,9 +165,7 @@ export async function resetPassword(token: string, password: string): Promise<Us
 
   sendMail({
     to: user.email,
-    kind: 'password_changed',
-    subject: 'Your password was changed',
-    text: 'The password on your account was just changed, and every signed in device has been signed out.\n\nIf this was not you, reset your password immediately and contact support.',
+    message: { kind: 'password_changed', data: { name: user.name, via: 'reset' } },
   });
 
   return user;
@@ -178,9 +194,10 @@ export async function deleteAccount(userId: Types.ObjectId, password: string): P
 
   sendMail({
     to: user.email,
-    kind: 'account_deleted',
-    subject: 'Your account has been closed',
-    text: 'Your account is closed and you have been signed out everywhere.\n\nYour data is kept for 30 days and then permanently removed. Contact support within that window if this was a mistake.',
+    message: {
+      kind: 'account_deleted',
+      data: { name: user.name, purgeDays: PURGE_AFTER_MS / MS_PER_DAY },
+    },
   });
 
   logger.info('Account soft deleted', { userId: user._id.toString() });
