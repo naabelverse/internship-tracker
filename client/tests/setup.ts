@@ -1,4 +1,19 @@
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/dom';
+
+/**
+ * Testing Library waits one second by default before giving up on a `waitFor`
+ * or `findBy`. That is enough on a developer machine and not enough on a loaded
+ * CI runner: the first CI run of this suite failed on the board's version
+ * conflict case, which asserts that overwriting reissues the PATCH, because the
+ * second request had not landed within the second.
+ *
+ * The budget is raised rather than the assertion relaxed — every test still
+ * proves exactly what it did before, it is just allowed more wall-clock to see
+ * it. Confirmed as the mechanism by forcing `asyncUtilTimeout: 1` locally,
+ * which reproduces the CI failure exactly while the default passes.
+ */
+configure({ asyncUtilTimeout: 5_000 });
 
 /**
  * jsdom has no layout engine and no pointer events, both of which dnd-kit needs:
