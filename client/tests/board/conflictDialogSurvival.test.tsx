@@ -132,7 +132,7 @@ describe('version conflict dialog surviving a board remount', () => {
 
     await screen.findByText('Stripe');
     // 'interview' is the fourth status, so column index 3.
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
     await openPrompt();
 
     emptyTheBoardQuery();
@@ -158,7 +158,7 @@ describe('version conflict dialog surviving a board remount', () => {
     const mock = renderBoard({ [LIST]: gatedList(refetch), [PATCH]: conflictThenAccept() });
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
     await openPrompt();
 
     emptyTheBoardQuery();
@@ -187,7 +187,7 @@ describe('version conflict dialog surviving a board remount', () => {
     const mock = renderBoard({ [LIST]: gatedList(refetch), [PATCH]: conflictThenAccept() });
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
     await openPrompt();
 
     emptyTheBoardQuery();

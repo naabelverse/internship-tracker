@@ -54,7 +54,7 @@ describe('pointer drag', () => {
 
     await screen.findByText('Stripe');
     // 'interview' is the fourth status, so column index 3.
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
 
     await waitFor(() => {
       expect(mock.callsTo('PATCH', '/applications/app-1')).toHaveLength(1);
@@ -80,7 +80,7 @@ describe('drag rollback', () => {
     await screen.findByText('Stripe');
     expect(within(columnOf('applied')).getByText('Stripe')).toBeInTheDocument();
 
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
 
     // Optimistic: the card is in the drop column while the request is in flight.
     await waitFor(() => {
@@ -105,7 +105,7 @@ describe('drag rollback', () => {
     });
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(4));
+    await pointerDrag(moveHandle(), columnCentre(4));
 
     await waitFor(() => {
       expect(within(columnOf('offer')).getByText('Stripe')).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('drag rollback', () => {
     const mock = renderBoard();
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(1));
+    await pointerDrag(moveHandle(), columnCentre(1));
 
     await waitFor(() => {
       expect(within(columnOf('applied')).getByText('Stripe')).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe('drag into a version conflict', () => {
     });
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
 
     await waitFor(() => {
       expect(within(columnOf('interview')).getByText('Stripe')).toBeInTheDocument();
@@ -173,7 +173,7 @@ describe('drag into a version conflict', () => {
     renderBoard({ [PATCH]: conflict });
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
 
     await screen.findByRole('dialog', { name: 'This was changed elsewhere' });
 
@@ -194,7 +194,7 @@ describe('drag into a version conflict', () => {
     });
 
     await screen.findByText('Stripe');
-    pointerDrag(moveHandle(), columnCentre(3));
+    await pointerDrag(moveHandle(), columnCentre(3));
 
     const prompt = await screen.findByRole('dialog', { name: 'This was changed elsewhere' });
     await userEvent.click(

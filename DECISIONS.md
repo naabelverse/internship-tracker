@@ -1020,3 +1020,76 @@ correctly labelled, yet no React handler runs and no dialog callback fires, whic
 signature of a node belonging to a tree React has already unmounted. Sweeping
 `document.body` in `resetClientState` did not help and was reverted rather than left in place
 claiming a fix it did not deliver.
+
+Closed by the section below. The unmounted-tree reading above turned out to be wrong: nothing
+was left mounted, and the two preceding cases were a coincidence rather than a cause.
+
+## Blocking fix - the board overwrite case's twenty-run flake
+
+Not a phase. The last item standing between Phase 10's CI gate and Phase 11.
+
+### Root cause
+
+`@dnd-kit/core`'s `AbstractPointerSensor` installs a **capture-phase `click` listener on the
+document that calls `stopPropagation`**, in `handleStart`, so that the click a pointer device
+emits when a drag is released cannot also activate whatever sits under the cursor. It removes
+that listener from `detach()` on a `setTimeout(..., 50)` - so the suppressor outlives the
+release by 50 ms of real time. `pointerDrag` returned synchronously at `pointerUp`, so any
+click a test made in the following 50 ms was stopped at the document before it reached its
+target or React at all.
+
+That is the whole of it. The button really is attached, enabled and correctly labelled; the
+event really is dispatched; it simply never descends past the document.
+
+### The evidence, because the previous reading was wrong
+
+- **Nothing is left over between cases.** Instrumenting `document.body` at the end of the two
+  preceding cases and again after `resetClientState` shows two children before and **zero**
+  after, with no `role="dialog"` surviving. RTL's `cleanup` was doing its job the whole time.
+  There is no cleanup gap, no missing `unmount`, no unflushed timer.
+- **The click dies above `<body>`.** Counting the click at three points - `document` capture,
+  `document.body` capture, and the button itself - gives `1 / 0 / 0` on a failing run and
+  `1 / 1 / 1` on a passing one. Only a capture listener on the document itself can produce
+  that, and dnd-kit's is the only one.
+- **The two preceding cases are a red herring, and the mechanism is timing.** Measuring the
+  gap between the release and the click: **28-36 ms with those cases running first, 45-74 ms
+  with the case run on its own.** They do not leak anything into it - they warm the module
+  graph, so the third case reaches its click sooner and lands inside the 50 ms window. That is
+  exactly why it passed 8 out of 8 alone and failed about three in four in file order.
+
+### The fix
+
+`pointerDrag` is now `async` and does not resolve until dnd-kit has stopped swallowing clicks;
+its ten call sites await it. Detection is by probe rather than by sleeping on the constant: a
+non-bubbling click dispatched at `<html>`, whose event path is therefore `document` then
+`<html>` only, which is off the path of both React roots since they live inside `<body>`. If
+the suppressor is installed the probe is stopped at the document and never reaches the target
+phase, and `waitFor` polls again.
+
+- **The probe mutates nothing, deliberately.** The first attempt appended and removed a scratch
+  node per poll. `waitFor` re-runs its callback from a MutationObserver, and those callbacks
+  are microtasks, so the probe re-armed itself faster than the event loop could ever reach the
+  50 ms macrotask it was waiting on: the suite hung outright rather than failing. Dispatching
+  at an element that is already there fixed it.
+- **Fixed in the helper, not at the one call site that hurt.** Any future test that clicks
+  after a drag would hit the identical trap, and it fails silently - a live, enabled, correctly
+  labelled node and no handler. Making the helper's contract honest ("the drag is over when
+  dnd-kit says it is") is what stops it recurring.
+- **Not a `document.body` sweep in shared setup.** That was tried in the previous session,
+  did not work, and would have hidden genuine unmount bugs in later tests. The evidence above
+  says why it could not have worked: nothing was left in the body to sweep.
+- **No product code changed and no test was weakened.** The dnd-kit behaviour is correct in a
+  browser - a hand cannot reach a button within 50 ms of letting go of a card - and the
+  overwrite case still asserts exactly what it asserted before.
+
+### The regression test
+
+`client/tests/board/dragClickSuppression.test.tsx` performs a real drag and then dispatches a
+click with no `await` in between, asserting it is delivered. It fails deterministically
+against the unfixed helper (`expected +0 to be 1`), not intermittently, so a future change that
+drops the wait is caught on the first run rather than three runs in four.
+
+### Verification
+
+`dragAndDrop.test.tsx` run 20 times consecutively: **20 passed, 0 failed.** Full client suite
+after: 25 files, 234 tests, all green.
