@@ -914,23 +914,37 @@ cards below 768, calendar days are `role="gridcell"` buttons and the popover clo
 
 ### The first real CI run
 
-- **CI went red on its first run, and on a pre-existing Phase 7 client test rather than anything this
-  phase added.** The board's version-conflict case, which asserts that "Overwrite with my changes"
-  reissues the PATCH without a version, timed out on the runner at 1157 ms against Testing Library's
-  1000 ms default for `waitFor` and `findBy`. It had always passed locally, so nine phases of green
-  local runs had never exposed it.
-- **It was diagnosed rather than patched over.** Forcing `asyncUtilTimeout: 1` locally reproduces the
-  CI failure exactly, and the test passes five times out of five at the default, which establishes the
-  budget as the mechanism rather than a logic difference between the two machines.
-- **The budget was raised; no assertion was touched.** The case still proves exactly two PATCH calls
-  and that the second body carries no `version`. Raising the wall clock a slow machine is allowed to
-  take is not the same as weakening what is asserted, which CLAUDE.md forbids.
-- **The fix is in `client/tests/setup.ts`, not at the one call site that failed.** Every `waitFor` and
-  `findBy` in the client suite is exposed to the same difference between a developer machine and a
-  loaded runner, so fixing only the one that happened to fail first would have left the rest to fail in
-  a later phase.
-- **`testTimeout` was raised to 20 s in `vite.config.ts` alongside it.** With a 5 s Testing Library
-  budget and Vitest's 5 s default ceiling, a genuinely stuck `waitFor` would be cut short by the runner
-  and report a bare timeout instead of its own assertion message.
-- **Green run: 33854468800**, all ten steps passing.
-  https://github.com/naabelverse/internship-tracker/actions/runs/33854468800
+- **CI went red on its first run, on a pre-existing Phase 6/7 client test rather than anything this
+  phase added.** The board's version-conflict case asserts that "Overwrite with my changes" reissues
+  the PATCH without a version. It had always passed locally, so nine phases of green local runs had
+  never exposed it. The workflow itself has since gone green once, run 33854468800, all ten steps
+  passing: https://github.com/naabelverse/internship-tracker/actions/runs/33854468800
+- **The first diagnosis was wrong, and is recorded here as wrong rather than quietly replaced.** It
+  looked like Testing Library's 1000 ms `waitFor` budget being too tight for a loaded runner, and
+  forcing `asyncUtilTimeout: 1` locally did reproduce the failure — which is weak evidence, because a
+  short enough timeout reproduces _any_ async failure. The budget was raised to 5 s. The next run
+  failed at 5158 ms, the full new budget, which disproved it outright: more time never helps. Both
+  timing changes were reverted.
+- **The real cause, from instrumenting the components and reproducing locally at 2 failures in 6
+  runs.** At failure the dialog is absent from the DOM and `onOverwrite` never ran at all, so the
+  click found the button but the node was detached before the event dispatched. `BoardPage` renders
+  `KanbanBoard` only under `query.isSuccess && applications.length > 0`, and a probe on the query
+  shows it repeatedly flipping to `isPending=true, data=undefined` during the optimistic write and its
+  rollback. The board is therefore torn down and rebuilt mid-interaction: `conflict` is re-set on the
+  new instance by the mutation's error handler, which is why the dialog appears at all, but
+  `pendingDrop` is lost with the old one.
+- **This is a user-facing defect, not a test artefact.** The conflict dialog can vanish before the
+  user can act on it, and `onOverwrite` silently does nothing when `pendingDrop` is null — the dialog
+  closes and the move is discarded with no error and no toast.
+- **A partial fix was tried and reverted.** `placeholderData: (previous) => previous` on the board
+  query cuts the failure rate from 2-in-6 to 1-in-15 but does not eliminate it, so it was taken back
+  out rather than left in place claiming a fix it does not deliver — the same call Phase 9 made on
+  `overflow-x-clip`.
+- **The test was left exactly as written.** It is correct, it is the only thing that found this, and
+  making it wait for the UI to settle would have hidden a real bug. CLAUDE.md forbids weakening a test
+  to make a build pass, and that applies just as much to a test that is right about something
+  inconvenient.
+- **Carried to the top of Phase 11, before any feature work.** The likely shape of the fix is to stop
+  `pendingDrop` living in a subtree the loading state can unmount: hoist it and the dialog into
+  `BoardPage`, or carry the attempted payload on the conflict object so the retry does not depend on
+  separate state surviving a remount.

@@ -46,9 +46,5 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],
     css: false,
-    // Comfortably above the 5 s Testing Library budget set in tests/setup.ts, so
-    // a genuinely stuck `waitFor` reports its own assertion rather than being
-    // cut short by the runner's default 5 s per-test ceiling.
-    testTimeout: 20_000,
   },
 });

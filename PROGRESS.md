@@ -332,7 +332,8 @@ Deferred / open:
 - [x] Seed: demo user + 60+ realistic applications, every chart populated
 - [x] Coverage target met on services and controllers
 - [x] README complete (setup, env table, endpoints, mermaid ERD, demo creds)
-- [x] CI workflow green
+- [ ] CI workflow green — workflow written and green once (run 33854468800), but not reliably: it is
+      blocked by a pre-existing Phase 6/7 board defect the first real CI run exposed. See below.
 
 Notes:
 - `npm run seed` imports `buildDemoApplications` from `demoData.service.ts`, as Phase 8 asked. The
@@ -397,20 +398,48 @@ as "the seed succeeded but the dashboard is empty".
 - The Phase 9 horizontal-scroll defect on the board route was left where it is, still carried to
   Phase 15. It was not investigated this phase.
 
-**CI is green on the real remote:** run 33854468800, all ten steps passing — install, lint, typecheck,
-server tests with coverage, client tests, build.
+**CI: the workflow is correct and has gone green on the real remote once — run 33854468800, all ten
+steps passing — but it is not reliably green, so the box above stays unticked.**
 https://github.com/naabelverse/internship-tracker/actions/runs/33854468800
 
-The first run (33853213230) went red, and on a **pre-existing Phase 7 client test**, not on anything
-this phase added: the board's version-conflict case, which asserts that "Overwrite with my changes"
-reissues the PATCH without a version. It passes locally and timed out on the runner at 1157 ms against
-Testing Library's 1000 ms default for `waitFor` and `findBy`. Diagnosed rather than patched over —
-forcing `asyncUtilTimeout: 1` locally reproduces the CI failure exactly, while the default passes 5 of
-5 — so the budget was raised in `client/tests/setup.ts` and **no assertion was touched**: the case
-still proves exactly two PATCH calls and that the second body carries no `version`. `testTimeout` in
-`vite.config.ts` was raised alongside it so a genuinely stuck `waitFor` reports its own assertion
-rather than being cut short by the runner's 5 s ceiling. That is the only latent flake the first real
-CI run exposed; it would have bitten any later phase.
+Every step this phase owns passes every time: install, lint, typecheck, server tests with coverage,
+build. What fails intermittently is one **pre-existing Phase 6/7 client test**, and it fails because
+it is catching a real product defect.
+
+The case is the board's version conflict: drag a card, the server answers 409, the "This was changed
+elsewhere" dialog opens, the user clicks "Overwrite with my changes", and the move is reissued without
+a version. On CI it intermittently sees only the first PATCH.
+
+**The first diagnosis was wrong and is recorded here as wrong.** It looked like Testing Library's
+1000 ms `waitFor` budget being too tight for a loaded runner, so the budget was raised. The next run
+failed at 5158 ms — the full new budget — which disproved it: more time never helps.
+
+What is actually happening, established by instrumenting the components and reproducing locally (2
+failures in 6 runs):
+
+- At failure the dialog is **absent from the DOM** and `onOverwrite` **never ran at all**. The click
+  found the button, but the node was detached before the event dispatched.
+- `BoardPage` renders `KanbanBoard` only under `query.isSuccess && applications.length > 0`. A probe
+  on the query shows it repeatedly flipping to `isPending=true, isSuccess=false, data=undefined`
+  during the optimistic write and its rollback.
+- So the board is torn down and rebuilt mid-interaction. `conflict` is re-set on the new instance by
+  the mutation's error handler, which is why the dialog appears at all, but `pendingDrop` — the only
+  record of what the user was trying to do — is lost with the old instance.
+
+**That is a user-facing defect, not a test artefact:** the conflict dialog can vanish on its own
+before the user can act on it, and even when it survives, `onOverwrite` silently does nothing when
+`pendingDrop` is null — the dialog closes and the move is discarded with no error and no toast.
+
+`placeholderData: (previous) => previous` on the board query was tried: it cuts the failure rate from
+2-in-6 to 1-in-15 but does not eliminate it, so **it was reverted rather than left in place claiming a
+fix it does not deliver** — the same call Phase 9 made on `overflow-x-clip`. The two timing changes
+from the wrong diagnosis were reverted too. The test was left exactly as written: it is correct, and
+it is the only thing that found this.
+
+Carried forward as the first thing to fix, before Phase 11 feature work. The likely shape of the real
+fix is to stop `pendingDrop` living in a subtree the loading state can unmount — either hoist it and
+the dialog into `BoardPage`, or carry the attempted payload on the conflict object itself so the retry
+does not depend on separate state surviving.
 
 ## Phase 11 — Account lifecycle
 - [ ] Email verification (hashed single-use token, 24 h, resend limited)
@@ -472,3 +501,10 @@ _Anything intentionally postponed, with the reason._
   installed on this machine yet, so Phase 1 proved the stack with HTTP-level checks against the
   compose containers instead. Phase 15 installs the Playwright browsers and covers this properly.
 - Production Docker image stages and the split-host deployment configuration are Phase 16 work.
+- **The board's version-conflict dialog can vanish mid-interaction, discarding the user's move.**
+  Found by the first real CI run in Phase 10. `BoardPage` renders `KanbanBoard` only while the query
+  has data, and the optimistic write plus rollback leaves that query briefly with none, so the board
+  is unmounted and rebuilt while the 409 dialog is open. `pendingDrop` dies with the old instance and
+  `onOverwrite` then silently does nothing. Reproduces locally about twice in six runs and makes CI
+  intermittently red. A partial fix (`placeholderData` on the board query) was tried and reverted for
+  only reducing it. **Fix this before starting Phase 11 feature work.**
