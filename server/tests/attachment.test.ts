@@ -66,6 +66,23 @@ describe('attachments', () => {
     expect(await getStorage().get(key)).toEqual(PDF);
   });
 
+  it('rejects an upload with no file attached', async () => {
+    const { accessToken } = await registerUser(app);
+    const application = await createApplicationFor(app, accessToken);
+
+    // Multer leaves `req.file` undefined rather than failing, so without this
+    // guard the request would reach the service and throw on a missing mimetype.
+    const response = await request(app)
+      .post(`${APPLICATIONS_BASE}/${application.id}/attachments`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('FILE_REQUIRED');
+
+    const stored = await Application.findById(application.id);
+    expect(stored?.attachments).toHaveLength(0);
+  });
+
   it('rejects a file type that is not on the allow list', async () => {
     const { accessToken } = await registerUser(app);
     const application = await createApplicationFor(app, accessToken);

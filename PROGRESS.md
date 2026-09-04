@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 9 complete
-**Current phase:** 10
+**Status:** Phase 10 complete
+**Current phase:** 11
 **Last updated:** 2026-09-04
 
 ---
@@ -329,10 +329,73 @@ Deferred / open:
   `width: 1px` as a minimum. The chart summaries now wrap the table in an `sr-only` div.
 
 ## Phase 10 — Seed, tests, docs, CI
-- [ ] Seed: demo user + 60+ realistic applications, every chart populated
-- [ ] Coverage target met on services and controllers
-- [ ] README complete (setup, env table, endpoints, mermaid ERD, demo creds)
-- [ ] CI workflow green
+- [x] Seed: demo user + 60+ realistic applications, every chart populated
+- [x] Coverage target met on services and controllers
+- [x] README complete (setup, env table, endpoints, mermaid ERD, demo creds)
+- [x] CI workflow green
+
+Notes:
+- `npm run seed` imports `buildDemoApplications` from `demoData.service.ts`, as Phase 8 asked. The
+  generator was measured against SPEC section 9's bar before being wired up rather than assumed to
+  meet it: 64 rows over 182 days across 7 calendar months, all 8 statuses, 7 sources, 15 companies,
+  10 tags on 45 rows, 23 interviews on 12 applications, 30 deadlines split 24 past / 6 upcoming, and
+  146 status-history entries over 100 distinct days. It clears the bar unchanged, so **nothing was
+  bolted on from a second source and nothing in the generator was edited**. One caveat left standing
+  rather than engineered around: no deadline lands inside the 3-day amber-chip window, which is a
+  Phase 7 affordance and not one of SPEC section 9's requirements.
+- The seed script lives in `src/scripts/`, not `src/services/`: the "every service function takes
+  `userId` first" rule cannot apply to an operation whose job is to create the user. Seeding a second
+  time is refused with a message pointing at `seed:reset`, so the dashboard's numbers cannot silently
+  double. `DEMO_EMAIL` and `DEMO_PASSWORD` became real env vars, as SPEC section 8 lists them.
+- **A real defect was found by running the documented setup instead of assuming it.** Copying
+  `server/.env.example` to `server/.env` made the server refuse to boot: dotenv reads a bare `KEY=` as
+  an empty string, and zod's `.optional()` only skips `undefined`, so all five blank `S3_*` keys
+  failed validation even with `STORAGE_DRIVER=local`. With that file present, **13 of 30 test suites
+  also failed**. `parseEnv` now treats blank as unset. The regression test parses the shipped
+  `.env.example` itself, so a later phase adding another blank optional key (`SMTP_*`, `SENTRY_DSN`)
+  cannot reintroduce it.
+
+**Coverage: the SPEC section 10 target was already met before this phase began.** The report was run
+first, as instructed: `src/services` 97.79% statements and `src/controllers` 99.09%, against a 70%
+target — no gap to close, so no tests were written to move a number. Tests were still added for
+behaviour that was genuinely unproven, each traceable to an uncovered line: weekly/monthly timeline
+bucketing (`analytics.service.ts:466`), CSV import of the stipend and contact columns our own export
+writes, the 1000-row import cap, an attachment upload with no file, and `/ready` returning 200 against
+a live database rather than only the 503 path. The Monday-bucket test was checked against a
+deliberately broken build — removing `startOfWeek` makes Mongo default to Sunday and the test fails —
+and the source was restored byte-identical. A seventh planned test was **dropped** once it turned out
+not to be a gap: `auth.service.ts`'s `USER_NOT_FOUND` throws are unreachable because `requireAuth`
+already filters `deletedAt: null`, and a test already proves that. Remaining uncovered lines are stated
+in `DECISIONS.md` rather than padded — defensive rethrows, a branch the zod refine makes unreachable,
+default parameters. The target is now enforced by a `coverageThreshold` in `jest.config.js` rather than
+observed once.
+
+**Dashboard verified in a real browser against the seeded database, with screenshots.** Chromium from
+the Playwright cache was driven via `executablePath` against the compose stack, signed in as the demo
+user at 1440 px in both themes. All five Chart.js canvases painted — checked for non-transparent
+pixels, not merely for the element existing — five populated `sr-only` data tables (14, 8, 7, 4, 10
+rows), the activity heatmap reporting "35 applications added across 31 active days in the last 12
+weeks", five real events in the upcoming panel, no empty-state copy, and no horizontal document scroll.
+Dark mode had to be driven through `prefers-color-scheme` rather than local storage, because Phase 9
+made the account preference win and the demo account is set to `system`; it then resolved
+`data-theme="dark"` with every chart repainted. No Playwright dependency was added; the committed suite
+stays Phase 15.
+
+**Docker path corrected, not just confirmed.** `docker compose exec api npm run seed -w server` first
+failed with "Missing script", because compose mounts only `server/src` and the image still held the
+pre-Phase-10 `package.json`. Rebuilt with `docker compose up --build`; the seed then worked, and the
+README documents that a manifest change needs a rebuild. Also recorded in the README: seeding from the
+host can reach a *different* MongoDB than the containers when one is installed natively, which presents
+as "the seed succeeded but the dashboard is empty".
+
+- No API drift to flag: `openapi.test.ts` already fails if a route is undocumented or a documented path
+  is stale, so the README table, the OpenAPI document and the router agree by construction.
+- The README env table documents what exists, not everything SPEC section 8 lists, and names the phase
+  each missing variable arrives in (mail 12, demo toggle and analytics 13, Sentry 14, `COOKIE_DOMAIN`
+  16). That follows the Phase 1 convention that a variable lands in `.env.example` when something
+  reads it.
+- The Phase 9 horizontal-scroll defect on the board route was left where it is, still carried to
+  Phase 15. It was not investigated this phase.
 
 ## Phase 11 — Account lifecycle
 - [ ] Email verification (hashed single-use token, 24 h, resend limited)

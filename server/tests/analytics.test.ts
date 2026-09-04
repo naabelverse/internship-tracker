@@ -336,3 +336,88 @@ describe('analytics grouping endpoints', () => {
     expect(response.status).toBe(400);
   });
 });
+
+/**
+ * The dashboard's day/week/month switch. Only `day` was covered, which left the
+ * `startOfWeek: 'monday'` branch of the `$dateTrunc` unproven — and MongoDB
+ * defaults that to Sunday, so dropping it would silently shift every weekly
+ * bucket by a day rather than fail loudly.
+ *
+ * The assertions are on the bucket boundaries themselves rather than on counts
+ * per bucket, so they hold whichever weekday the suite happens to run on.
+ */
+describe('GET /timeline granularity', () => {
+  /** Ninety days of activity, wide enough to span several weeks and months. */
+  const SPREAD = [0, 3, 9, 16, 24, 33, 45, 58, 71, 86].map((daysAgo) => ({
+    daysAgo,
+    status: 'applied' as const,
+  }));
+
+  interface TimelineBody {
+    data: { granularity: string; points: { bucket: string; created: number }[] };
+  }
+
+  const pointsFrom = (body: TimelineBody): { bucket: string; created: number }[] =>
+    body.data.points;
+
+  const totalCreated = (body: TimelineBody): number =>
+    body.data.points.reduce((sum, point) => sum + point.created, 0);
+
+  it('starts every weekly bucket on a Monday, not the Mongo default of Sunday', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, SPREAD);
+
+    const response = await get('/timeline?granularity=week&range=90d', accessToken);
+    const points = pointsFrom(response.body as TimelineBody);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.granularity).toBe('week');
+    expect(points.length).toBeGreaterThan(1);
+
+    for (const point of points) {
+      const bucket = new Date(point.bucket);
+      expect(bucket.getUTCDay()).toBe(1);
+      expect(bucket.toISOString()).toMatch(/T00:00:00\.000Z$/);
+    }
+  });
+
+  it('starts every monthly bucket on the first of the month', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, SPREAD);
+
+    const response = await get('/timeline?granularity=month&range=90d', accessToken);
+    const points = pointsFrom(response.body as TimelineBody);
+
+    expect(response.body.data.granularity).toBe('month');
+    expect(points.length).toBeGreaterThan(1);
+
+    for (const point of points) {
+      const bucket = new Date(point.bucket);
+      expect(bucket.getUTCDate()).toBe(1);
+      expect(bucket.toISOString()).toMatch(/T00:00:00\.000Z$/);
+    }
+  });
+
+  it('keeps the same rows however coarsely they are bucketed', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, SPREAD);
+
+    const [byDay, byWeek, byMonth] = await Promise.all([
+      get('/timeline?granularity=day&range=90d', accessToken),
+      get('/timeline?granularity=week&range=90d', accessToken),
+      get('/timeline?granularity=month&range=90d', accessToken),
+    ]);
+
+    // Coarser granularity must merge buckets, never drop or invent rows.
+    expect(totalCreated(byDay.body as TimelineBody)).toBe(SPREAD.length);
+    expect(totalCreated(byWeek.body as TimelineBody)).toBe(SPREAD.length);
+    expect(totalCreated(byMonth.body as TimelineBody)).toBe(SPREAD.length);
+
+    const dayCount = pointsFrom(byDay.body as TimelineBody).length;
+    const weekCount = pointsFrom(byWeek.body as TimelineBody).length;
+    const monthCount = pointsFrom(byMonth.body as TimelineBody).length;
+
+    expect(monthCount).toBeLessThanOrEqual(weekCount);
+    expect(weekCount).toBeLessThanOrEqual(dayCount);
+  });
+});

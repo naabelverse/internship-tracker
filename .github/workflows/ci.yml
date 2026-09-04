@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A second push to the same branch cancels the run already in flight, so the
+# queue never fills with builds nobody is waiting on.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # The server env loader validates at import time, so the test run needs a
+      # valid configuration before any module loads. These are CI-only constants
+      # with no production meaning; tests/setup.ts supplies the same shape
+      # locally. NODE_ENV stays unset here: jest sets it to `test` itself.
+      MONGO_URI: mongodb://127.0.0.1:27017/internship_tracker_ci
+      JWT_ACCESS_SECRET: ci-access-secret-not-used-outside-github-actions
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-used-outside-github-actions
+      LOG_LEVEL: error
+      ENABLE_CRON: 'false'
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # mongodb-memory-server downloads a mongod binary on first use. Cached it
+      # is a few seconds; uncached it dominates the run and can fail on a flaky
+      # download, which would make CI red for a reason unrelated to the code.
+      - name: Cache the in-memory MongoDB binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Coverage rather than a plain test run: SPEC section 10 asks for the
+      # report to be printed, and server/jest.config.js fails the job if the
+      # services or controllers directories drop below the target.
+      - name: Test the server with coverage
+        run: npm run test:coverage
+        env:
+          MONGOMS_DOWNLOAD_DIR: ~/.cache/mongodb-binaries
+
+      - name: Test the client
+        run: npm run test -w client
+
+      - name: Build
+        run: npm run build

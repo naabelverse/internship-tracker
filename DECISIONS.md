@@ -799,3 +799,115 @@ cards below 768, calendar days are `role="gridcell"` buttons and the popover clo
   correctly. `overflow-x-clip` on `main` did not fix it and was reverted rather than left in
   place with a comment claiming a fix it did not deliver. The root cause is not isolated; it
   is carried to Phase 15 alongside the rest of the responsive and E2E work.
+
+## Phase 10 - Seed, tests, documentation, CI
+
+### Seed data
+
+- **`npm run seed` imports `buildDemoApplications` from `demoData.service.ts` and adds no rows of its
+  own.** Phase 8 asked for this explicitly. Before wiring it up the generator was measured against
+  SPEC section 9's bar rather than assumed to meet it: 64 rows spread from 3 to 182 days ago across 7
+  calendar months, all 8 statuses, 7 sources, 15 companies, 10 roles, 10 tags on 45 rows, 23
+  interviews on 12 applications, 30 deadlines split 24 past and 6 upcoming, and 146 status-history
+  entries over 100 distinct days. It clears the bar unchanged, so nothing in it was touched.
+- **One caveat recorded rather than papered over: no generated deadline falls inside the 3-day
+  amber-chip window.** That chip is a Phase 7 affordance, not one of SPEC section 9's requirements,
+  and the upcoming panel still shows five real events, so the generator was left alone rather than
+  bent to light up one component.
+- **The script lives in `src/scripts/`, not `src/services/`.** The convention that every service
+  function takes `userId` first does not fit an operation whose job is to create the user. Keeping it
+  out of `services/` keeps that rule absolute. The logic is exported and tested; only the
+  `require.main` bootstrap is untested, the same shape as `index.ts`.
+- **Seeding twice is refused; `seed:reset` is the way to reseed.** Re-running the plain seed would
+  silently double every number on the dashboard, which looks like data rather than an error.
+- **`DEMO_EMAIL` and `DEMO_PASSWORD` became real env vars.** SPEC section 8 lists both and SPEC
+  section 12 signs the "Try the demo" visitor into the same account, so they are configuration, not
+  constants buried in a script. They are published in the README deliberately.
+- **Reset restores the profile and password as well as the rows.** An account left in an odd state by
+  manual poking comes back to a known one, which is what a reset is for.
+
+### The .env.example boot failure
+
+- **Copying `server/.env.example` to `server/.env` - the documented setup step - made the server
+  refuse to boot, and this phase fixed it.** dotenv reads a bare `KEY=` as an empty string, and zod's
+  `.optional()` only skips `undefined`, so all five blank `S3_*` keys failed validation even with
+  `STORAGE_DRIVER=local`. Nothing had caught it because the tests set env vars programmatically and
+  compose sets them inline, so nobody had run the npm path from the example file. `parseEnv` now
+  drops empty-string values before validating.
+- **The blast radius was wider than the seed script.** With `server/.env` present, 13 of 30 test
+  suites failed on the same error, so a developer following the documented setup got a broken test
+  run as well as a dead server.
+- **Blank means unset, which is also what a reader expects `KEY=` to mean.** A defaulted key falls
+  back to its default instead of failing coercion, and a required one reports "Required" rather than
+  a confusing length error.
+- **The regression test parses the shipped `.env.example` itself, not a copy of its contents.** A
+  later phase adding another blank optional key - `SMTP_*` in 12, `SENTRY_DSN` in 14 - cannot
+  reintroduce this without failing the test.
+
+### Test coverage
+
+- **The SPEC section 10 target was already met before this phase started: 97.79% statements on
+  `src/services` and 99.09% on `src/controllers`, against a 70% target.** The coverage report was run
+  first, as instructed, and it showed no gap to close. No tests were written to move a number.
+- **Tests were still added, for behaviour that was genuinely unproven**, each traceable to an
+  uncovered line: weekly and monthly timeline bucketing (`analytics.service.ts:466`), CSV import of
+  the stipend and contact columns our own export writes, the 1000-row import cap, an attachment
+  upload with no file, and `/ready` returning 200 against a live database rather than only the 503
+  path.
+- **The weekly-bucket test was checked against a deliberately broken build.** Removing
+  `startOfWeek: 'monday'` makes MongoDB default to Sunday, and the test fails with `getUTCDay()` 0
+  instead of 1. The source was restored byte-identical afterwards.
+- **A planned test was dropped after it turned out not to be a gap.** The `USER_NOT_FOUND` throws in
+  `auth.service.ts` looked uncovered, but `requireAuth` already filters `deletedAt: null` and returns
+  401 before any service runs, and a test already proves that. Those throws are unreachable
+  defence-in-depth, so an HTTP test for them was impossible and a service-level one would have
+  asserted only that Mongoose returns null.
+- **Other uncovered lines are stated rather than padded.** `application.service.ts:127` and
+  `applicationTransfer.service.ts:217` are defensive rethrows; `application.service.ts:317` is
+  unreachable through HTTP because `bulkActionSchema.refine()` rejects it at the route boundary; the
+  rest are default parameters and nullish fallbacks.
+- **The target is now enforced instead of observed once.** `server/jest.config.js` carries a
+  `coverageThreshold` on both directories, so a later phase adding an untested service fails CI.
+  Directory keys aggregate, which is the number the SPEC asks for; glob keys would apply per file.
+
+### Documentation
+
+- **The env var table documents what exists, not what SPEC section 8 lists.** Phase 1 set the
+  convention that a variable lands in `.env.example` in the phase that consumes it. The README states
+  which SPEC variables are still unimplemented and which phase each one arrives in, so the gap is
+  visible rather than silent.
+- **The API table has no drift to flag.** `openapi.test.ts` already walks the Express stack in both
+  directions and fails if a route is undocumented or a documented path is stale, so the table, the
+  OpenAPI document and the router agree by construction.
+- **The Docker path was corrected, not just confirmed.** `docker compose exec api npm run seed -w server`
+  initially failed with "Missing script", because compose mounts only `server/src` and the image
+  still held the pre-Phase-10 `package.json`. The stack was rebuilt with `docker compose up --build`
+  and the seed then worked; the README says the rebuild is needed after a manifest change.
+- **The README warns about the two-MongoDB trap.** This machine runs a native MongoDB on
+  `127.0.0.1:27017` alongside the container bound to `0.0.0.0:27017`. Seeding from the host wrote to
+  the native one while the app read the containerised one, which presents as "the seed succeeded but
+  the dashboard is empty".
+
+### Dashboard verification
+
+- **The dashboard was checked in a real browser against the seeded database, not by counting rows.**
+  Chromium from the Playwright cache was driven through `executablePath`, signed in as the demo user,
+  and every panel inspected: five Chart.js canvases each with at least one non-transparent pixel,
+  five populated screen-reader tables (14, 8, 7, 4 and 10 rows), an activity heatmap reporting 35
+  applications across 31 active days, and five real events in the upcoming panel. Screenshots were
+  taken in both themes.
+- **Dark mode had to be driven through `prefers-color-scheme`, not local storage.** Writing
+  `theme: dark` to local storage did nothing, because Phase 9 made the account preference win once
+  `/auth/me` resolves and the demo account is set to `system`. Emulating the OS preference is the
+  honest way to exercise that path, and it resolved `data-theme="dark"` with every chart repainted.
+- **No Playwright dependency was added to the repository**, exactly as in Phase 9. The committed
+  suite stays Phase 15.
+
+### CI
+
+- **The workflow runs `test:coverage` rather than `test` for the server.** SPEC section 10 asks for
+  the report to be printed, and it is what makes the coverage threshold a gate.
+- **The mongod binary that `mongodb-memory-server` downloads is cached.** Uncached it dominates the
+  run, and a flaky download would turn CI red for a reason unrelated to the code.
+- **CI supplies its environment inline and leaves `NODE_ENV` unset.** Jest sets it to `test` itself,
+  and setting it in the workflow would have masked that.

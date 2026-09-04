@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --runInBand"
+    "test:coverage": "jest --coverage --runInBand",
+    "seed": "tsx src/scripts/seed.ts",
+    "seed:reset": "tsx src/scripts/seed.ts --reset"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1125.0",

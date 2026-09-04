@@ -43,6 +43,15 @@ const baseSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().min(1).optional(),
   S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
 
+  /**
+   * The account `npm run seed` creates. SPEC section 9 fixes these values, and
+   * SPEC section 12 signs the "Try the demo" visitor into the same account, so
+   * they are configuration rather than constants buried in the seed script.
+   * Publishing them is the point: this is a throwaway account holding fixtures.
+   */
+  DEMO_EMAIL: z.string().email().default('demo@tracker.dev'),
+  DEMO_PASSWORD: z.string().min(8).default('Demo@1234'),
+
   /** Local hour at which a user receives their reminder digest. */
   REMINDER_DIGEST_HOUR: z.coerce.number().int().min(0).max(23).default(8),
   ENABLE_CRON: z.preprocess(
@@ -131,12 +140,31 @@ export const envSchemaWithStorage = envSchema.superRefine((value, ctx) => {
 export type Env = z.infer<typeof envSchema>;
 
 /**
+ * Drops keys whose value is the empty string.
+ *
+ * `.env.example` documents optional variables as a bare `KEY=`, and dotenv
+ * turns that into an empty string rather than leaving the key unset. Zod's
+ * `.optional()` only skips `undefined`, so copying the example file verbatim —
+ * the documented setup step — made all five blank `S3_*` keys fail validation
+ * and the server refuse to boot even with `STORAGE_DRIVER=local`.
+ *
+ * Treating blank as absent is also what a reader expects `KEY=` to mean: a
+ * defaulted key falls back to its default instead of failing coercion, and a
+ * required one reports "is required" rather than a length error.
+ */
+function withoutBlanks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(
+    Object.entries(source).filter(([, value]) => value !== ''),
+  ) as NodeJS.ProcessEnv;
+}
+
+/**
  * Validates a raw environment bag and returns the typed, defaulted config.
  * Throws with every problem listed at once so a misconfigured deploy is fixed
  * in a single pass instead of one variable per restart.
  */
 export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchemaWithStorage.safeParse(source);
+  const result = envSchemaWithStorage.safeParse(withoutBlanks(source));
 
   if (!result.success) {
     const details = result.error.issues

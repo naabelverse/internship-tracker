@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import dotenv from 'dotenv';
 import { EXAMPLE_SECRET_VALUES, MIN_SECRET_LENGTH, parseEnv } from '@/config/env';
 
 const validSecretA = 'A'.repeat(MIN_SECRET_LENGTH + 8);
@@ -85,6 +88,57 @@ describe('env loader', () => {
 
     it('defaults to local disk outside production', () => {
       expect(parseEnv(minimalEnv()).STORAGE_DRIVER).toBe('local');
+    });
+  });
+
+  /**
+   * Regression: `.env.example` documents optional variables as a bare `KEY=`,
+   * which dotenv reads as an empty string rather than leaving unset. Zod's
+   * `.optional()` only skips `undefined`, so copying the example file — the
+   * documented setup step — made all five blank `S3_*` keys fail validation and
+   * the server refuse to boot with `STORAGE_DRIVER=local`.
+   *
+   * The first case parses the shipped file itself rather than a copy of its
+   * contents, so a later phase adding another blank optional key (SMTP_*,
+   * SENTRY_DSN) cannot reintroduce this without failing here.
+   */
+  describe('blank values in a .env file', () => {
+    const exampleEnv = (): NodeJS.ProcessEnv =>
+      dotenv.parse(
+        readFileSync(path.join(__dirname, '..', '.env.example'), 'utf8'),
+      ) as NodeJS.ProcessEnv;
+
+    it('accepts the shipped .env.example verbatim', () => {
+      const raw = exampleEnv();
+
+      // Proves the fixture is the real thing: if the file stopped shipping
+      // blank optional keys, this test would silently stop testing anything.
+      expect(raw.S3_BUCKET).toBe('');
+      expect(() => parseEnv(raw)).not.toThrow();
+      expect(parseEnv(raw).STORAGE_DRIVER).toBe('local');
+      expect(parseEnv(raw).S3_BUCKET).toBeUndefined();
+    });
+
+    it('reads the demo credentials the seed script publishes', () => {
+      const env = parseEnv(exampleEnv());
+
+      expect(env.DEMO_EMAIL).toBe('demo@tracker.dev');
+      expect(env.DEMO_PASSWORD).toBe('Demo@1234');
+    });
+
+    it('falls back to the default when a defaulted key is left blank', () => {
+      const env = parseEnv({ ...minimalEnv(), PORT: '', LOG_LEVEL: '' } as NodeJS.ProcessEnv);
+
+      expect(env.PORT).toBe(5000);
+      expect(env.LOG_LEVEL).toBe('info');
+    });
+
+    it('still reports a required key left blank as missing', () => {
+      // Blank is absent, so this is the plain "Required" a missing key produces
+      // rather than the length message an empty string used to trigger.
+      expect(() => parseEnv({ ...minimalEnv(), MONGO_URI: '' } as NodeJS.ProcessEnv)).toThrow(
+        /MONGO_URI: Required/,
+      );
     });
   });
 

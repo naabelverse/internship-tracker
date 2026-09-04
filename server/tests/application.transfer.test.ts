@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { Application } from '@/models/Application';
+import { MAX_IMPORT_ROWS } from '@/schemas/application.schema';
 import {
   APPLICATIONS_BASE,
   buildTestApp,
@@ -168,5 +169,70 @@ describe('POST /applications/import', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe('EMPTY_CSV');
+  });
+
+  // The columns below are written by our own export but were never read back by
+  // a test, so an import that silently dropped them would have looked like a
+  // clean round trip.
+  it('reads the stipend columns back onto the record', async () => {
+    const { accessToken, userId } = await registerUser(app);
+
+    const response = await importCsv(
+      accessToken,
+      [
+        'company,role,stipendAmount,stipendCurrency,stipendPeriod',
+        'Setel,Backend Intern,2500,MYR,month',
+      ].join('\n'),
+    );
+
+    expect(response.body.data.imported).toBe(1);
+    const stored = await Application.findOne({ user: userId });
+    expect(stored?.stipend).toMatchObject({ amount: 2500, currency: 'MYR', period: 'month' });
+  });
+
+  it('defaults the stipend currency and period when only an amount is given', async () => {
+    const { accessToken, userId } = await registerUser(app);
+
+    const response = await importCsv(
+      accessToken,
+      ['company,role,stipendAmount', 'Razer,Platform Intern,1800'].join('\n'),
+    );
+
+    expect(response.body.data.imported).toBe(1);
+    const stored = await Application.findOne({ user: userId });
+    expect(stored?.stipend).toMatchObject({ amount: 1800, currency: 'USD', period: 'month' });
+  });
+
+  it('reads the contact columns back onto the record', async () => {
+    const { accessToken, userId } = await registerUser(app);
+
+    const response = await importCsv(
+      accessToken,
+      [
+        'company,role,contactName,contactEmail',
+        'Figma,Design Intern,Wei Ling,hiring@example.com',
+      ].join('\n'),
+    );
+
+    expect(response.body.data.imported).toBe(1);
+    const stored = await Application.findOne({ user: userId });
+    expect(stored?.contact).toMatchObject({ name: 'Wei Ling', email: 'hiring@example.com' });
+  });
+
+  it('refuses a file with more rows than one import allows', async () => {
+    const { accessToken, userId } = await registerUser(app);
+
+    const rows = Array.from(
+      { length: MAX_IMPORT_ROWS + 1 },
+      (_unused, index) => `Company ${String(index)},Software Engineer Intern`,
+    );
+
+    const response = await importCsv(accessToken, ['company,role', ...rows].join('\n'));
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('IMPORT_TOO_LARGE');
+    // The cap has to reject the batch outright: importing the first thousand and
+    // discarding the rest would be a partial write the caller never asked for.
+    expect(await Application.countDocuments({ user: userId })).toBe(0);
   });
 });
