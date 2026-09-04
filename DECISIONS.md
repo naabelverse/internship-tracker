@@ -561,3 +561,142 @@ verify`; nothing in the stack depends on a version-specific API.
 
 - **dnd-kit is its own chunk.** Only the board needs it, so it stays off the dashboard's path, the
   same reasoning that separated the markdown pair in Phase 6.
+
+## Phase 8 - Dashboard and charts
+
+### Extending Phase 4's summary endpoint
+
+- **`GET /analytics/summary` gained a `period` block, because the stat card deltas SPEC section 6
+  asks for cannot be derived from what Phase 4 returned.** The endpoint reported all-time standing
+  only, and `/timeline` aggregates status changes across every status at once, so neither carries
+  "interviews this month against last month". The alternative was computing deltas in the browser,
+  which is not possible from either payload.
+- **The change is additive.** Every field Phase 4 returned is untouched and `periodDays` defaults to
+  30, so existing callers, tests and the OpenAPI round-trip check see the same response they did.
+- **Both windows are measured on the cohort of applications created inside them,** not on events
+  that happened inside them. One population, asked the same question twice, is comparable; mixing an
+  all-time total with a windowed event count is not. The known cost is cohort maturity: the previous
+  window's applications have had longer to progress, so a rate delta flatters the older cohort
+  slightly. That is a smaller distortion than the alternatives and is the standard way these cards
+  are built.
+- **It costs no extra database round trip.** Three branches were added to the `$facet` that already
+  existed, after `withMilestones`, so "ever reached interview" is a boolean test on a field the
+  pipeline had already computed.
+- **The previous week is resolved by stepping back a day and re-running `startOfLocalWeek`,** not by
+  subtracting seven times 86,400,000. Across a daylight saving change the fixed subtraction lands in
+  the wrong week for the accounts that observe it.
+
+### Load demo data
+
+- **"Load demo data" needed a real endpoint: `POST /applications/demo-data`.** SPEC section 9's seed
+  is a CLI script, which a browser cannot run. Generating rows client side and posting them one at a
+  time would be sixty-odd requests and would ship the fixture generator in the client bundle.
+- **It refuses any account that already holds an application, with 409 `DEMO_DATA_NOT_EMPTY`.** The
+  button only renders in the zero-application empty state, but the server is the authority: this is
+  reachable by any signed-in caller and must never be able to mix fixture rows into real data. A
+  test asserts the refusal leaves the account exactly as it was.
+- **The generator lives in `demoData.service.ts` and is deterministic.** Phase 10's `npm run seed`
+  imports `buildDemoApplications` rather than growing a second definition of "realistic data". A
+  seeded PRNG rather than `Math.random` means an assertion about the generated spread is
+  reproducible instead of flaky.
+- **`insertMany` is called with `{ timestamps: false }`, cast to `InsertManyOptions`.** Mongoose
+  honours the option at runtime but has never listed it on the published type. Without it the
+  back-dated `createdAt` values are overwritten with the insert time and every chart collapses onto
+  a single day.
+
+### Theme-reactive charts
+
+- **The palette is re-read from `getComputedStyle` on every theme change, keyed on the theme store's
+  `resolved` value.** Chart.js resolves colours once, when it is handed an options object, and has
+  no idea a CSS variable exists. `setPreference` writes `data-theme` onto the document element and
+  sets `resolved` in the same action, so keying the memo on it guarantees the read happens after the
+  attribute flip and returns the incoming palette rather than the outgoing one.
+- **The new colours are pushed into the live chart rather than remounting it.** react-chartjs-2
+  assigns changed `data` and `options` onto the existing instance and calls `update()`. Keying the
+  components to force a remount would work too, but it throws away the mount animation and any open
+  tooltip on every toggle.
+- **Every colour in a chart option is a token, tooltips included.** Chart.js defaults the tooltip to
+  an opaque near-black box with white text, which is a fixed pixel colour and unreadable on a light
+  canvas. Background, border, title and body all come from the same tokens the rest of the app uses.
+- **Six categorical `--color-chart-*` tokens and five `--color-heat-*` tokens were added.** The
+  semantic tokens cannot carry a by-source or top-companies chart on their own: those need colours
+  that are distinguishable from one another rather than colours that mean something.
+- **The doughnut keeps each status on the colour its pill already has,** so a slice and a badge for
+  the same status never disagree. Ghosted and withdrawn share a grey pill but get separate chart
+  tokens, because two identical slices would be unreadable. The custom legend paints its swatch from
+  the palette inline rather than from a Tailwind class, so the swatch and its slice cannot drift.
+- **`useChartPalette` carries a targeted `react-hooks/exhaustive-deps` disable.** The factory does
+  not reference `resolved`, but `resolved` is genuinely its input: the values read off the document
+  are decided entirely by the attribute the store writes alongside it. The rule only sees
+  identifiers. The alternative, recomputing the palette on every render, would push a pointless
+  Chart.js update on each one.
+
+### Chart.js weight
+
+- **Components are registered by hand; `chart.js/auto` is never imported,** as SPEC section 12
+  requires. Measured both ways on this build: explicit registration produces a 174.86 kB raw /
+  61.39 kB gzip vendor chunk against 209.07 kB / 71.90 kB for `chart.js/auto`, so the hand-written
+  registry saves 10.5 kB gzip. `Legend` is deliberately not registered — every legend on the page is
+  our own markup, which SPEC section 6 asks for on the doughnut anyway and which keeps legends
+  themeable and keyboard reachable.
+- **The weekly goal ring is hand-drawn SVG, not a sixth Chart.js instance.** A single-value ring
+  needs no scales, tooltip or legend, and one arc costs a few bytes against a whole doughnut
+  controller. It reads the same token palette, so it re-themes with the charts.
+- **The dashboard route is the only lazy route so far.** `React.lazy` on the page module puts the
+  whole chart subtree in its own chunk, so the applications, board, calendar and settings routes
+  never download Chart.js.
+- **Phase 7's note that dnd-kit "stays off the dashboard's path" was wrong, and this build shows it.**
+  Being a separate chunk is not the same as being off the path: `App.tsx` imports the board and
+  detail pages eagerly, so the entry chunk statically imports both `dnd` and `markdown` and every
+  route pays for them. Correcting that means lazy-loading the other routes too, which is Phase 15's
+  code-splitting item; the dashboard budget below is reported with those two chunks counted in.
+
+### Accessibility
+
+- **Every chart ships its data twice: once on the canvas and once as a visually hidden table.** A
+  canvas has no DOM inside it, so without the table the dashboard is silent to a screen reader.
+  `sr-only` rather than `aria-hidden` or `display: none` keeps the table in the accessibility tree
+  while keeping it out of the layout.
+- **The doughnut's centre total is markup, not a canvas plugin,** so it is real text that a reader
+  announces and a text zoom scales.
+- **A stat card's direction is carried by an arrow plus the word "Up" or "Down" in hidden text,**
+  never by the red or green alone.
+
+### Bugs found by the tests
+
+- **The upcoming panel refetched forever.** `useUpcomingQuery` built its window from `new Date()` on
+  every render, and since the window is part of the query key, the key changed on every render and
+  the request never settled. The window is now truncated to the top of the hour, which makes the key
+  stable between renders while still moving forward on its own.
+- **Every application write left the dashboard stale.** The shared optimistic mutation invalidated
+  only the applications lists, so adding a row moved no number and no chart. It now invalidates the
+  analytics and calendar trees as well; neither is patched optimistically, because both are
+  server-side aggregates rather than copies of a row the client is holding.
+- **The chart data memos never held.** `sources ?? []` allocates a fresh array on every render, so
+  the `useMemo` that builds the chart data saw a new dependency each time and pushed a redundant
+  update into Chart.js. The fallbacks are memoised on the query result instead.
+
+### Testing charts under jsdom
+
+- **The tests run real Chart.js and real react-chartjs-2 against a stubbed 2D context.** jsdom has no
+  canvas, so `getContext` returns nothing and the `update()` a theme change goes through would fail
+  on a null context. A proxy that answers any drawing call with a no-op is enough for Chart.js to
+  run its layout, scale and update passes headlessly. Nothing about the chart's configuration is
+  faked: the assertions read `Chart.getChart(canvas).options` and `.data`, which is the object
+  Chart.js paints from.
+- **The theme test asserts against the shipped palette, not a copy of it.** `installThemeTokens`
+  reads the `:root` and `[data-theme='dark']` blocks out of `src/index.css` and injects them, so a
+  chart colour is compared against the value the app actually ships. Restating the palette in the
+  test would let it pass against colours the app no longer uses.
+- **The token blocks are read off disk rather than imported.** Vitest runs with `css: false`, which
+  stubs every stylesheet import to an empty string, `?raw` included.
+- **The theme test was checked against a deliberately broken implementation.** Caching the palette at
+  module scope, which is the exact bug this phase is meant to prevent, fails the two repaint cases
+  and passes the rest, which is what it should do.
+
+### Two existing tests were rewritten, deliberately
+
+- **`routing.test.tsx` and `RegisterForm.test.tsx` used the Phase 8 placeholder as their "landed on
+  the dashboard" signal.** That placeholder no longer exists. Both now assert the real dashboard
+  heading and answer its requests, which is a stronger check than before: the routing case also
+  proves the lazy chunk resolves and the Suspense fallback gives way.

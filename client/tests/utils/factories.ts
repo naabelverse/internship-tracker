@@ -1,3 +1,11 @@
+import type {
+  AnalyticsSummary,
+  CompanyEntry,
+  FunnelStage,
+  SourceEntry,
+  StatusBreakdownEntry,
+  Timeline,
+} from '@/types/analytics';
 import type { ApiErrorBody, ApiSuccessBody, PaginationMeta } from '@/types/api';
 import type { Application, Attachment, Interview } from '@/types/application';
 import type { CalendarEvent } from '@/types/calendar';
@@ -129,4 +137,128 @@ export function makeCalendarEvent(overrides: Partial<CalendarEvent> = {}): Calen
     status: 'applied',
     ...overrides,
   };
+}
+
+/**
+ * Analytics fixtures. Every field the dashboard reads has a value, so a test
+ * that cares about one number does not have to spell out the other twelve.
+ */
+export function makeSummary(overrides: Partial<AnalyticsSummary> = {}): AnalyticsSummary {
+  return {
+    total: 42,
+    active: 11,
+    applied: 38,
+    responded: 19,
+    interviewed: 9,
+    offers: 3,
+    responseRate: 50,
+    interviewRate: 23.7,
+    offerRate: 7.9,
+    avgDaysToFirstResponse: 6.4,
+    currentStreakDays: 4,
+    weeklyGoal: { target: 5, completed: 3, percentage: 60, previousCompleted: 1 },
+    period: {
+      days: 30,
+      current: {
+        created: 12,
+        active: 7,
+        applied: 11,
+        responded: 6,
+        interviewed: 4,
+        offers: 2,
+        responseRate: 54.5,
+      },
+      previous: {
+        created: 8,
+        active: 4,
+        applied: 8,
+        responded: 3,
+        interviewed: 1,
+        offers: 1,
+        responseRate: 37.5,
+      },
+    },
+    ...overrides,
+  };
+}
+
+/** An account with nothing in it, which is what the empty state keys off. */
+export function makeEmptySummary(): AnalyticsSummary {
+  const zeroed = {
+    created: 0,
+    active: 0,
+    applied: 0,
+    responded: 0,
+    interviewed: 0,
+    offers: 0,
+    responseRate: 0,
+  };
+
+  return makeSummary({
+    total: 0,
+    active: 0,
+    applied: 0,
+    responded: 0,
+    interviewed: 0,
+    offers: 0,
+    responseRate: 0,
+    interviewRate: 0,
+    offerRate: 0,
+    avgDaysToFirstResponse: null,
+    currentStreakDays: 0,
+    weeklyGoal: { target: 5, completed: 0, percentage: 0, previousCompleted: 0 },
+    period: { days: 30, current: zeroed, previous: zeroed },
+  });
+}
+
+export function makeStatusBreakdown(): StatusBreakdownEntry[] {
+  return [
+    { status: 'saved', count: 4 },
+    { status: 'applied', count: 12 },
+    { status: 'assessment', count: 6 },
+    { status: 'interview', count: 5 },
+    { status: 'offer', count: 3 },
+    { status: 'rejected', count: 9 },
+    { status: 'ghosted', count: 2 },
+    { status: 'withdrawn', count: 1 },
+  ];
+}
+
+export function makeTimeline(overrides: Partial<Timeline> = {}): Timeline {
+  return {
+    granularity: 'week',
+    range: '90d',
+    points: [
+      { bucket: '2026-08-03T00:00:00.000Z', created: 5, statusChanges: 3 },
+      { bucket: '2026-08-10T00:00:00.000Z', created: 8, statusChanges: 6 },
+      { bucket: '2026-08-17T00:00:00.000Z', created: 2, statusChanges: 9 },
+    ],
+    ...overrides,
+  };
+}
+
+export function makeFunnel(): FunnelStage[] {
+  return [
+    { stage: 'applied', count: 38, conversionFromApplied: 100, conversionFromPrevious: 100 },
+    { stage: 'assessment', count: 16, conversionFromApplied: 42.1, conversionFromPrevious: 42.1 },
+    { stage: 'interview', count: 9, conversionFromApplied: 23.7, conversionFromPrevious: 56.3 },
+    { stage: 'offer', count: 3, conversionFromApplied: 7.9, conversionFromPrevious: 33.3 },
+  ];
+}
+
+export function makeSources(): SourceEntry[] {
+  return [
+    { source: 'linkedin', count: 18 },
+    { source: 'referral', count: 9 },
+    { source: 'company_site', count: 7 },
+    { source: 'unspecified', count: 2 },
+  ];
+}
+
+export function makeTopCompanies(): CompanyEntry[] {
+  return [
+    { company: 'Grab', count: 6 },
+    { company: 'Shopee', count: 4 },
+    { company: 'Stripe', count: 3 },
+  ];
 }

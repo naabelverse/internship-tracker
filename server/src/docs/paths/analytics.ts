@@ -15,6 +15,20 @@ const PLANNING = ['Calendar and reminders'];
 
 const authOnly = { '401': COMMON_ERRORS['401'] };
 
+/**
+ * One comparison window, measured on the cohort of applications created inside
+ * it, which is what makes the two windows comparable on the same population.
+ */
+const periodMetrics = objectOf({
+  created: { type: 'integer' },
+  active: { type: 'integer' },
+  applied: { type: 'integer' },
+  responded: { type: 'integer' },
+  interviewed: { type: 'integer' },
+  offers: { type: 'integer' },
+  responseRate: { type: 'number' },
+});
+
 const summaryData = objectOf({
   total: { type: 'integer' },
   active: { type: 'integer' },
@@ -34,6 +48,12 @@ const summaryData = objectOf({
     target: { type: 'integer' },
     completed: { type: 'integer' },
     percentage: { type: 'number' },
+    previousCompleted: { type: 'integer', description: 'The same window one week earlier' },
+  }),
+  period: objectOf({
+    days: { type: 'integer' },
+    current: periodMetrics,
+    previous: periodMetrics,
   }),
 });
 
@@ -48,9 +68,16 @@ export const analyticsPaths: Record<string, unknown> = {
       tags: TAG,
       summary: 'Headline numbers for the dashboard',
       description:
-        'Day and week boundaries, the streak and the weekly goal window are all computed in the timezone stored on the account, never the server one.',
+        'Day and week boundaries, the streak and the weekly goal window are all computed in the timezone stored on the account, never the server one. `period` carries the same numbers for the current window and the window of equal length before it, which is what the stat card deltas are built from.',
       security: AUTHENTICATED,
-      responses: { ...ok('Summary', summaryData), ...authOnly },
+      parameters: [
+        queryParam(
+          'periodDays',
+          { type: 'integer', minimum: 1, maximum: 365 },
+          'Length of the comparison window. Defaults to 30',
+        ),
+      ],
+      responses: { ...ok('Summary', summaryData), '400': COMMON_ERRORS['400'], ...authOnly },
     },
   },
   '/api/v1/analytics/status-breakdown': {

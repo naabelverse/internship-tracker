@@ -93,6 +93,32 @@ function percentage(part: number, whole: number): number {
   return Math.round((part / whole) * 1000) / 10;
 }
 
+/**
+ * One window's worth of the headline numbers, measured on the cohort of
+ * applications *created* inside that window.
+ *
+ * Cohort rather than event framing is what makes the two windows comparable:
+ * every metric is asked of the same population, so a delta says "this batch of
+ * applications did better than the last batch" rather than mixing an all-time
+ * total with a windowed one.
+ */
+export interface PeriodMetrics {
+  created: number;
+  active: number;
+  applied: number;
+  responded: number;
+  interviewed: number;
+  offers: number;
+  responseRate: number;
+}
+
+/** The current window and the window of equal length immediately before it. */
+export interface PeriodComparison {
+  days: number;
+  current: PeriodMetrics;
+  previous: PeriodMetrics;
+}
+
 export interface AnalyticsSummary {
   total: number;
   active: number;
@@ -105,7 +131,15 @@ export interface AnalyticsSummary {
   offerRate: number;
   avgDaysToFirstResponse: number | null;
   currentStreakDays: number;
-  weeklyGoal: { target: number; completed: number; percentage: number };
+  weeklyGoal: {
+    target: number;
+    completed: number;
+    percentage: number;
+    /** Same window one week earlier, so the goal card can show a delta too. */
+    previousCompleted: number;
+  };
+  /** SPEC section 6: every stat card carries a delta against the last period. */
+  period: PeriodComparison;
 }
 
 interface CountRow {
@@ -118,6 +152,16 @@ interface DayKeyRow {
   _id: string;
 }
 
+/** What one cohort `$group` emits; every field is counted in the same pass. */
+interface CohortRow {
+  created: number;
+  active: number;
+  applied: number;
+  responded: number;
+  interviewed: number;
+  offers: number;
+}
+
 interface SummaryFacet {
   total: CountRow[];
   active: CountRow[];
@@ -127,6 +171,9 @@ interface SummaryFacet {
   offered: CountRow[];
   responseTime: AverageRow[];
   thisWeek: CountRow[];
+  lastWeek: CountRow[];
+  periodCurrent: CohortRow[];
+  periodPrevious: CohortRow[];
   dayKeys: DayKeyRow[];
 }
 
@@ -136,6 +183,53 @@ const countOf = (match: Record<string, unknown>): PipelineStage.FacetPipelineSta
 ];
 
 const firstCount = (rows: CountRow[]): number => rows[0]?.count ?? 0;
+
+/**
+ * Every cohort number in one `$group`, so a window costs one extra facet branch
+ * rather than another round trip. It runs after `withMilestones`, which is what
+ * lets "ever reached interview" be a boolean test instead of a second lookup.
+ */
+const cohortGroup: PipelineStage.FacetPipelineStage = {
+  $group: {
+    _id: null,
+    created: { $sum: 1 },
+    active: {
+      $sum: {
+        $cond: [
+          {
+            $and: [{ $in: ['$status', [...ACTIVE_STATUSES]] }, { $eq: ['$archived', false] }],
+          },
+          1,
+          0,
+        ],
+      },
+    },
+    applied: { $sum: { $cond: ['$isApplied', 1, 0] } },
+    responded: { $sum: { $cond: ['$isResponded', 1, 0] } },
+    interviewed: { $sum: { $cond: ['$isInterviewed', 1, 0] } },
+    offers: { $sum: { $cond: ['$isOffered', 1, 0] } },
+  },
+};
+
+/** The cohort created inside one half-open window, `[start, end)`. */
+function cohortIn(start: Date, end: Date): PipelineStage.FacetPipelineStage[] {
+  return [{ $match: { createdAt: { $gte: start, $lt: end } } }, cohortGroup];
+}
+
+const EMPTY_COHORT: CohortRow = {
+  created: 0,
+  active: 0,
+  applied: 0,
+  responded: 0,
+  interviewed: 0,
+  offers: 0,
+};
+
+function toPeriodMetrics(rows: CohortRow[]): PeriodMetrics {
+  const row = rows[0] ?? EMPTY_COHORT;
+
+  return { ...row, responseRate: percentage(row.responded, row.applied) };
+}
 
 /**
  * Walks distinct local day keys backwards from today. The grouping happens in
@@ -155,13 +249,25 @@ function computeStreak(dayKeys: string[], today: string): number {
   return streak;
 }
 
+/** SPEC section 6 shows a delta against "the previous period"; this is its length. */
+export const DEFAULT_PERIOD_DAYS = 30;
+
 export async function getSummary(
   userId: Types.ObjectId,
   timeZone: string,
   weeklyGoal: number,
   now: Date = new Date(),
+  periodDays: number = DEFAULT_PERIOD_DAYS,
 ): Promise<AnalyticsSummary> {
   const weekStart = startOfLocalWeek(now, timeZone);
+  // Stepping back a day and re-resolving the week start keeps the previous week
+  // seven *local* days long across a daylight saving change, which subtracting a
+  // fixed number of milliseconds would not.
+  const previousWeekStart = startOfLocalWeek(new Date(weekStart.getTime() - MS_PER_DAY), timeZone);
+
+  const windowEnd = new Date(now.getTime());
+  const currentStart = new Date(windowEnd.getTime() - periodDays * MS_PER_DAY);
+  const previousStart = new Date(currentStart.getTime() - periodDays * MS_PER_DAY);
 
   const [facet] = await Application.aggregate<SummaryFacet>([
     scopedToUser(userId),
@@ -187,6 +293,9 @@ export async function getSummary(
           },
         ],
         thisWeek: countOf({ createdAt: { $gte: weekStart } }),
+        lastWeek: countOf({ createdAt: { $gte: previousWeekStart, $lt: weekStart } }),
+        periodCurrent: cohortIn(currentStart, windowEnd),
+        periodPrevious: cohortIn(previousStart, currentStart),
         // Distinct local days with activity, newest first, for the streak walk.
         dayKeys: [
           {
@@ -229,6 +338,12 @@ export async function getSummary(
       target: weeklyGoal,
       completed,
       percentage: percentage(completed, weeklyGoal),
+      previousCompleted: firstCount(facet.lastWeek),
+    },
+    period: {
+      days: periodDays,
+      current: toPeriodMetrics(facet.periodCurrent),
+      previous: toPeriodMetrics(facet.periodPrevious),
     },
   };
 }

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/App';
-import { errorBody, makeUser, successBody } from '../utils/factories';
+import { errorBody, makeEmptySummary, makeUser, successBody } from '../utils/factories';
 import { installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState } from '../utils/render';
 
@@ -13,6 +13,23 @@ const noSession: Responder = () => ({
   status: 401,
   data: errorBody('No refresh token was provided', 'MISSING_REFRESH_TOKEN'),
 });
+
+/**
+ * A successful registration lands on the dashboard, so its requests have to be
+ * answered for the case to get past the loading state and prove where it ended.
+ */
+const dashboardRoutes: Record<string, Responder> = {
+  'GET /analytics/summary': () => ({ status: 200, data: successBody(makeEmptySummary()) }),
+  'GET /analytics/status-breakdown': () => ({ status: 200, data: successBody({ breakdown: [] }) }),
+  'GET /analytics/timeline': () => ({
+    status: 200,
+    data: successBody({ granularity: 'day', range: '90d', points: [] }),
+  }),
+  'GET /analytics/by-source': () => ({ status: 200, data: successBody({ sources: [] }) }),
+  'GET /analytics/funnel': () => ({ status: 200, data: successBody({ stages: [] }) }),
+  'GET /analytics/top-companies': () => ({ status: 200, data: successBody({ companies: [] }) }),
+  'GET /calendar': () => ({ status: 200, data: successBody({ events: [] }) }),
+};
 
 async function renderRegisterPage(routes: Record<string, Responder>): Promise<MockApi> {
   const mock = installMockApi({ [REFRESH]: noSession, ...routes });
@@ -74,12 +91,13 @@ describe('RegisterForm', () => {
         status: 201,
         data: successBody({ user: makeUser(), accessToken: 'access-1' }),
       }),
+      ...dashboardRoutes,
     });
 
     await fillValidForm(user);
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByTestId('phase-placeholder')).toHaveAttribute('data-phase', '8');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
 
     const body = mock.callsTo('POST', '/auth/register')[0].data as Record<string, unknown>;
     expect(body.acceptTerms).toBe(true);

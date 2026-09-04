@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useSessionBootstrap } from '@/hooks/useSession';
@@ -6,7 +7,7 @@ import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
 import { BoardPage } from '@/pages/BoardPage';
 import { CalendarPage } from '@/pages/CalendarPage';
-import { DashboardPage } from '@/pages/DashboardPage';
+import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -14,6 +15,13 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { PublicOnlyRoute } from '@/routes/PublicOnlyRoute';
 import { paths } from '@/routes/paths';
+
+/**
+ * SPEC section 12 keeps Chart.js out of every bundle but the dashboard's. The
+ * lazy boundary is what makes that true: the page module and its whole chart
+ * subtree become a separate chunk, fetched the first time someone opens `/`.
+ */
+const DashboardPage = lazy(async () => import('@/pages/DashboardPage'));
 
 /**
  * The route table. The router itself lives in `main.tsx` so tests can mount this
@@ -36,7 +44,14 @@ export function App(): JSX.Element {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path={paths.dashboard} element={<DashboardPage />} />
+          <Route
+            path={paths.dashboard}
+            element={
+              <Suspense fallback={<DashboardSkeleton />}>
+                <DashboardPage />
+              </Suspense>
+            }
+          />
           <Route path={paths.applications} element={<ApplicationsPage />} />
           <Route path={paths.board} element={<BoardPage />} />
           <Route path={paths.calendar} element={<CalendarPage />} />

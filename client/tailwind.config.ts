@@ -34,6 +34,19 @@ export default {
         warning: token('color-warning'),
         danger: token('color-danger'),
         info: token('color-info'),
+        // Chart series and heatmap levels, so a chart colour is a token like
+        // every other colour in the app rather than a literal in a JS object.
+        'chart-1': token('color-chart-1'),
+        'chart-2': token('color-chart-2'),
+        'chart-3': token('color-chart-3'),
+        'chart-4': token('color-chart-4'),
+        'chart-5': token('color-chart-5'),
+        'chart-6': token('color-chart-6'),
+        'heat-0': token('color-heat-0'),
+        'heat-1': token('color-heat-1'),
+        'heat-2': token('color-heat-2'),
+        'heat-3': token('color-heat-3'),
+        'heat-4': token('color-heat-4'),
       },
       borderRadius: {
         card: '0.75rem',

@@ -77,6 +77,11 @@ function useOptimisticApplicationMutation<TVariables, TResult>({
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.applications.lists() });
+      // Every write moves a number the dashboard reads, and a deadline or an
+      // interview moves the calendar too. Neither is patched optimistically —
+      // they are server-side aggregates — so they are refetched instead.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
     },
   });
 }

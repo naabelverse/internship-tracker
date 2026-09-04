@@ -1,13 +1,20 @@
 import { getAuthenticatedUser } from '@/middleware/requireAuth';
-import type { TimelineQuery, TopCompaniesQuery } from '@/schemas/analytics.schema';
+import type { SummaryQuery, TimelineQuery, TopCompaniesQuery } from '@/schemas/analytics.schema';
 import * as analytics from '@/services/analytics.service';
 import { asyncHandler } from '@/utils/asyncHandler';
 import { sendSuccess } from '@/utils/apiResponse';
 
 export const summary = asyncHandler(async (req, res) => {
   const user = getAuthenticatedUser(req);
+  const { periodDays } = req.query as unknown as SummaryQuery;
 
-  const data = await analytics.getSummary(user._id, user.timezone, user.weeklyGoal);
+  const data = await analytics.getSummary(
+    user._id,
+    user.timezone,
+    user.weeklyGoal,
+    new Date(),
+    periodDays,
+  );
 
   sendSuccess(res, data);
 });

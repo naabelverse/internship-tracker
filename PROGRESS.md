@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 7 complete
-**Current phase:** 8
+**Status:** Phase 8 complete
+**Current phase:** 9
 **Last updated:** 2026-09-04
 
 ---
@@ -202,11 +202,63 @@ Notes:
   week or day calendar view. Real-browser verification at 375 px stays Phase 9/15.
 
 ## Phase 8 — Dashboard + charts
-- [ ] Stat cards with period deltas
-- [ ] Line, doughnut, source bar, funnel, top-companies charts
-- [ ] Activity heatmap grid
-- [ ] Charts re-theme correctly on dark/light toggle
-- [ ] Upcoming panel, empty states, skeletons
+- [x] Stat cards with period deltas
+- [x] Line, doughnut, source bar, funnel, top-companies charts
+- [x] Activity heatmap grid
+- [x] Charts re-theme correctly on dark/light toggle
+- [x] Upcoming panel, empty states, skeletons
+
+Notes:
+- SPEC section 6 wants a delta on every stat card and Phase 4's `/analytics/summary` could not
+  supply one: it reported all-time standing, and `/timeline` aggregates status changes across every
+  status at once. The endpoint gained an additive `period` block and an optional `periodDays`
+  (default 30). Both windows are measured on the cohort of applications *created* inside them, so
+  the two are comparable, and it costs no extra round trip — three branches were added to the
+  `$facet` that already existed.
+- "Load demo data" needed a real endpoint, `POST /applications/demo-data`, because SPEC section 9's
+  seed is a CLI script a browser cannot run. It refuses any account that already holds an
+  application with 409 `DEMO_DATA_NOT_EMPTY`, so it can never mix fixture rows into real data.
+  **Phase 10 should import `buildDemoApplications` from `demoData.service.ts` for `npm run seed`
+  rather than writing a second generator.**
+- Theme reactivity: `useChartPalette` re-reads the tokens off the document element with
+  `getComputedStyle`, keyed on the theme store's `resolved` value, and react-chartjs-2 pushes the
+  new options into the live instance via `update()`. No remount, so the mount animation and any open
+  tooltip survive a toggle. Every colour in a chart option is a token, tooltip background, border,
+  title and body included.
+- The theme test runs real Chart.js against a stubbed 2D context and asserts on
+  `Chart.getChart(canvas).options` and `.data` — the object Chart.js paints from — after toggling.
+  It compares against the `:root` and `[data-theme='dark']` blocks read out of `src/index.css`, not
+  a copy of the palette. Checked against a deliberately broken build: caching the palette at module
+  scope fails the two repaint cases and passes the rest.
+- Three bugs the tests found and fixed: the upcoming panel rebuilt its query key from `new Date()`
+  every render and refetched forever; every application write invalidated only the applications
+  lists, leaving the dashboard stale; and `?? []` fallbacks meant the chart data memos never held.
+- `chart.js/auto` is never imported. Measured both ways: the hand-written registry gives a 174.86 kB
+  raw / 61.39 kB gzip vendor chunk against 209.07 kB / 71.90 kB for `chart.js/auto`. `Legend` is not
+  registered at all, since every legend on the page is our own markup.
+- Bundle after this phase, with the dashboard behind `React.lazy`: **260.90 kB gzip on the dashboard
+  route against SPEC section 12's 300 kB budget — passing, with 39.10 kB of headroom.** That is
+  index 68.57 + react-vendor 51.90 + query-vendor 35.61 + chart-vendor 61.39 + DashboardPage 6.88 +
+  markdown 23.37 + dnd 13.18. Non-dashboard routes are 192.63 kB gzip; `chart-vendor` appears in the
+  entry chunk only inside Vite's preload table, never as a static import.
+- Correction to the Phase 7 note: dnd-kit does **not** stay off the dashboard's path. Being a
+  separate chunk is not the same as being off the path — `App.tsx` imports the board and detail
+  pages eagerly, so the entry chunk statically imports both `dnd` and `markdown` and every route
+  pays for them. They are counted in the figure above. Lazy-loading the remaining routes is Phase
+  15's code-splitting item.
+- Six categorical `--color-chart-*` tokens and five `--color-heat-*` tokens were added to
+  `index.css` and exposed through Tailwind, because the semantic tokens cannot carry a by-source or
+  top-companies chart on their own.
+- Accessibility: every chart renders its data a second time as a visually hidden table, the
+  doughnut's centre total is markup rather than a canvas plugin, and a stat card's direction is
+  carried by an arrow plus hidden "Up"/"Down" text rather than by colour alone.
+- Two existing tests were rewritten deliberately, not weakened: `routing.test.tsx` and
+  `RegisterForm.test.tsx` used the Phase 8 placeholder as their "landed on the dashboard" signal.
+  Both now assert the real dashboard heading, and the routing case additionally proves the lazy
+  chunk resolves.
+- Deferred: the timeline range is fixed at 90 days (SPEC asks for the day/week/month granularity
+  switch, which is built, not a range switch), and real-browser verification at 375/768/1440 px in
+  both themes stays Phase 9/15.
 
 ## Phase 9 — Settings, polish, a11y, responsive
 - [ ] Settings: profile, password, preferences, timezone

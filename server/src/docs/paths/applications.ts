@@ -165,6 +165,23 @@ export const applicationPaths: Record<string, unknown> = {
       },
     },
   },
+  '/api/v1/applications/demo-data': {
+    post: {
+      tags: TAG,
+      summary: 'Fill an empty account with the demo fixture set',
+      description:
+        'Bridges the seed data in SPEC section 9, which is a CLI script, to the dashboard empty state, which runs in a browser. Refuses with DEMO_DATA_NOT_EMPTY when the account already holds any application, so fixture rows can never mix into a real search.',
+      security: AUTHENTICATED,
+      responses: {
+        ...ok('Loaded', objectOf({ inserted: { type: 'integer' } }), '201'),
+        '401': COMMON_ERRORS['401'],
+        '409': {
+          description: 'The account already has applications',
+          content: { 'application/json': { schema: ref('Error') } },
+        },
+      },
+    },
+  },
   '/api/v1/applications/bulk': {
     post: {
       tags: TAG,

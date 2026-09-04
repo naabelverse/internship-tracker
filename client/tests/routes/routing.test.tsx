@@ -5,6 +5,7 @@ import { readRedirectTarget } from '@/routes/redirectTarget';
 import {
   errorBody,
   makeApplication,
+  makeEmptySummary,
   makeListResponse,
   makeSession,
   makeUser,
@@ -17,6 +18,25 @@ const REFRESH = 'POST /auth/refresh';
 const ME = 'GET /auth/me';
 const LIST_ROUTE = 'GET /applications';
 const DETAIL_ROUTE = 'GET /applications/64b7f0c2c1a4d9e5f2a10001';
+
+/** Enough of the analytics surface for the dashboard route to finish rendering. */
+function dashboardRoutes(): Record<string, () => { status: number; data: unknown }> {
+  return {
+    'GET /analytics/summary': () => ({ status: 200, data: successBody(makeEmptySummary()) }),
+    'GET /analytics/status-breakdown': () => ({
+      status: 200,
+      data: successBody({ breakdown: [] }),
+    }),
+    'GET /analytics/timeline': () => ({
+      status: 200,
+      data: successBody({ granularity: 'day', range: '90d', points: [] }),
+    }),
+    'GET /analytics/by-source': () => ({ status: 200, data: successBody({ sources: [] }) }),
+    'GET /analytics/funnel': () => ({ status: 200, data: successBody({ stages: [] }) }),
+    'GET /analytics/top-companies': () => ({ status: 200, data: successBody({ companies: [] }) }),
+    'GET /calendar': () => ({ status: 200, data: successBody({ events: [] }) }),
+  };
+}
 
 beforeEach(() => {
   resetClientState();
@@ -73,21 +93,34 @@ describe('protected routing', () => {
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument();
   });
 
-  // Phase 6 replaced the Applications and Detail placeholders and Phase 7 the
-  // Board and Calendar ones, so those paths are covered by their own suites. The
-  // rest still assert the placeholder contract their phases will retire in turn.
-  it.each([
-    ['/', '8', 'Dashboard'],
-    ['/settings', '9', 'Settings'],
-  ])('renders the %s route for a signed-in user', async (route, phase, heading) => {
-    installMockApi({});
+  // Phase 6 replaced the Applications and Detail placeholders, Phase 7 the Board
+  // and Calendar ones and Phase 8 the Dashboard, so those paths are covered by
+  // their own suites. Settings still asserts the placeholder contract that
+  // Phase 9 will retire in turn.
+  it.each([['/settings', '9', 'Settings']])(
+    'renders the %s route for a signed-in user',
+    async (route, phase, heading) => {
+      installMockApi({});
+      signIn(makeSession());
+
+      renderWithProviders(<App />, { route });
+
+      const placeholder = await screen.findByTestId('phase-placeholder');
+      expect(placeholder).toHaveAttribute('data-phase', phase);
+      expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    },
+  );
+
+  it('resolves the lazy dashboard chunk and renders it at /', async () => {
+    installMockApi(dashboardRoutes());
     signIn(makeSession());
 
-    renderWithProviders(<App />, { route });
+    renderWithProviders(<App />, { route: '/' });
 
-    const placeholder = await screen.findByTestId('phase-placeholder');
-    expect(placeholder).toHaveAttribute('data-phase', phase);
-    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    // The dashboard is the one route behind React.lazy, so this also proves the
+    // Suspense fallback gives way rather than sticking on the skeleton.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.queryByTestId('phase-placeholder')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -122,12 +155,12 @@ describe('protected routing', () => {
   });
 
   it('keeps a signed-in user off the login page', async () => {
-    installMockApi({});
+    installMockApi(dashboardRoutes());
     signIn(makeSession());
 
     renderWithProviders(<App />, { route: '/login' });
 
-    expect(await screen.findByTestId('phase-placeholder')).toHaveAttribute('data-phase', '8');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
   });
 
   it('offers the sign-in link from the 404 page', async () => {

@@ -28,6 +28,25 @@
   --color-info: 2 132 199;
   --color-ring: 79 70 229;
   --color-shadow: 15 23 42;
+
+  /*
+   * Categorical series for the charts. The semantic tokens above cannot carry a
+   * by-source or top-companies chart on their own: those need colours that are
+   * distinguishable from each other rather than colours that mean something.
+   */
+  --color-chart-1: 79 70 229;
+  --color-chart-2: 2 132 199;
+  --color-chart-3: 13 148 136;
+  --color-chart-4: 180 83 9;
+  --color-chart-5: 190 24 93;
+  --color-chart-6: 100 116 139;
+
+  /* Activity heatmap intensity, level 0 being a day with nothing on it. */
+  --color-heat-0: 226 232 240;
+  --color-heat-1: 199 210 254;
+  --color-heat-2: 165 180 252;
+  --color-heat-3: 118 116 235;
+  --color-heat-4: 67 56 202;
 }
 
 [data-theme='dark'] {
@@ -48,6 +67,19 @@
   --color-info: 56 189 248;
   --color-ring: 129 140 248;
   --color-shadow: 0 0 0;
+
+  --color-chart-1: 129 140 248;
+  --color-chart-2: 56 189 248;
+  --color-chart-3: 45 212 191;
+  --color-chart-4: 251 191 36;
+  --color-chart-5: 244 114 182;
+  --color-chart-6: 148 163 184;
+
+  --color-heat-0: 27 38 62;
+  --color-heat-1: 49 62 116;
+  --color-heat-2: 76 88 168;
+  --color-heat-3: 108 118 216;
+  --color-heat-4: 147 156 255;
 }
 
 @layer base {

@@ -48,3 +48,39 @@ if (typeof Element.prototype.setPointerCapture === 'undefined') {
     return false;
   };
 }
+
+/**
+ * Chart.js asks the canvas for a 2D context and then draws through it. jsdom has
+ * no canvas implementation, so `getContext` throws and every call after it would
+ * fail on a null context — including the `update()` that a theme change goes
+ * through, which is precisely the path the chart tests need to exercise.
+ *
+ * The proxy below answers any drawing call with a no-op and remembers whatever
+ * is assigned to it, which is all Chart.js needs to run its layout, scale and
+ * update passes headlessly. Nothing here fakes the chart's *configuration* —
+ * the tests assert against the real Chart instance's own options and data.
+ */
+if (typeof HTMLCanvasElement.prototype.getContext === 'function') {
+  const stubContext = function stubContext(this: HTMLCanvasElement): CanvasRenderingContext2D {
+    const assigned = new Map<string, unknown>();
+    const base: Record<string, unknown> = {
+      canvas: this,
+      measureText: (text: string) => ({ width: text.length * 6 }),
+      getImageData: () => ({ data: new Uint8ClampedArray(4) }),
+      createLinearGradient: () => ({ addColorStop: () => undefined }),
+      getLineDash: () => [],
+    };
+
+    return new Proxy(base, {
+      get: (target, key: string) =>
+        key in target ? target[key] : (assigned.get(key) ?? (() => undefined)),
+      set: (_target, key: string, value: unknown) => {
+        assigned.set(key, value);
+        return true;
+      },
+    }) as unknown as CanvasRenderingContext2D;
+  };
+
+  HTMLCanvasElement.prototype.getContext =
+    stubContext as unknown as typeof HTMLCanvasElement.prototype.getContext;
+}

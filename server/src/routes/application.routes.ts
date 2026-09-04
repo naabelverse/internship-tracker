@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as applications from '@/controllers/application.controller';
 import * as interviews from '@/controllers/interview.controller';
 import * as attachments from '@/controllers/attachment.controller';
+import * as demoData from '@/controllers/demoData.controller';
 import { csvUpload } from '@/middleware/csvUpload';
 import { attachmentUpload } from '@/middleware/upload';
 import { requireAuth } from '@/middleware/requireAuth';
@@ -30,6 +31,10 @@ router.use(requireAuth);
 router.get('/export', validateQuery(exportQuerySchema), applications.exportAll);
 router.post('/import', csvUpload, applications.importCsv);
 router.post('/bulk', validateBody(bulkActionSchema), applications.bulk);
+// Fills an empty account with the fixture set behind the dashboard empty state.
+// It refuses any account that already holds applications, so it can never mix
+// demo rows into a real search.
+router.post('/demo-data', demoData.load);
 
 router.get('/', validateQuery(listApplicationsQuerySchema), applications.list);
 router.post('/', validateBody(createApplicationSchema), applications.create);

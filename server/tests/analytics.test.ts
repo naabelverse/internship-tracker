@@ -1,4 +1,7 @@
+import { Types, type InsertManyOptions } from 'mongoose';
 import request from 'supertest';
+import { Application } from '@/models/Application';
+import { startOfLocalWeek } from '@/utils/dates';
 import {
   APPLICATIONS_BASE,
   buildTestApp,
@@ -111,6 +114,139 @@ describe('analytics endpoints', () => {
       expect(response.body.data.weeklyGoal.completed).toBe(1);
       expect(response.body.data.weeklyGoal.percentage).toBe(20);
     });
+  });
+});
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Writes rows straight to the collection with `timestamps: false`, because the
+ * window a row falls in is decided by `createdAt` and the API has no way to
+ * back-date one. Every row carries a real `statusHistory`, so the cohort
+ * metrics are derived the same way they are in production.
+ */
+async function seedAgedApplications(
+  userId: string,
+  rows: { daysAgo: number; status: 'saved' | 'applied' | 'interview' }[],
+): Promise<void> {
+  const now = Date.now();
+
+  await Application.insertMany(
+    rows.map((row, index) => {
+      const createdAt = new Date(now - row.daysAgo * MS_PER_DAY);
+      const path = row.status === 'saved' ? ['saved'] : ['saved', row.status];
+
+      return {
+        user: new Types.ObjectId(userId),
+        company: `Aged ${String(index)}`,
+        role: 'Software Engineer Intern',
+        employmentType: 'internship',
+        status: row.status,
+        priority: 'medium',
+        source: 'linkedin',
+        tags: [],
+        statusHistory: path.map((to, step) => ({
+          from: step === 0 ? null : path[step - 1],
+          to,
+          changedAt: new Date(createdAt.getTime() + step * MS_PER_DAY),
+        })),
+        createdAt,
+        updatedAt: createdAt,
+      };
+    }),
+    // See demoData.service: the option works, the published type omits it.
+    { timestamps: false } as InsertManyOptions,
+  );
+}
+
+describe('GET /summary period deltas', () => {
+  it('splits the cohort into the current window and the one before it', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, [
+      { daysAgo: 2, status: 'applied' },
+      { daysAgo: 9, status: 'interview' },
+      { daysAgo: 20, status: 'saved' },
+      { daysAgo: 40, status: 'applied' },
+      { daysAgo: 55, status: 'saved' },
+      // Older than both windows, so it counts towards the all-time total only.
+      { daysAgo: 120, status: 'applied' },
+    ]);
+
+    const response = await get('/summary', accessToken);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.total).toBe(6);
+    expect(response.body.data.period.days).toBe(30);
+    expect(response.body.data.period.current).toMatchObject({ created: 3, interviewed: 1 });
+    expect(response.body.data.period.previous).toMatchObject({ created: 2, interviewed: 0 });
+  });
+
+  it('measures the response rate on each window own cohort', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, [
+      // Current window: one of two applied rows reached interview, so 50%.
+      { daysAgo: 3, status: 'applied' },
+      { daysAgo: 4, status: 'interview' },
+      // Previous window: both applied rows reached interview, so 100%.
+      { daysAgo: 35, status: 'interview' },
+      { daysAgo: 45, status: 'interview' },
+    ]);
+
+    const response = await get('/summary', accessToken);
+
+    expect(response.body.data.period.current.responseRate).toBe(50);
+    expect(response.body.data.period.previous.responseRate).toBe(100);
+  });
+
+  it('honours a caller supplied window length', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, [
+      { daysAgo: 2, status: 'applied' },
+      { daysAgo: 9, status: 'applied' },
+    ]);
+
+    const response = await get('/summary?periodDays=7', accessToken);
+
+    expect(response.body.data.period.days).toBe(7);
+    expect(response.body.data.period.current.created).toBe(1);
+    expect(response.body.data.period.previous.created).toBe(1);
+  });
+
+  it('rejects a window length outside the allowed range', async () => {
+    const { accessToken } = await registerUser(app);
+
+    const response = await get('/summary?periodDays=0', accessToken);
+
+    expect(response.status).toBe(400);
+  });
+
+  it('reports last week completed alongside this week for the goal card', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    // Placed relative to the account own week start, which is what the service
+    // uses, so the fixture cannot drift into the wrong week on a Monday run.
+    const weekStart = startOfLocalWeek(new Date(), 'UTC').getTime();
+    const daysAgo = (at: number): number => (Date.now() - at) / MS_PER_DAY;
+
+    await seedAgedApplications(userId, [
+      { daysAgo: daysAgo(weekStart + MS_PER_DAY / 2), status: 'saved' },
+      { daysAgo: daysAgo(weekStart - MS_PER_DAY * 2), status: 'saved' },
+      { daysAgo: daysAgo(weekStart - MS_PER_DAY * 5), status: 'saved' },
+    ]);
+
+    const response = await get('/summary', accessToken);
+
+    expect(response.body.data.weeklyGoal.completed).toBe(1);
+    expect(response.body.data.weeklyGoal.previousCompleted).toBe(2);
+  });
+
+  it('returns an empty comparison rather than dividing by zero', async () => {
+    const { accessToken } = await registerUser(app);
+
+    const response = await get('/summary', accessToken);
+
+    expect(response.body.data.period.current).toMatchObject({ created: 0, responseRate: 0 });
+    expect(response.body.data.period.previous).toMatchObject({ created: 0, responseRate: 0 });
+    expect(response.body.data.weeklyGoal.previousCompleted).toBe(0);
   });
 });
 

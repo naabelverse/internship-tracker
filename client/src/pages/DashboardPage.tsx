@@ -1,11 +1,12 @@
-import { PhasePlaceholder } from '@/pages/PhasePlaceholder';
+import { DashboardView } from '@/features/dashboard/DashboardView';
 
+/**
+ * The dashboard route. The whole body, Chart.js included, sits behind the
+ * `React.lazy` boundary declared in the route table, so this module and
+ * everything it imports form their own chunk.
+ */
 export function DashboardPage(): JSX.Element {
-  return (
-    <PhasePlaceholder
-      phase={8}
-      title="Dashboard"
-      description="Stat cards with period deltas, the Chart.js visuals, the activity heatmap and the upcoming deadlines panel."
-    />
-  );
+  return <DashboardView />;
 }
+
+export default DashboardPage;
