@@ -1,7 +1,9 @@
+import { expect } from 'vitest';
 import type { ReactElement, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { HelmetProvider } from 'react-helmet-async';
 import { MemoryRouter } from 'react-router-dom';
-import { cleanup, render, type RenderResult } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, type RenderResult } from '@testing-library/react';
 import { apiClient } from '@/api/client';
 import { authClient } from '@/api/http';
 import { resetRefreshState } from '@/api/refresh';
@@ -36,15 +38,37 @@ export function renderWithProviders(
 ): RenderResult {
   function Wrapper({ children }: { children: ReactNode }): JSX.Element {
     return (
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[route]} future={ROUTER_FUTURE}>
-          {children}
-        </MemoryRouter>
-      </QueryClientProvider>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={[route]} future={ROUTER_FUTURE}>
+            {children}
+          </MemoryRouter>
+        </QueryClientProvider>
+      </HelmetProvider>
     );
   }
 
   return render(ui, { wrapper: Wrapper });
+}
+
+/**
+ * Waits out the route-level `Suspense` boundary.
+ *
+ * Phase 13 made every heavy route lazy, which is what keeps Chart.js, dnd-kit and
+ * the markdown pair out of the landing bundle. The cost is that mounting `<App />`
+ * now renders `RouteSkeleton` first and the page one microtask later, so a
+ * synchronous assertion would see the wrong skeleton.
+ *
+ * Awaiting this leaves the test asserting exactly what it did before — the
+ * page's own loading, empty or error state — rather than the router's.
+ */
+export async function waitForRoute(): Promise<void> {
+  // `waitFor` rather than `waitForElementToBeRemoved`, because more than one
+  // boundary can show this skeleton — the session guard and the lazy route both
+  // do — and the second can appear only after the first has gone.
+  await waitFor(() => {
+    expect(screen.queryAllByTestId('route-skeleton')).toHaveLength(0);
+  });
 }
 
 /**

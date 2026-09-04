@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/App';
+import CalendarPage from '@/pages/CalendarPage';
 import {
   errorBody,
   makeApplication,
@@ -9,7 +10,7 @@ import {
   makeSession,
   successBody,
 } from '../utils/factories';
-import { installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
+import { createGate, installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 
 const CALENDAR = 'GET /calendar';
@@ -67,13 +68,25 @@ afterEach(() => {
 });
 
 describe('calendar rendering', () => {
-  it('shows a skeleton before the events arrive', () => {
-    installMockApi({ [CALENDAR]: () => ({ status: 200, data: successBody({ events: [] }) }) });
+  it('shows a skeleton before the events arrive', async () => {
+    // The page is rendered directly rather than through `<App />`. Since Phase 13
+    // this route is lazy, so going through the router would race the chunk load
+    // against the request; this case is about the page's own loading state. The
+    // response is gated so that state persists long enough to observe.
+    const gate = createGate();
+    installMockApi({
+      [CALENDAR]: async () => {
+        await gate.wait;
+        return { status: 200, data: successBody({ events: [] }) };
+      },
+    });
     signIn(makeSession());
 
-    renderWithProviders(<App />, { route: '/applications/calendar?month=2026-02' });
+    renderWithProviders(<CalendarPage />, { route: '/applications/calendar?month=2026-02' });
 
-    expect(screen.getByTestId('calendar-skeleton')).toBeInTheDocument();
+    expect(await screen.findByTestId('calendar-skeleton')).toBeInTheDocument();
+
+    gate.open();
   });
 
   it('shows an error state with a retry when the range fails to load', async () => {

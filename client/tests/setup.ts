@@ -1,4 +1,17 @@
+import { configure } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+
+/**
+ * Phase 13 made every route lazy, which is what keeps Chart.js, dnd-kit and the
+ * markdown pair out of the landing bundle. Under Vite's on-demand transform the
+ * first dynamic import in a file can take longer than the 1s default, so a
+ * `findBy*` would time out on a page that is merely still compiling rather than
+ * actually missing. The ceiling is raised, not removed: a genuinely absent
+ * element still fails, just a few seconds later. It has to stay well under
+ * `testTimeout` in vite.config.ts, or a slow query eats the whole test budget
+ * and reports a timeout instead of the assertion that actually failed.
+ */
+configure({ asyncUtilTimeout: 10_000 });
 
 /**
  * jsdom has no layout engine and no pointer events, both of which dnd-kit needs:

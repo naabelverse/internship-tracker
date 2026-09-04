@@ -45,6 +45,21 @@ export const register = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * "Try the demo". Deliberately takes no body — see `loginAsDemo` for why that is
+ * a security property rather than a convenience.
+ */
+export const demoLogin = asyncHandler(async (req, res) => {
+  const { user, session } = await authService.loginAsDemo(sessionContext(req));
+
+  setRefreshCookie(res, session.refreshToken);
+  sendSuccess(
+    res,
+    { user: user.toJSON(), accessToken: session.accessToken },
+    { message: 'Signed in to the demo account' },
+  );
+});
+
 export const login = asyncHandler(async (req, res) => {
   const { user, session } = await authService.login(req.body as LoginInput, sessionContext(req));
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   changePassword,
   deleteMe,
+  demoLogin,
   forgotPassword,
   listSessions,
   login,
@@ -17,6 +18,7 @@ import {
   verifyEmail,
 } from '@/controllers/auth.controller';
 import {
+  demoLoginIpLimiter,
   forgotPasswordEmailLimiter,
   forgotPasswordIpLimiter,
   loginEmailLimiter,
@@ -26,6 +28,7 @@ import {
   resendVerificationLimiter,
   resetPasswordIpLimiter,
 } from '@/middleware/rateLimit';
+import { changesEmail, rejectDemoAccount } from '@/middleware/rejectDemoAccount';
 import { requireAuth } from '@/middleware/requireAuth';
 import { validateBody } from '@/middleware/validate';
 import {
@@ -53,6 +56,11 @@ router.post(
 
 router.post('/login', loginIpLimiter, loginEmailLimiter, validateBody(loginSchema), login);
 
+// No body, and no `validateBody`: there is nothing to validate, which is
+// precisely what stops this route being pointed at any account but the seeded
+// demo one. See `loginAsDemo`.
+router.post('/demo', demoLoginIpLimiter, demoLogin);
+
 // Refresh and logout authenticate with the cookie, so they must work even once
 // the access token has expired.
 router.post('/refresh', refresh);
@@ -60,8 +68,22 @@ router.post('/logout', logout);
 
 router.post('/logout-all', requireAuth, logoutAll);
 router.get('/me', requireAuth, me);
-router.patch('/me', requireAuth, validateBody(updateMeSchema), updateMe);
-router.patch('/me/password', requireAuth, validateBody(changePasswordSchema), changePassword);
+// The demo guard runs after validation on the profile patch, so `changesEmail`
+// reads a parsed body rather than guessing at a raw one.
+router.patch(
+  '/me',
+  requireAuth,
+  validateBody(updateMeSchema),
+  rejectDemoAccount({ when: changesEmail }),
+  updateMe,
+);
+router.patch(
+  '/me/password',
+  requireAuth,
+  rejectDemoAccount(),
+  validateBody(changePasswordSchema),
+  changePassword,
+);
 
 // Verification and reset are unauthenticated on purpose: the token in the body
 // is the credential, and requiring a session would make a reset useless to the
@@ -87,6 +109,6 @@ router.post(
 router.get('/sessions', requireAuth, listSessions);
 router.delete('/sessions/:id', requireAuth, revokeSession);
 
-router.delete('/me', requireAuth, validateBody(deleteAccountSchema), deleteMe);
+router.delete('/me', requireAuth, rejectDemoAccount(), validateBody(deleteAccountSchema), deleteMe);
 
 export default router;

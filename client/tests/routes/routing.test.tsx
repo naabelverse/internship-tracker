@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { App } from '@/App';
+import { paths } from '@/routes/paths';
 import { readRedirectTarget } from '@/routes/redirectTarget';
 import {
   errorBody,
@@ -109,7 +110,7 @@ describe('protected routing', () => {
     installMockApi(dashboardRoutes());
     signIn(makeSession());
 
-    renderWithProviders(<App />, { route: '/' });
+    renderWithProviders(<App />, { route: paths.dashboard });
 
     // The dashboard is the one route behind React.lazy, so this also proves the
     // Suspense fallback gives way rather than sticking on the skeleton.
@@ -161,9 +162,10 @@ describe('protected routing', () => {
 
     renderWithProviders(<App />, { route: '/nope' });
 
+    // The dashboard moved off `/` in Phase 13, which is now the landing page.
     expect(await screen.findByRole('link', { name: 'Back to the dashboard' })).toHaveAttribute(
       'href',
-      '/',
+      paths.dashboard,
     );
   });
 });
@@ -176,13 +178,13 @@ describe('post-login redirect target', () => {
   });
 
   it('falls back to the dashboard when there is nothing to go back to', () => {
-    expect(readRedirectTarget(null)).toBe('/');
-    expect(readRedirectTarget({})).toBe('/');
-    expect(readRedirectTarget({ from: 42 })).toBe('/');
+    expect(readRedirectTarget(null)).toBe(paths.dashboard);
+    expect(readRedirectTarget({})).toBe(paths.dashboard);
+    expect(readRedirectTarget({ from: 42 })).toBe(paths.dashboard);
   });
 
   it('refuses a protocol-relative path, which would be an open redirect', () => {
-    expect(readRedirectTarget({ from: '//evil.example' })).toBe('/');
-    expect(readRedirectTarget({ from: 'https://evil.example' })).toBe('/');
+    expect(readRedirectTarget({ from: '//evil.example' })).toBe(paths.dashboard);
+    expect(readRedirectTarget({ from: 'https://evil.example' })).toBe(paths.dashboard);
   });
 });

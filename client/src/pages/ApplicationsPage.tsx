@@ -253,3 +253,6 @@ export function ApplicationsPage(): JSX.Element {
     </div>
   );
 }
+
+/** Default export as well, so `React.lazy` can import this route. */
+export default ApplicationsPage;

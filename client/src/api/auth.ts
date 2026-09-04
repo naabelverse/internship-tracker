@@ -30,6 +30,15 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
   return data.data;
 }
 
+/**
+ * Signs into the shared demo account. Sends no body at all — the server takes no
+ * parameters here, which is what stops the route being aimed at another account.
+ */
+export async function demoLogin(): Promise<AuthSession> {
+  const { data } = await authClient.post<ApiSuccessBody<AuthSession>>('/auth/demo');
+  return data.data;
+}
+
 /** Revokes the refresh token and clears the cookie. Errors are the caller's to handle. */
 export async function logout(): Promise<void> {
   await authClient.post('/auth/logout');

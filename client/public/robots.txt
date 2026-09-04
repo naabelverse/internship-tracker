@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /terms
+Allow: /privacy
+
+# Only the routes that carry a single-use token in the query string are
+# blocked. The app routes are deliberately *not* listed: they need a session,
+# so a crawler gets an empty shell with nothing to index, and Google is
+# explicit that robots.txt is the wrong tool for keeping a page out of an
+# index anyway. Blocking them would also fail the Lighthouse is-crawlable
+# audit for no protection in return.
+Disallow: /verify-email
+Disallow: /reset-password
+
+Sitemap: http://localhost:5173/sitemap.xml

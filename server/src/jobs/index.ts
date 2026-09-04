@@ -1,6 +1,7 @@
 import type { ScheduledTask } from 'node-cron';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
+import { startDemoResetCron } from '@/jobs/demoResetJob';
 import { startPurgeCron } from '@/jobs/purgeDeletedUsersJob';
 import { startReminderCron } from '@/jobs/reminderJob';
 import { startWeeklySummaryCron } from '@/jobs/weeklySummaryJob';
@@ -16,6 +17,7 @@ export function startScheduledJobs(): void {
   tasks.push(startReminderCron());
   tasks.push(startWeeklySummaryCron());
   tasks.push(startPurgeCron());
+  tasks.push(startDemoResetCron());
   logger.info('Scheduled jobs started', { count: tasks.length });
 }
 

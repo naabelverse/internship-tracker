@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { Types } from 'mongoose';
+import { env } from '@/config/env';
 import {
   ACCOUNT_LOCK_MS,
   BCRYPT_ROUNDS,
@@ -99,6 +100,43 @@ export async function login(input: LoginInput, context: SessionContext): Promise
   user.failedLoginAttempts = 0;
   user.lockedUntil = undefined;
   user.lastLoginAt = now;
+  await user.save();
+
+  const session = await createSession(user._id, context);
+
+  return { user, session };
+}
+
+/**
+ * Signs a visitor into the shared demo account, for SPEC section 12's
+ * "Try the demo" button.
+ *
+ * Three properties make this safe to expose unauthenticated, and all three are
+ * structural rather than checks somebody could forget:
+ *
+ * 1. It takes no input. There is no parameter for a caller to point at another
+ *    account — the identity comes from `env.DEMO_EMAIL`, a server-side value.
+ * 2. It only ever *finds*. No branch here constructs a `User`, so it cannot mint
+ *    accounts or bypass registration; an unseeded deployment gets a 404 rather
+ *    than a helpfully created account.
+ * 3. `isDemo: true` is part of the query, so somebody who registered the demo
+ *    address before it was seeded cannot be logged into through this route.
+ *
+ * Escalation is closed off separately by `rejectDemoAccount`, which refuses the
+ * password change, the email change and the deletion — so a demo session cannot
+ * be turned into an account of one's own.
+ */
+export async function loginAsDemo(context: SessionContext): Promise<AuthResult> {
+  const user = await User.findOne({ email: env.DEMO_EMAIL, isDemo: true, deletedAt: null });
+
+  if (!user) {
+    throw ApiError.notFound(
+      'The demo account is not available on this deployment.',
+      'DEMO_UNAVAILABLE',
+    );
+  }
+
+  user.lastLoginAt = new Date();
   await user.save();
 
   const session = await createSession(user._id, context);

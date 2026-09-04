@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 12 complete
-**Current phase:** 13
+**Status:** Phase 13 complete
+**Current phase:** 14
 **Last updated:** 2026-09-05
 
 ---
@@ -552,11 +552,42 @@ Notes:
   none of them set.
 
 ## Phase 13 — Public surface
-- [ ] Landing page (hero, features, screenshots, FAQ, footer)
-- [ ] Demo login into the sandboxed account, destructive actions blocked
-- [ ] Terms + Privacy pages, terms checkbox at registration
-- [ ] SEO: meta, OG, sitemap, robots, manifest, favicons, og-image
-- [ ] Lighthouse scores recorded and meeting targets
+- [x] Landing page (hero, features, screenshots, FAQ, footer)
+- [x] Demo login into the sandboxed account, destructive actions blocked
+- [x] Terms + Privacy pages, terms checkbox at registration
+- [x] SEO: meta, OG, sitemap, robots, manifest, favicons, og-image
+- [x] Lighthouse scores recorded and meeting targets
+- [x] Landing bundle isolated from Chart.js, dnd-kit and the markdown pair
+- [x] Tests green
+
+Notes:
+- **`react-helmet-async` was not in the stack.** Phase 5 landed the router, React Query and
+  axios but no Helmet, and `main.tsx` had no provider. It was installed this phase, along with
+  `sharp` as a client devDependency for the generated brand assets.
+- **The dashboard moved from `/` to `/dashboard`.** `/` is the landing page, and a signed-in
+  visitor is redirected — which is what "logged-in users hitting `/` go straight to the
+  dashboard" means once the two are different pages. The decision lives only in
+  `routes/MarketingRoute.tsx`. It is a separate guard from `PublicOnlyRoute` because it must
+  render the page during `pending` rather than a skeleton: that is the largest paint a crawler
+  and a first-time visitor both see.
+- **The demo reuses `seedDemoAccount` from Phase 10**, which itself calls Phase 8's
+  `buildDemoApplications`. No third generator was written. The nightly reset job *is*
+  `npm run seed:reset`.
+- **The demo login is `POST /auth/demo`, and it takes no request body at all.** That is the
+  security property, not a convenience: there is no parameter to aim it at another account, and
+  it only ever looks the account up — it never creates one.
+- **Phase 12's email-link mirror test caught a real bug during this phase**: the "Open my
+  dashboard" button in the weekly summary still pointed at `/`, which had just become the
+  landing page. Fixed in `server/src/mail/links.ts`.
+- **Only 7 routes are lazy, not all of them.** An earlier pass made every route lazy, which met
+  the budget but introduced timing flakiness across 25 previously-green tests. The final set is
+  the routes isolation actually requires — Landing, Terms, Privacy, Dashboard, Board,
+  Applications, Calendar, ApplicationDetail — and the suite is stable over repeated runs.
+- Client test timeouts were separated: `asyncUtilTimeout` 10 s against a `testTimeout` of 20 s.
+  Equal values made a slow lazy chunk report "test timed out" instead of the real assertion.
+- **robots.txt no longer blocks the app routes**, only the two that carry a single-use token in
+  the query string. Blocking `/dashboard` failed Lighthouse's `is-crawlable` audit while
+  protecting nothing — those routes need a session, so a crawler gets an empty shell.
 
 ## Phase 14 — Hardening
 - [ ] Resource caps, disposable email blocklist, honeypot
@@ -587,7 +618,18 @@ Notes:
 ## Manual steps waiting on me (the human)
 _The agent appends anything it cannot do itself here — DNS records, account signups, secrets to generate._
 
-- [ ] Fill `{{CONTACT_EMAIL}}` in Terms, Privacy, and SECURITY.md
+- [ ] **Fill `{{CONTACT_EMAIL}}`.** It now appears in four places, all fed from one constant:
+      set `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts` and the landing footer's mailto, the
+      Terms contact line and the Privacy contact line all follow. The literal placeholder also
+      sits in `client/content/terms.md` and `client/content/privacy.md` for anyone reading the
+      markdown directly, and in SECURITY.md. A test asserts the placeholder is still present,
+      so it will start failing once you replace it — update
+      `client/tests/marketing/legal.test.tsx` in the same commit.
+- [ ] **Set `VITE_APP_URL` before deploying.** `sitemap.xml` and `robots.txt` are generated
+      from it (`npm run assets -w client`), and they currently carry `http://localhost:5173`.
+- [ ] **Re-run `npm run screenshot -w client` after any dashboard redesign.** The landing page
+      shows a real capture of the demo account, not a mock-up, so it goes stale when the
+      dashboard changes.
 
 ## Deferred / known issues
 _Anything intentionally postponed, with the reason._

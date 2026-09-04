@@ -19,6 +19,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // Emitted so `scripts/checkBundle.mjs` can walk the real static-import graph
+    // rather than guess at it from file names. SPEC section 12's landing-route
+    // budget is only checkable against the actual closure.
+    manifest: true,
     rollupOptions: {
       output: {
         // Dependencies change far less often than application code, so splitting
@@ -42,6 +46,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Comfortably above `asyncUtilTimeout` in tests/setup.ts. Lazy routes make a
+    // first mount slower under Vite's on-demand transform, and if the two are
+    // equal a slow chunk reports "test timed out" instead of the assertion that
+    // really failed.
+    testTimeout: 20_000,
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],

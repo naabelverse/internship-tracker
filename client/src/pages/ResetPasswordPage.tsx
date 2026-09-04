@@ -100,3 +100,6 @@ export function ResetPasswordPage(): JSX.Element {
     </AuthSplitLayout>
   );
 }
+
+/** Default export as well, so `React.lazy` can import this route. */
+export default ResetPasswordPage;

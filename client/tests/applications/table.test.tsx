@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/App';
+import ApplicationsPage from '@/pages/ApplicationsPage';
 import { COLUMN_STORAGE_KEY } from '@/features/applications/columns';
 import { errorBody, makeApplication, makeListResponse, makeSession } from '../utils/factories';
-import { installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
+import { createGate, installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 
 const LIST = 'GET /applications';
@@ -34,13 +35,25 @@ afterEach(() => {
 });
 
 describe('applications table', () => {
-  it('shows a skeleton before the first page arrives, not a bare spinner', () => {
-    installMockApi({ [LIST]: () => ({ status: 200, data: makeListResponse([]) }) });
+  it('shows a skeleton before the first page arrives, not a bare spinner', async () => {
+    // The page is rendered directly rather than through `<App />`. Since Phase 13
+    // this route is lazy, so going through the router would race the chunk load
+    // against the request; this case is about the page's own loading state. The
+    // response is gated so that state persists long enough to observe.
+    const gate = createGate();
+    installMockApi({
+      [LIST]: async () => {
+        await gate.wait;
+        return { status: 200, data: makeListResponse([]) };
+      },
+    });
     signIn(makeSession());
 
-    renderWithProviders(<App />, { route: '/applications' });
+    renderWithProviders(<ApplicationsPage />, { route: '/applications' });
 
-    expect(screen.getByTestId('applications-skeleton')).toBeInTheDocument();
+    expect(await screen.findByTestId('applications-skeleton')).toBeInTheDocument();
+
+    gate.open();
   });
 
   it('renders the rows the server returned', async () => {

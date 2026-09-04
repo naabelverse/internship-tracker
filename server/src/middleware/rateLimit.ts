@@ -105,6 +105,16 @@ export const resetPasswordIpLimiter = createAuthLimiter(
 );
 
 /**
+ * "Try the demo" needs no credential, so it is the one sign-in route where an
+ * attempt costs the caller nothing at all. Keyed by IP and capped like the
+ * others, so it cannot be used to mint refresh tokens in bulk.
+ */
+export const demoLoginIpLimiter = createAuthLimiter(
+  'RATE_LIMITED_IP',
+  'Too many demo sign-ins from this network. Try again in 15 minutes.',
+);
+
+/**
  * SPEC section 5: 3 per hour, per account rather than per IP, so a shared
  * network cannot exhaust one user's budget. Keyed on the authenticated id
  * because the route carries no email in its body.

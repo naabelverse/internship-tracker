@@ -9,7 +9,10 @@ import { env } from '@/config/env';
  * cannot quietly turn every email button into a 404.
  */
 export const MAIL_LINK_PATHS = {
-  dashboard: '/',
+  // Phase 13 moved the dashboard off `/`, which is now the public landing page.
+  // The mirror test below caught this: without the change, every "Open my
+  // dashboard" button in an email would have landed on the marketing page.
+  dashboard: '/dashboard',
   board: '/applications/board',
   settings: '/settings',
 } as const;

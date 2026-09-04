@@ -64,6 +64,15 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    // Build-time scripts: Node programs that are meant to print. They generate
+    // the brand assets, capture the landing screenshot and enforce the bundle
+    // budget, and their output is the whole point — `no-console` would be
+    // telling a CLI not to say anything.
+    files: ['client/scripts/**/*.mjs', 'scripts/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-console': 'off' },
+  },
+  {
     files: ['server/tests/**/*.ts', 'client/tests/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
     languageOptions: { globals: { ...globals.node, ...globals.jest } },
   },

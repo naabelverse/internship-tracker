@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
+import { paths } from '@/routes/paths';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   THEME_STORAGE_KEY,
@@ -127,7 +128,7 @@ describe('theme follows the account', () => {
       ...dashboardRoutes,
     });
 
-    renderWithProviders(<App />, { route: '/' });
+    renderWithProviders(<App />, { route: paths.dashboard });
 
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
@@ -148,7 +149,7 @@ describe('theme follows the account', () => {
       ...dashboardRoutes,
     });
 
-    renderWithProviders(<App />, { route: '/' });
+    renderWithProviders(<App />, { route: paths.dashboard });
 
     await waitFor(() => {
       expect(useThemeStore.getState().preference).toBe('system');

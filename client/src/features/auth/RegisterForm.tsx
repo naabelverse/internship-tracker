@@ -1,4 +1,5 @@
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -10,6 +11,8 @@ import { useRegister } from '@/features/auth/useAuthMutations';
 import { paths } from '@/routes/paths';
 
 const FIELDS = ['name', 'email', 'password'] as const;
+
+const LEGAL_LINK = 'font-medium text-primary underline underline-offset-2 hover:no-underline';
 
 export function RegisterForm(): JSX.Element {
   const registerAccount = useRegister(paths.dashboard);
@@ -74,8 +77,25 @@ export function RegisterForm(): JSX.Element {
         {...register('password')}
       />
 
+      {/*
+        The label carries real links, so somebody can read what they are
+        accepting without losing the half-filled form behind them. `acceptTerms`
+        is sent to the server, which stamps `acceptedTermsAt` on the account.
+      */}
       <Checkbox
-        label="I accept the Terms of Service and the Privacy Policy."
+        label={
+          <>
+            I accept the{' '}
+            <Link to={paths.terms} target="_blank" rel="noreferrer" className={LEGAL_LINK}>
+              Terms of Service
+            </Link>{' '}
+            and the{' '}
+            <Link to={paths.privacy} target="_blank" rel="noreferrer" className={LEGAL_LINK}>
+              Privacy Policy
+            </Link>
+            .
+          </>
+        }
         error={errors.acceptTerms?.message}
         {...register('acceptTerms')}
       />

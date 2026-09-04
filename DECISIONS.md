@@ -1423,3 +1423,70 @@ The half deferred when the phase was split. Closes Phase 11.
   links at, and a test reads `client/src/routes/paths.ts` as text to assert the mirror still
   matches - the same technique `app-info.test.ts` already uses against `package.json`. A client
   route rename cannot quietly turn every button in every email into a 404.
+
+## Phase 13 - public surface
+
+- **`react-helmet-async` was not in the stack, contrary to the brief.** Phase 5 landed the
+  router, React Query and axios; there was no Helmet dependency and no provider in `main.tsx`.
+  It was installed here, together with `sharp` as a client devDependency for generating the
+  brand assets.
+- **The dashboard moved from `/` to `/dashboard`.** Two pages cannot both own one path, and
+  SPEC section 12's "logged-in users hitting `/` go straight to the dashboard" only means
+  something once they are different locations. The redirect lives in exactly one component,
+  `MarketingRoute`.
+- **`MarketingRoute` is a separate guard from `PublicOnlyRoute`, and the difference is the
+  `pending` branch.** `PublicOnlyRoute` renders a skeleton while the silent refresh is in
+  flight, which is right for `/login`. On a marketing page it would be the largest paint a
+  crawler and a first-time visitor both see, so `MarketingRoute` renders the page immediately
+  and redirects only once the session is actually known to be authenticated.
+- **`POST /auth/demo` takes no request body.** Three properties make it safe to expose
+  unauthenticated, and all three are structural rather than checks that could be forgotten: it
+  has no parameter to aim at another account; it only ever _finds_ a user, never creates one,
+  so it cannot mint accounts or bypass registration; and `isDemo: true` is part of the query,
+  so somebody who registered the demo address before seeding cannot be logged into through it.
+  An unseeded deployment answers 404 rather than helpfully creating an account.
+- **The sandbox guard is server-side and keyed on `isDemo`, not on the endpoint.** The demo
+  credentials are published and the demo route hands a session to anyone, so a hidden button
+  would protect nothing. `rejectDemoAccount` refuses `DELETE /auth/me`, `PATCH /auth/me/password`
+  and an email change on `PATCH /auth/me`. The profile patch is _not_ blocked wholesale: theme
+  and timezone are what the demo exists to show, and they destroy nothing.
+- **The nightly reset is `npm run seed:reset`, not a new code path.** `runDemoReset` calls
+  `seedDemoAccount({ reset: true })`, which calls Phase 8's `buildDemoApplications`. It is
+  registered by the same `startScheduledJobs` as the reminder, weekly-summary and purge crons,
+  at 04:20 UTC — off the purge's 03:15 and off the hour boundary the digests tick on. A
+  deployment with no demo account skips quietly rather than erroring nightly about an optional
+  fixture.
+- **Only the routes isolation requires are lazy.** An intermediate version made all fifteen
+  routes lazy: it met the budget at 111 KB but destabilised 25 previously-green tests, because
+  mounting `<App />` then resolved a chunk mid-test. The final set is eight — Landing, Terms,
+  Privacy, Dashboard, Board, Applications, Calendar, ApplicationDetail — which lands at 139.8 KB
+  and leaves the suite stable across repeated runs. A budget met by a flaky suite is not met.
+- **`manualChunks` was never the isolation mechanism, and believing it was would have been the
+  bug.** It puts Chart.js and dnd-kit in their own _chunks_, but `App.tsx` statically imported
+  `BoardPage`, `CalendarPage` and `ApplicationDetailPage`, so the browser fetched those chunks on
+  every route including `/`. The dynamic import is what severs them; `scripts/checkBundle.mjs`
+  walks the built manifest's transitive static-import closure and fails the build if any of them
+  reappears, and greps the emitted JavaScript for library fingerprints as a second check.
+  Size alone would prove nothing: a chunk can be under budget and still drag Chart.js behind it.
+- **robots.txt blocks only the two token-bearing routes.** Disallowing `/dashboard` and friends
+  failed Lighthouse's `is-crawlable` audit (dashboard SEO 63) while protecting nothing: those
+  routes need a session, so a crawler gets an empty shell, and Google is explicit that robots.txt
+  is the wrong tool for keeping a page out of an index. `/verify-email` and `/reset-password`
+  stay blocked because their query strings carry single-use tokens.
+- **Authenticated route titles live in one table in `AppLayout`, not a `<Seo>` per page.** Every
+  one of those routes renders into that shell, so a longest-prefix table gives each its own
+  title and description without five near-identical edits.
+- **The landing screenshot is a real capture, not a mock-up.** `scripts/captureScreenshot.mjs`
+  drives a production build through "Try the demo" and photographs the actual dashboard. The
+  landing copy claims it is "the same view the demo account opens on", and a drawn
+  approximation would make that false the moment the UI changed.
+- **Client async timeouts were separated: `asyncUtilTimeout` 10 s under a 20 s `testTimeout`.**
+  Equal values meant a slow lazy chunk consumed the whole test budget and reported "test timed
+  out" instead of the assertion that actually failed.
+- **The legal pages are checked for substance, not for rendering.** `legal.test.tsx` asserts the
+  privacy policy names bcrypt, the IP address, the user agent, the timezone, the terms stamp, the
+  30-day purge, the export route and the delete route — the things this app really stores. A test
+  that only checked the page rendered would pass on lorem ipsum.
+- **The `{{CONTACT_EMAIL}}` placeholder is fed from one constant.** `CONTACT_EMAIL` in
+  `siteMeta.ts` supplies the footer mailto and is substituted into both markdown documents at
+  render time, so filling it in is a one-line change rather than a hunt through prose.

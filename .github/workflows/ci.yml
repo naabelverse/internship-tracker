@@ -73,3 +73,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # SPEC section 12's performance budget, checked against the built output:
+      # the landing route under 150 KB gzipped with Chart.js, dnd-kit and the
+      # markdown pair provably absent from its static import closure.
+      - name: Check the bundle budget
+        run: npm run check:bundle

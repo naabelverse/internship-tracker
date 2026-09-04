@@ -42,6 +42,26 @@ export function useLogin(
   });
 }
 
+/**
+ * "Try the demo" on the landing page. Takes no arguments, mirroring the endpoint.
+ * The toast sets expectations up front: the account is shared and resets nightly,
+ * which is why the destructive actions inside it answer with a refusal.
+ */
+export function useDemoLogin(): UseMutationResult<AuthSession, unknown, void> {
+  const onEstablished = useSessionEstablished();
+
+  return useMutation({
+    mutationFn: authApi.demoLogin,
+    onSuccess: (session) => {
+      onEstablished(session, paths.dashboard);
+      toast.success('You are in the demo account. It is shared, and resets every night.');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'The demo is not available right now'));
+    },
+  });
+}
+
 export function useRegister(
   redirectTo: string,
 ): UseMutationResult<AuthSession, unknown, authApi.RegisterPayload> {

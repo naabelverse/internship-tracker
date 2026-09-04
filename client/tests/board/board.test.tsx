@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import { App } from '@/App';
+import BoardPage from '@/pages/BoardPage';
 import { BOARD_LIMIT } from '@/features/board/boardColumns';
 import { errorBody, makeApplication, makeListResponse, makeSession } from '../utils/factories';
-import { installMockApi, type Responder } from '../utils/mockAdapter';
-import { renderWithProviders, resetClientState, signIn } from '../utils/render';
+import { createGate, installMockApi, type Responder } from '../utils/mockAdapter';
+import { renderWithProviders, resetClientState, signIn, waitForRoute } from '../utils/render';
 
 const LIST = 'GET /applications';
 
@@ -14,13 +15,15 @@ const rows = [
   makeApplication({ id: 'a3', company: 'Linear', status: 'offer', tags: ['design', 'remote'] }),
 ];
 
-function renderBoard(routes: Record<string, Responder> = {}, meta = {}): void {
+async function renderBoard(routes: Record<string, Responder> = {}, meta = {}): Promise<void> {
   installMockApi({
     [LIST]: () => ({ status: 200, data: makeListResponse(rows, meta) }),
     ...routes,
   });
   signIn(makeSession());
   renderWithProviders(<App />, { route: '/applications/board' });
+  // The board route is lazy, so the page mounts a microtask after render.
+  await waitForRoute();
 }
 
 beforeEach(() => {
@@ -32,17 +35,29 @@ afterEach(() => {
 });
 
 describe('board rendering', () => {
-  it('shows a skeleton before the first page arrives', () => {
-    installMockApi({ [LIST]: () => ({ status: 200, data: makeListResponse([]) }) });
+  it('shows a skeleton before the first page arrives', async () => {
+    // The page is rendered directly rather than through `<App />`. Since Phase 13
+    // the board route is lazy, so going through the router would race the chunk
+    // load against the request, and this case is about the page's own loading
+    // state rather than about routing. The list is gated so that state persists.
+    const gate = createGate();
+    installMockApi({
+      [LIST]: async () => {
+        await gate.wait;
+        return { status: 200, data: makeListResponse([]) };
+      },
+    });
     signIn(makeSession());
 
-    renderWithProviders(<App />, { route: '/applications/board' });
+    renderWithProviders(<BoardPage />);
 
-    expect(screen.getByTestId('board-skeleton')).toBeInTheDocument();
+    expect(await screen.findByTestId('board-skeleton')).toBeInTheDocument();
+
+    gate.open();
   });
 
   it('shows an error state with a retry when the board fails to load', async () => {
-    renderBoard({
+    await renderBoard({
       [LIST]: () => ({ status: 500, data: errorBody('Something went wrong', 'INTERNAL_ERROR') }),
     });
 
@@ -51,13 +66,13 @@ describe('board rendering', () => {
   });
 
   it('shows an empty state when nothing is tracked yet', async () => {
-    renderBoard({ [LIST]: () => ({ status: 200, data: makeListResponse([]) }) });
+    await renderBoard({ [LIST]: () => ({ status: 200, data: makeListResponse([]) }) });
 
     expect(await screen.findByText('Nothing on the board yet')).toBeInTheDocument();
   });
 
   it('renders one column per status with a live count', async () => {
-    renderBoard();
+    await renderBoard();
     await screen.findByText('Stripe');
 
     expect(screen.getAllByTestId(/^column-/)).toHaveLength(8);
@@ -70,7 +85,7 @@ describe('board rendering', () => {
   });
 
   it('puts each card in the column for its status', async () => {
-    renderBoard();
+    await renderBoard();
     await screen.findByText('Stripe');
 
     expect(within(screen.getByTestId('column-applied')).getByText('Figma')).toBeInTheDocument();
@@ -78,7 +93,7 @@ describe('board rendering', () => {
   });
 
   it('shows the role, deadline chip and tags on a card', async () => {
-    renderBoard();
+    await renderBoard();
     await screen.findByText('Linear');
 
     const card = screen.getByTestId('column-offer');
@@ -88,7 +103,7 @@ describe('board rendering', () => {
   });
 
   it('gives every card a labelled move handle for the keyboard sensor', async () => {
-    renderBoard();
+    await renderBoard();
     await screen.findByText('Stripe');
 
     expect(screen.getByRole('button', { name: 'Move Stripe from Applied' })).toBeInTheDocument();
@@ -96,7 +111,7 @@ describe('board rendering', () => {
   });
 
   it('says so when there are more applications than one board page holds', async () => {
-    renderBoard({}, { total: BOARD_LIMIT + 40 });
+    await renderBoard({}, { total: BOARD_LIMIT + 40 });
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       `Showing the ${String(BOARD_LIMIT)} most recently updated of ${String(BOARD_LIMIT + 40)}`,

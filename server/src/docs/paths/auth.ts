@@ -75,6 +75,23 @@ export const authPaths: Record<string, unknown> = {
       },
     },
   },
+  '/api/v1/auth/demo': {
+    post: {
+      tags: TAG,
+      summary: 'Sign in to the shared demo account',
+      description:
+        'Backs the landing page "Try the demo" button. Takes no request body, which is the security property rather than a convenience: there is no parameter that could point this at another account, the identity comes from the server DEMO_EMAIL, and the handler only ever looks the account up — it never creates one, so it cannot mint accounts or bypass registration. The session it returns is ordinary, but the account carries isDemo, so the password change, the email change and the deletion are each refused with 403 DEMO_ACCOUNT_READONLY.',
+      security: [],
+      responses: {
+        ...ok('Signed in to the demo account', sessionData),
+        '404': {
+          description: 'This deployment has no seeded demo account',
+          content: { 'application/json': { schema: ref('Error') } },
+        },
+        ...RATE_LIMITED,
+      },
+    },
+  },
   '/api/v1/auth/refresh': {
     post: {
       tags: TAG,

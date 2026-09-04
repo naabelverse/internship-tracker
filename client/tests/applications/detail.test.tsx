@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '@/App';
+import ApplicationDetailPage from '@/pages/ApplicationDetailPage';
 import {
   errorBody,
   makeApplication,
@@ -9,7 +10,7 @@ import {
   makeInterview,
   makeSession,
 } from '../utils/factories';
-import { installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
+import { createGate, installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 
 const ID = 'app-1';
@@ -53,13 +54,25 @@ afterEach(() => {
 });
 
 describe('detail page', () => {
-  it('shows a skeleton before the document arrives', () => {
-    installMockApi({ [DETAIL]: detailResponse });
+  it('shows a skeleton before the document arrives', async () => {
+    // The page is rendered directly rather than through `<App />`. Since Phase 13
+    // this route is lazy, so going through the router would race the chunk load
+    // against the request; this case is about the page's own loading state. The
+    // response is gated so that state persists long enough to observe.
+    const gate = createGate();
+    installMockApi({
+      [DETAIL]: async () => {
+        await gate.wait;
+        return detailResponse();
+      },
+    });
     signIn(makeSession());
 
-    renderWithProviders(<App />, { route: `/applications/${ID}` });
+    renderWithProviders(<ApplicationDetailPage />, { route: `/applications/${ID}` });
 
-    expect(screen.getByTestId('detail-skeleton')).toBeInTheDocument();
+    expect(await screen.findByTestId('detail-skeleton')).toBeInTheDocument();
+
+    gate.open();
   });
 
   it('shows an error state with a retry when the document fails to load', async () => {
