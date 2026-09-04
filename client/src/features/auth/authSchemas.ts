@@ -45,3 +45,20 @@ export function detectTimezone(): string {
     return 'UTC';
   }
 }
+
+export const forgotPasswordSchema = z.object({ email });
+
+/**
+ * The reset form asks twice, which registration does not, because there is no
+ * current password to fall back on if a typo gets through: the token is spent
+ * and the only way back is another email.
+ */
+export const resetPasswordSchema = z
+  .object({ password: strongPassword, confirmPassword: z.string() })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Both passwords must match',
+  });
+
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;

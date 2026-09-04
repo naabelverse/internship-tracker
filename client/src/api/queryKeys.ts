@@ -11,6 +11,7 @@ import type { ApplicationFilters } from '@/features/applications/filterParams';
 const auth = {
   all: ['auth'] as const,
   session: () => ['auth', 'session'] as const,
+  sessions: () => ['auth', 'sessions'] as const,
 };
 
 const applications = {

@@ -8,4 +8,9 @@ export const paths = {
   settings: '/settings',
   login: '/login',
   register: '/register',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  verifyEmail: '/verify-email',
+  /** Where a closed account lands: sign-in will not work from here. */
+  accountClosed: '/account-closed',
 } as const;

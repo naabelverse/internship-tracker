@@ -1,9 +1,12 @@
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { DangerZoneSection } from '@/features/settings/DangerZoneSection';
 import { DataSection } from '@/features/settings/DataSection';
+import { EmailSection } from '@/features/settings/EmailSection';
 import { PasswordSection } from '@/features/settings/PasswordSection';
 import { PreferencesSection } from '@/features/settings/PreferencesSection';
 import { ProfileSection } from '@/features/settings/ProfileSection';
+import { SessionsSection } from '@/features/settings/SessionsSection';
 import { useSession } from '@/hooks/useSession';
 
 /**
@@ -48,9 +51,12 @@ export function SettingsPage(): JSX.Element {
 
       <div className="max-w-3xl space-y-4">
         <ProfileSection user={user} />
+        <EmailSection user={user} />
         <PreferencesSection user={user} />
         <PasswordSection />
+        <SessionsSection />
         <DataSection />
+        <DangerZoneSection />
       </div>
     </div>
   );

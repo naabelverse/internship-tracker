@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 11 backend complete, UI outstanding
-**Current phase:** 11 (client pages)
+**Status:** Phase 11 complete
+**Current phase:** 12
 **Last updated:** 2026-09-04
 
 ---
@@ -475,7 +475,7 @@ conflict being raised at all. Carrying the payload on the conflict object would 
 
 ## Phase 11 — Account lifecycle
 - [x] Email verification (hashed single-use token, 24 h, resend limited)
-- [x] Forgot + reset password endpoints — **pages deferred**, see the note below
+- [x] Forgot + reset password pages and endpoints
 - [x] No user enumeration on forgot-password (test proves it)
 - [x] Email change with pending-email confirmation
 - [x] Session list + revoke, account lock after repeated failures
@@ -483,11 +483,11 @@ conflict being raised at all. Carrying the payload on the conflict object would 
 - [x] Tests green
 
 Notes:
-- **This phase was split at your instruction: the backend landed, the UI did not.** SPEC section
-  16 phase 11 also lists the `/forgot-password` and `/reset-password` pages, plus the verification
-  banner, sessions panel and delete-account flow the endpoints exist for. None of that is built.
-  The second box above is ticked for the endpoints only and says so; the phase is **not** complete
-  until the client work lands, so Phase 12 should not start ahead of it.
+- **This phase was built in two passes at your instruction, backend then UI. Both have landed and
+  nothing is deferred.** The client half added `/forgot-password`, `/reset-password`,
+  `/verify-email` and `/account-closed`, an app-wide verification banner that escalates as the
+  seven day window closes, and Settings sections for the email change, the signed in devices and
+  closing the account.
 - **Account lockout was already built.** Phase 2 implemented `failedLoginAttempts` and
   `lockedUntil` in `auth.service.ts`. This phase proved it rather than rebuilding it, and added
   the interaction test that separates it from the rate limiter.
@@ -502,6 +502,14 @@ Notes:
   transport, which is the shape Phase 12 fills in with the real transport and templates.
 - A Phase 2 test that asserted `PATCH /auth/me` rejects an email change was rewritten, not
   deleted — it was an explicit placeholder for this phase's flow. Recorded in `DECISIONS.md`.
+- The banner reads `emailVerified` and `createdAt`, which `/auth/me` really returns; the seven day
+  constant is duplicated client-side and marked advisory, since the server's 403 is the real gate.
+- The closed-account page says what the API actually does: `login` filters `deletedAt: null`, so a
+  closed account gets the same answer as a wrong password and cannot be recovered from the app. A
+  test asserts the page never implies otherwise.
+- Two ordering bugs surfaced while testing and were fixed in the code rather than the assertions:
+  the delete flow cleared the session before navigating, so `ProtectedRoute` beat it to `/login`;
+  and the typed-confirmation label and its error message were identical text.
 
 ## Phase 12 — Email system
 - [ ] Provider-agnostic transport + console fallback (app boots with no SMTP)

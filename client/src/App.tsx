@@ -9,7 +9,11 @@ import { ApplicationsPage } from '@/pages/ApplicationsPage';
 import { BoardPage } from '@/pages/BoardPage';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
+import { AccountClosedPage } from '@/pages/AccountClosedPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -42,7 +46,18 @@ export function App(): JSX.Element {
       <Route element={<PublicOnlyRoute />}>
         <Route path={paths.login} element={<LoginPage />} />
         <Route path={paths.register} element={<RegisterPage />} />
+        <Route path={paths.forgotPassword} element={<ForgotPasswordPage />} />
+        <Route path={paths.resetPassword} element={<ResetPasswordPage />} />
       </Route>
+
+      {/*
+        Verification and the closed-account notice sit outside both guards. A
+        confirmation link is followed from an email on whatever device happens to
+        be to hand, signed in or not, and the closed-account page is reached at
+        the exact moment the session has just been cleared.
+      */}
+      <Route path={paths.verifyEmail} element={<VerifyEmailPage />} />
+      <Route path={paths.accountClosed} element={<AccountClosedPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

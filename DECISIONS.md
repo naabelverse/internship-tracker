@@ -1280,3 +1280,61 @@ Phase 11 is chartered to build it, so the case was rewritten rather than deleted
 the address is accepted, parked on `pendingEmail`, and does not take effect until confirmed.
 Saying so here because CLAUDE.md forbids weakening a test to make a build pass, and the
 difference between that and correcting a superseded one is worth being explicit about.
+
+## Phase 11 - account lifecycle (client)
+
+The half deferred when the phase was split. Closes Phase 11.
+
+### The three questions answered against shipped code rather than assumed
+
+- **Grace window detection uses `emailVerified` and `createdAt`, both of which the API really
+  returns.** `User.toJSON` strips only `PRIVATE_FIELDS`, which does not include either, and the
+  client's `User` type already declared them. `pendingEmail` is returned too and was simply
+  missing from the client type, so it was added rather than invented. The seven day constant is
+  duplicated in `verificationWindow.ts` and marked advisory in a comment: the server's 403 is the
+  real gate, and if the two ever disagree the API wins.
+- **A soft deleted user gets `401 INVALID_CREDENTIALS` on login, identical to a wrong password.**
+  `login` queries `deletedAt: null`, so the account never matches and falls into the no-user
+  branch. `forgot-password` filters the same way. There is no un-delete endpoint anywhere in the
+  API. So `AccountClosedPage` says the address will no longer sign them in and names support
+  inside the 30 days as the only route back - it does not imply a recovery the server cannot do.
+  A test asserts that page never says "sign back in to restore".
+- **The file list held**, with one addition found while building: `AccountClosedPage`, because
+  redirecting a just-deleted user to `/login` would have shown them a form that cannot work.
+
+### Assumptions and judgement calls
+
+- **Forgot-password renders its confirmation even when the request fails.** No branch on the
+  response at all, and the `catch` is deliberately empty. A chatty version would undo the
+  backend's whole guarantee: if a network error rendered differently, an attacker learns nothing
+  from the happy path and everything from the failure path. The cost is that a genuine outage is
+  silent on this one form, which is the trade being made knowingly. The test asserts the success
+  and failure renders are identical with the address factored out.
+- **Email change got its own Settings section rather than joining the profile form.** The profile
+  form saves several fields at once; folding an address change into it would fire a verification
+  email as a side effect of editing a graduation year. The section shows the current address and
+  the pending one together, so the display never swaps to an address that is not live yet.
+- **The banner escalates in three steps** - informative, a countdown in the last three days, then
+  a plain statement that editing has stopped - and switches from `role="status"` to `role="alert"`
+  at expiry, so a screen reader is interrupted only once it is actually actionable.
+- **`INVALID_TOKEN` is reported to the user as "already used".** The server clears a token off the
+  document the moment it is spent, so a spent token and a fictional one are the same lookup and
+  cannot be told apart. "Already used" is the true statement in the overwhelmingly common case and
+  points somewhere useful; "invalid" would leave someone re-clicking a dead link.
+- **The verify-email effect guards against a second run with a ref.** Strict mode runs effects
+  twice in development and this one spends a single-use token: without the guard the second run
+  would report the first as already used, on a link that had just worked.
+- **Two ordering bugs were found by the tests and fixed in the code, not the assertions.** The
+  delete flow cleared the auth store before navigating, so `ProtectedRoute` saw `anonymous` while
+  the location was still `/settings` and redirected to `/login`, beating the redirect to the
+  closed-account page. `AccountClosedPage` now clears the store on mount instead, which cannot
+  race the navigation it is the destination of. Separately, the typed-confirmation field's label
+  and its validation message were word for word identical, which is ambiguous for a screen reader
+  as much as for a query; the message now reads differently from the label.
+- **`current` is never inferred client-side.** The server decides it by hashing the refresh cookie
+  the request arrived with, so revoking "this device" acts on the server's answer rather than a
+  guess. When that row is revoked the store is cleared and the user is sent to `/login`, because
+  the access token in memory can no longer be refreshed.
+- **Device labels are matched crudely on purpose.** A UA parsing dependency for a decoration
+  nobody makes a decision on is not worth the bundle; the IP and last-used time are what identify
+  a device to its owner, and "this device" is authoritative.

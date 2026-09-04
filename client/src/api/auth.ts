@@ -46,6 +46,8 @@ export interface UpdateMePayload {
   theme?: ThemePreference;
   timezone?: string;
   emailRemindersEnabled?: boolean;
+  /** Parked as `pendingEmail` by the server until it is confirmed. */
+  email?: string;
 }
 
 export interface ChangePasswordPayload {
@@ -71,4 +73,66 @@ export async function changePassword(payload: ChangePasswordPayload): Promise<vo
 export async function fetchMe(): Promise<User> {
   const { data } = await apiClient.get<ApiSuccessBody<{ user: User }>>('/auth/me');
   return data.data.user;
+}
+
+export interface ActiveSession {
+  id: string;
+  userAgent?: string;
+  ip?: string;
+  lastUsedAt?: string;
+  createdAt: string;
+  expiresAt: string;
+  /** True for the device making the request, decided server-side by token hash. */
+  current: boolean;
+}
+
+/**
+ * The account lifecycle calls, per SPEC section 5.
+ *
+ * Verification and reset go through `authClient`, not `apiClient`: they carry a
+ * token from an email rather than a session, so a 401 or 400 from them is an
+ * answer about that token and must never start a silent refresh.
+ */
+export async function verifyEmail(token: string): Promise<User> {
+  const { data } = await authClient.post<ApiSuccessBody<{ user: User }>>('/auth/verify-email', {
+    token,
+  });
+  return data.data.user;
+}
+
+export async function resendVerification(): Promise<void> {
+  await apiClient.post('/auth/resend-verification');
+}
+
+/**
+ * Asks for a reset link. The server answers identically whether or not the
+ * address has an account, and this resolves the same way for both, so nothing
+ * downstream can tell them apart either.
+ */
+export async function forgotPassword(email: string): Promise<void> {
+  await authClient.post('/auth/forgot-password', { email });
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await authClient.post('/auth/reset-password', { token, password });
+}
+
+export async function fetchSessions(): Promise<ActiveSession[]> {
+  const { data } =
+    await apiClient.get<ApiSuccessBody<{ sessions: ActiveSession[] }>>('/auth/sessions');
+  return data.data.sessions;
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await apiClient.delete(`/auth/sessions/${id}`);
+}
+
+/** Revokes every refresh token, including this one. */
+export async function logoutEverywhere(): Promise<void> {
+  await apiClient.post('/auth/logout-all');
+}
+
+/** Soft deletes the account. The password is re-checked server-side. */
+export async function deleteAccount(password: string): Promise<void> {
+  await apiClient.delete('/auth/me', { data: { password } });
 }

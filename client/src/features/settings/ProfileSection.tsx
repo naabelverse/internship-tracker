@@ -98,7 +98,7 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
           value={user.email}
           readOnly
           disabled
-          hint="Changing your email arrives with email verification."
+          hint="Change it in the Email address section below."
         />
         <TextField
           label="University"

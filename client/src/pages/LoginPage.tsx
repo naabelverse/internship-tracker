@@ -18,6 +18,11 @@ export function LoginPage(): JSX.Element {
       }
     >
       <LoginForm />
+      <p className="mt-3 text-sm">
+        <Link to={paths.forgotPassword} className="font-medium text-primary hover:underline">
+          Forgot your password?
+        </Link>
+      </p>
     </AuthSplitLayout>
   );
 }

@@ -15,6 +15,11 @@ export interface User {
   timezone: string;
   emailRemindersEnabled: boolean;
   emailVerified: boolean;
+  /**
+   * An address the user has asked to move to, held until they confirm it. The
+   * server keeps the current address live for signing in until then.
+   */
+  pendingEmail?: string;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;

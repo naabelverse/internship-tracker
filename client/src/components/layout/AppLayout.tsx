@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { VerificationBanner } from '@/features/auth/VerificationBanner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 
@@ -38,6 +39,11 @@ export function AppLayout(): JSX.Element {
             setIsNavOpen(true);
           }}
         />
+
+        {/* App wide, not per page: an unverified account is a property of the
+            session, and burying the notice on one route would let someone spend
+            a week never seeing it. */}
+        <VerificationBanner />
 
         <main id="main-content" className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />

@@ -26,7 +26,12 @@ export function makeUser(overrides: Partial<User> = {}): User {
     theme: 'system',
     timezone: 'Asia/Kuala_Lumpur',
     emailRemindersEnabled: true,
-    emailVerified: false,
+    // Verified by default: the ordinary account most cases are about. Left
+    // unverified, every authenticated page carries Phase 11's banner - which is
+    // correct behaviour, but noise in a test about something else, and its
+    // `role="alert"` collides with the alerts those tests query for. Cases that
+    // exercise verification set this explicitly.
+    emailVerified: true,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
