@@ -911,3 +911,26 @@ cards below 768, calendar days are `role="gridcell"` buttons and the popover clo
   run, and a flaky download would turn CI red for a reason unrelated to the code.
 - **CI supplies its environment inline and leaves `NODE_ENV` unset.** Jest sets it to `test` itself,
   and setting it in the workflow would have masked that.
+
+### The first real CI run
+
+- **CI went red on its first run, and on a pre-existing Phase 7 client test rather than anything this
+  phase added.** The board's version-conflict case, which asserts that "Overwrite with my changes"
+  reissues the PATCH without a version, timed out on the runner at 1157 ms against Testing Library's
+  1000 ms default for `waitFor` and `findBy`. It had always passed locally, so nine phases of green
+  local runs had never exposed it.
+- **It was diagnosed rather than patched over.** Forcing `asyncUtilTimeout: 1` locally reproduces the
+  CI failure exactly, and the test passes five times out of five at the default, which establishes the
+  budget as the mechanism rather than a logic difference between the two machines.
+- **The budget was raised; no assertion was touched.** The case still proves exactly two PATCH calls
+  and that the second body carries no `version`. Raising the wall clock a slow machine is allowed to
+  take is not the same as weakening what is asserted, which CLAUDE.md forbids.
+- **The fix is in `client/tests/setup.ts`, not at the one call site that failed.** Every `waitFor` and
+  `findBy` in the client suite is exposed to the same difference between a developer machine and a
+  loaded runner, so fixing only the one that happened to fail first would have left the rest to fail in
+  a later phase.
+- **`testTimeout` was raised to 20 s in `vite.config.ts` alongside it.** With a 5 s Testing Library
+  budget and Vitest's 5 s default ceiling, a genuinely stuck `waitFor` would be cut short by the runner
+  and report a bare timeout instead of its own assertion message.
+- **Green run: 33854468800**, all ten steps passing.
+  https://github.com/naabelverse/internship-tracker/actions/runs/33854468800

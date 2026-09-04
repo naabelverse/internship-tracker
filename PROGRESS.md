@@ -397,6 +397,21 @@ as "the seed succeeded but the dashboard is empty".
 - The Phase 9 horizontal-scroll defect on the board route was left where it is, still carried to
   Phase 15. It was not investigated this phase.
 
+**CI is green on the real remote:** run 33854468800, all ten steps passing — install, lint, typecheck,
+server tests with coverage, client tests, build.
+https://github.com/naabelverse/internship-tracker/actions/runs/33854468800
+
+The first run (33853213230) went red, and on a **pre-existing Phase 7 client test**, not on anything
+this phase added: the board's version-conflict case, which asserts that "Overwrite with my changes"
+reissues the PATCH without a version. It passes locally and timed out on the runner at 1157 ms against
+Testing Library's 1000 ms default for `waitFor` and `findBy`. Diagnosed rather than patched over —
+forcing `asyncUtilTimeout: 1` locally reproduces the CI failure exactly, while the default passes 5 of
+5 — so the budget was raised in `client/tests/setup.ts` and **no assertion was touched**: the case
+still proves exactly two PATCH calls and that the second body carries no `version`. `testTimeout` in
+`vite.config.ts` was raised alongside it so a genuinely stuck `waitFor` reports its own assertion
+rather than being cut short by the runner's 5 s ceiling. That is the only latent flake the first real
+CI run exposed; it would have bitten any later phase.
+
 ## Phase 11 — Account lifecycle
 - [ ] Email verification (hashed single-use token, 24 h, resend limited)
 - [ ] Forgot + reset password pages and endpoints
