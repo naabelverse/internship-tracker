@@ -402,7 +402,8 @@ as "the seed succeeded but the dashboard is empty".
 **CI is now reliably green — run 33874058196.**
 https://github.com/naabelverse/internship-tracker/actions/runs/33874058196
 
-Two fixes were needed to get there, in this order.
+Three fixes were needed in total. The first two got CI green; the third closed the second
+instance of the first one's defect class, which the audit had found and reported.
 
 1. **A real Phase 6/7 board defect**, described below and in `DECISIONS.md`: the conflict dialog and
    the pending drop lived in a subtree the board's loading state could unmount, so a 409 prompt could
@@ -455,6 +456,17 @@ before the user can act on it, and even when it survives, `onOverwrite` silently
 fix it does not deliver** — the same call Phase 9 made on `overflow-x-clip`. The two timing changes
 from the wrong diagnosis were reverted too. The test was left exactly as written: it is correct, and
 it is the only thing that found this.
+
+3. **The same defect class in `ApplicationsPage`'s edit modal**, which the board fix's audit found
+   and reported without fixing. `editing = applications.find(...)` with `isOpen={editing !== undefined}`
+   made the modal's existence depend on a value any refetch could take away: the modal closed
+   mid-edit, the reset effect wiped the typed values when the row returned, and while the row was
+   missing `isEdit` was false, so Save and Overwrite silently POSTed a duplicate instead of PATCHing.
+   Fixed by snapshotting the row when Edit is clicked rather than re-deriving it every render.
+   `client/tests/applications/editModalSurvival.test.tsx` covers all three, and the applications
+   suite ran 20 consecutive times with 20 passes and 0 failures. The third audit item,
+   `ApplicationDetailPage`, was re-checked and is safe today rather than merely less likely; the
+   reasoning and what would break it are in `DECISIONS.md`.
 
 Both were fixed before any Phase 11 feature work, in the order listed at the top of this section.
 The hoist into `BoardPage` was the shape chosen, for a third reason not visible above: the

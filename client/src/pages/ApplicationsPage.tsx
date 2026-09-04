@@ -21,7 +21,7 @@ import { useApplicationsQuery } from '@/features/applications/useApplicationQuer
 import { useBulkAction, useChangeStatus } from '@/features/applications/useApplicationMutations';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import type { ApplicationStatus } from '@/types/application';
+import type { Application, ApplicationStatus } from '@/types/application';
 
 function TableSkeleton(): JSX.Element {
   return (
@@ -41,8 +41,25 @@ export function ApplicationsPage(): JSX.Element {
   const bulk = useBulkAction();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  /**
+   * The row being edited is held as a snapshot taken when Edit was clicked, not
+   * re-derived from the live list on every render.
+   *
+   * Deriving it made the modal's own existence depend on a value an unrelated
+   * refetch could take away: an optimistic delete, a page or filter change, or a
+   * refetch that simply no longer contained the row all made `find` return
+   * undefined, which closed the modal mid-edit, wiped the in-progress form when
+   * the row came back, and left `isEdit` false so saving POSTed a duplicate
+   * instead of updating.
+   *
+   * The snapshot is also the more correct value. `version` has to be the one the
+   * user read, because that is what the server compares against; re-deriving
+   * silently advanced it on every background refetch and quietly disarmed the
+   * conflict check the dialog exists to handle.
+   */
+  const [editing, setEditing] = useState<Application | null>(null);
 
   const [hiddenColumns, setHiddenColumns] = useLocalStorageState<string[]>(
     COLUMN_STORAGE_KEY,
@@ -54,7 +71,15 @@ export function ApplicationsPage(): JSX.Element {
   const columns = useMemo(() => visibleColumns(hiddenColumns), [hiddenColumns]);
   // Memoised so `toggleAll` keeps a stable identity between renders.
   const applications = useMemo(() => query.data?.applications ?? [], [query.data]);
-  const editing = applications.find((application) => application.id === editingId);
+
+  // Resolved once, from the list the user is actually looking at, and then held.
+  const startEditing = useCallback(
+    (id: string) => {
+      const row = applications.find((application) => application.id === id);
+      if (row) setEditing(row);
+    },
+    [applications],
+  );
 
   const toggle = useCallback((id: string) => {
     setSelectedIds((current) =>
@@ -180,7 +205,7 @@ export function ApplicationsPage(): JSX.Element {
               selectedIds={selectedIds}
               pendingStatusIds={pendingStatusIds}
               onToggle={toggle}
-              onEdit={setEditingId}
+              onEdit={startEditing}
               onStatusChange={(id, status) => {
                 changeStatus.mutate({ id, status });
               }}
@@ -195,7 +220,7 @@ export function ApplicationsPage(): JSX.Element {
               onToggle={toggle}
               onToggleAll={toggleAll}
               onSort={onSort}
-              onEdit={setEditingId}
+              onEdit={startEditing}
               onStatusChange={(id, status) => {
                 changeStatus.mutate({ id, status });
               }}
@@ -219,10 +244,10 @@ export function ApplicationsPage(): JSX.Element {
       />
 
       <ApplicationFormModal
-        isOpen={editing !== undefined}
-        application={editing}
+        isOpen={editing !== null}
+        application={editing ?? undefined}
         onClose={() => {
-          setEditingId(null);
+          setEditing(null);
         }}
       />
     </div>

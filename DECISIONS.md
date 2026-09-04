@@ -1093,3 +1093,88 @@ drops the wait is caught on the first run rather than three runs in four.
 
 `dragAndDrop.test.tsx` run 20 times consecutively: **20 passed, 0 failed.** Full client suite
 after: 25 files, 234 tests, all green.
+
+## Blocking fix - the edit modal closing when its row leaves the list
+
+Not a phase. The second instance the board fix's audit found and reported without fixing,
+and the last thing standing before Phase 11.
+
+### Root cause
+
+`ApplicationsPage` re-derived the edit modal's open state from the live list on every
+render: `const editing = applications.find(...)` with `isOpen={editing !== undefined}` and
+`application={editing}`. So the modal's existence depended on a value any refetch could take
+away for a moment.
+
+Three failures follow from that one cause, and the third is the worst:
+
+- **The modal closes mid-edit.** `editing` goes undefined, `isOpen` goes false, the `Modal`
+  unmounts and the user's half-written form is off the screen.
+- **The typed values are wiped when the row comes back.** `ApplicationFormModal` keys its
+  reset effect on `formIdentity`, which is `${application?.id ?? 'new'}:${String(isOpen)}`.
+  A round trip takes that from `app-1:true` to `new:false` and back, so the effect fires and
+  resets the form to the server's copy. The machinery that exists precisely to stop a
+  background refetch wiping the form was defeated by the prop going undefined underneath it.
+- **Saving creates a duplicate instead of updating.** `isEdit` is `application !== undefined`.
+  While the row is missing it is false, so both Save and "Overwrite with my changes" take the
+  create branch: a silent `POST /applications` making a second copy, rather than the
+  `PATCH /applications/app-1` the user asked for. No error, no toast.
+
+Reachable through ordinary use: an optimistic delete or bulk delete removes the row from
+every cached list through `removeCachedApplications`; a refetch after a status change can
+return a page that no longer matches the active filter; a page or filter change swaps the
+query key for one with no data at all.
+
+### The fix, and why not the board's shape
+
+**The row is snapshotted when Edit is clicked and held in state** - `editing: Application | null`
+instead of `editingId: string | null` plus a `find`. `isOpen={editing !== null}`.
+
+- **There was nothing to hoist.** Unlike `BoardPage`, this modal is already rendered
+  unconditionally at page level, outside every query branch, and never unmounts. The board's
+  defect was an unmounting subtree; this one is prop re-derivation on a component that stays
+  mounted. Copying the board's mechanism would have been the wrong tool for a different bug.
+- **The snapshot is the more correct value, not just the more robust one.** `version` in the
+  save payload has to be the version the user read - that is the whole basis of the 409.
+  Re-deriving from the live list silently advanced it on every background refetch, which
+  quietly disarmed the conflict check that `VersionConflictDialog` exists to handle. The
+  snapshot fixes that second, quieter bug at the same time.
+- **No child changed.** `onEdit` still takes an id; the page resolves it once, against the
+  list the user is actually looking at, and keeps the result.
+
+### The regression test
+
+`client/tests/applications/editModalSurvival.test.tsx` removes the row with
+`removeCachedApplications` - the production helper an optimistic delete uses - and puts it
+back with the restore closure that same helper returns, so the reproduction is the real code
+path rather than a synthetic one and never depends on scheduling. The list responder is gated
+so no refetch can refill the list before the assertions run. All three cases fail against the
+unfixed page, each with its own signature: "Unable to find role=dialog and name Edit
+application", a Role field reset to the server's value, and one PATCH where two were expected.
+
+- **A test that passed before the fix was treated as a broken test, not a green one.** The
+  round-trip case originally dropped and restored the row back to back and passed on the
+  unfixed page. TanStack notifies observers through a scheduler, so the two writes coalesced
+  into no render at all and the round trip never happened. It now waits for the row to
+  actually leave the DOM before restoring it, and fails against the unfixed page as it should.
+
+### Audit item three, re-checked properly
+
+`ApplicationDetailPage` was reported as "same class, lower likelihood". Checked rather than
+re-hedged: it is **safe today, but only by the behaviour of three separate things**, none of
+which is a guarantee the page itself makes.
+
+- Nothing in `src/` calls `resetQueries` or `removeQueries` at all.
+- `onSettled` invalidates `lists()`, `analytics` and `calendar` - never `details()` - and
+  invalidation retains data anyway.
+- `mapCachedApplication` ends its details branch with `return map(data) ?? data`, so even an
+  optimistic delete cannot blank a cached detail entry.
+- `refetchOnWindowFocus` is false, so there is no background refetch to fail and flip the
+  query to `isError`.
+
+So `query.isPending` cannot become true again, and `!application` cannot become true, while
+the id is unchanged - the early returns above the three modals are unreachable after the
+first success. **Left as it is, deliberately**, because there is no reachable defect to fix
+and restructuring it would be a change with no failing test behind it. The hazard is latent
+rather than live: adding a `resetQueries` on details, or changing that `?? data`, would
+reintroduce the board's defect on this page with nothing to catch it.
