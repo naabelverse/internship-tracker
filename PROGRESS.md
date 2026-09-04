@@ -332,8 +332,9 @@ Deferred / open:
 - [x] Seed: demo user + 60+ realistic applications, every chart populated
 - [x] Coverage target met on services and controllers
 - [x] README complete (setup, env table, endpoints, mermaid ERD, demo creds)
-- [ ] CI workflow green — workflow written and green once (run 33854468800), but not reliably: it is
-      blocked by a pre-existing Phase 6/7 board defect the first real CI run exposed. See below.
+- [x] CI workflow green — reliably, as of run 33874058196. Two fixes were needed after the workflow
+      itself was written: the Phase 6/7 board defect the first real CI run exposed, and the drag
+      helper flake that outlived it. Both are recorded below and in `DECISIONS.md`.
 
 Notes:
 - `npm run seed` imports `buildDemoApplications` from `demoData.service.ts`, as Phase 8 asked. The
@@ -398,9 +399,28 @@ as "the seed succeeded but the dashboard is empty".
 - The Phase 9 horizontal-scroll defect on the board route was left where it is, still carried to
   Phase 15. It was not investigated this phase.
 
-**CI: the workflow is correct and has gone green on the real remote once — run 33854468800, all ten
-steps passing — but it is not reliably green, so the box above stays unticked.**
-https://github.com/naabelverse/internship-tracker/actions/runs/33854468800
+**CI is now reliably green — run 33874058196.**
+https://github.com/naabelverse/internship-tracker/actions/runs/33874058196
+
+Two fixes were needed to get there, in this order.
+
+1. **A real Phase 6/7 board defect**, described below and in `DECISIONS.md`: the conflict dialog and
+   the pending drop lived in a subtree the board's loading state could unmount, so a 409 prompt could
+   vanish before the user answered it and "Overwrite with my changes" could silently discard the move.
+   Fixed by hoisting the mutation, both pieces of state and the dialog into `BoardPage`.
+2. **A flake in the test helper, not in the product.** `@dnd-kit/core`'s `AbstractPointerSensor` keeps
+   a capture-phase `click` listener on the document that calls `stopPropagation` for 50 ms after a
+   drag ends, so the click a pointer device emits on release cannot also activate whatever is under
+   the cursor. `pointerDrag` returned synchronously at `pointerUp`, so a test clicking inside that
+   window had the event stopped at the document — an attached, enabled, correctly labelled button and
+   no handler running. `pointerDrag` is now async and waits for the suppressor to lift.
+   `dragAndDrop.test.tsx` then ran 20 consecutive times with 20 passes and 0 failures.
+   `client/tests/board/dragClickSuppression.test.tsx` pins it deterministically.
+
+The account below is left standing as written, because the first diagnosis in it was also wrong and
+the correction matters more than a tidy record. Note that its closing reading — a node belonging to an
+already-unmounted tree — was itself wrong: nothing was left mounted, and `document.body` is provably
+empty after `resetClientState`. `DECISIONS.md` carries the evidence.
 
 Every step this phase owns passes every time: install, lint, typecheck, server tests with coverage,
 build. What fails intermittently is one **pre-existing Phase 6/7 client test**, and it fails because
@@ -436,10 +456,10 @@ fix it does not deliver** — the same call Phase 9 made on `overflow-x-clip`. T
 from the wrong diagnosis were reverted too. The test was left exactly as written: it is correct, and
 it is the only thing that found this.
 
-Carried forward as the first thing to fix, before Phase 11 feature work. The likely shape of the real
-fix is to stop `pendingDrop` living in a subtree the loading state can unmount — either hoist it and
-the dialog into `BoardPage`, or carry the attempted payload on the conflict object itself so the retry
-does not depend on separate state surviving.
+Both were fixed before any Phase 11 feature work, in the order listed at the top of this section.
+The hoist into `BoardPage` was the shape chosen, for a third reason not visible above: the
+`useUpdateApplication` observer lived in `KanbanBoard` too, so an unmount mid-PATCH could stop the
+conflict being raised at all. Carrying the payload on the conflict object would not have fixed that.
 
 ## Phase 11 — Account lifecycle
 - [ ] Email verification (hashed single-use token, 24 h, resend limited)
