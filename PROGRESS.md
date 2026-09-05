@@ -320,15 +320,15 @@ actual attempted scroll):
 - Both themes behave identically at every breakpoint.
 
 Deferred / open:
-- ~~**The document scrolls horizontally on the board route at every width**~~ — **withdrawn in
-  Phase 15: there was no such bug.** Measured in Chromium at 375, 768 and 1440 on every route,
-  `document.scrollingElement.scrollLeft` will not move off zero and `documentElement.scrollWidth`
-  equals `clientWidth` everywhere. The report came from a detector that counted any box whose
-  `getBoundingClientRect()` reached past the viewport, which on this layout means the fixed
-  off-canvas drawer parked at `left: -256px` below `lg`, and the board's own columns inside its
-  `overflow-x: auto` strip at every width. Neither can extend the document. The `body.scrollWidth`
-  reading recorded at the time was the correct measurement and was disbelieved. Full mechanism in
-  DECISIONS.md; `e2e/audits/overflow.spec.ts` now asserts it by actually scrolling.
+- **FIXED in Phase 15 — the document scrolling horizontally.** Root cause: Tailwind's `sr-only` is
+  `position: absolute`, and the scroll containers were `position: static`, so an ancestor's
+  `overflow` could not clip them — a static box is never in an absolutely positioned descendant's
+  containing block chain. The table's "Actions" header label and `DeadlineChip`'s label therefore
+  escaped their scroll containers and extended the document whenever the content was wider than the
+  container. That is why `body.scrollWidth` read clean (an out-of-flow box contributes to
+  `documentElement`, not to body) and why `overflow-x-clip` on `main` did nothing (`main` is static
+  too). Fixed by making all four horizontal scroll containers `relative`. Regression test:
+  `e2e/audits/overflow.spec.ts`, which asserts by actually scrolling the document.
 - `sr-only` on a `<table>` does not constrain its width, because a `display: table` box treats
   `width: 1px` as a minimum. The chart summaries now wrap the table in an `sr-only` div.
 
@@ -662,9 +662,23 @@ Notes:
   3. **Five nameless `role="img"` canvases on the dashboard**, a serious axe violation.
      react-chartjs-2 labels the canvas `role="img"`; the charts already ship an `sr-only` data
      table, so the canvases are now `aria-hidden` and the table is the single text alternative.
-- **The Phase 9 horizontal-scroll bug was a measurement error, not a layout bug.** No route scrolls
-  the document sideways at any width, and none did. Details in DECISIONS; `e2e/audits/overflow.spec.ts`
-  is the regression test, and it decides pass/fail by actually scrolling rather than by scanning boxes.
+- **The Phase 9 horizontal-scroll bug was real, and is fixed: an absolutely positioned `sr-only`
+  label escaping its scroll container.** Tailwind's `sr-only` is `position: absolute`, and an
+  absolutely positioned box is only clipped by an ancestor's `overflow` when that ancestor is in
+  its containing block chain — which a `position: static` box never is. The applications table's
+  wrapper was `overflow-x-auto` but static, so the "Actions" header label escaped it, landed past
+  the viewport whenever the table was wider than the wrapper, and extended the *document*. Fixed by
+  making the four horizontal scroll containers `relative`. Full mechanism in DECISIONS, including
+  why `body.scrollWidth` read clean and why Phase 9's `overflow-x-clip` on `main` could not have
+  worked.
+- **This phase got that wrong once before getting it right, which is worth recording.** With the
+  box scan filtered sensibly the bug stopped reproducing locally and was written up as "a
+  measurement error, no bug exists". That was wrong: the local table happened to fit at 768 while
+  CI's fonts made it overflow. **CI caught it on the first run of the new suite.** What settled it
+  was asking the browser rather than reading the markup a third time — bisect by hiding one element
+  at a time and re-measuring `documentElement`, then print every ancestor's containment. The audit
+  now seeds long names across five statuses so the condition holds by construction, not by font
+  luck: `scrolled 29px` against the unfixed component, clean against the fixed one.
 - **Full lazy loading was safe all along.** Phase 13's belief that it destabilised 25 tests was
   wrong: with `asyncUtilTimeout` at RTL's 1 s default the *same 13 tests* fail whether 9 routes are
   lazy or all 16 — byte-identical lists, and two of them exercise routes that are eager in the

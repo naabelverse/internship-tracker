@@ -86,7 +86,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
         <Skeleton className="mt-4 h-32 w-full" label="Loading activity" />
       ) : (
         <>
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="relative mt-4 flex gap-2 overflow-x-auto pb-1">
             <ul
               className="flex shrink-0 flex-col justify-between py-0.5 text-[0.625rem] text-content-subtle"
               aria-hidden="true"

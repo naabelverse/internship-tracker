@@ -63,6 +63,11 @@ board, a calendar, deadline reminders and an analytics dashboard.
   labels the canvas `role="img"`, which axe reports as a serious violation when
   it has no accessible name. The canvas is now hidden from assistive technology,
   leaving the existing screen-reader data table as the single text alternative.
+- **The page no longer scrolls sideways when a table or the board is wider than its container.**
+  Tailwind's `sr-only` is `position: absolute`, and an absolutely positioned box is only clipped by
+  an ancestor's `overflow` when that ancestor is in its containing block chain — which a
+  `position: static` box never is. The scroll containers were static, so screen-reader labels
+  escaped them and extended the document. The four horizontal scroll containers are now positioned.
 - **The applications CSV export is reachable from the UI.** The endpoint had
   existed since the analytics phase with nothing calling it, so the export step
   of the documented user journey could not be walked at all.

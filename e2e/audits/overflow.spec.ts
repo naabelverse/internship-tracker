@@ -98,10 +98,25 @@ for (const width of WIDTHS) {
     const account = newAccount(`overflow-${String(width)}`);
     const api = await apiFor(10);
     const { accessToken } = await registerAccount(api, account);
-    // Enough cards that the board strip is genuinely wider than the viewport,
-    // which is the condition the Phase 9 report described.
-    for (const company of ['Stripe', 'Figma', 'Monzo', 'Revolut', 'Wise']) {
-      await createApplication(api, accessToken, { company, role: 'Intern', status: 'saved' });
+    /*
+      Deliberately wide, and spread across statuses.
+
+      Both halves matter. The table and the board only overflow their own
+      containers once the content is wider than they are, and that is the only
+      condition under which an escaping `sr-only` box lands past the viewport —
+      the defect this audit exists to catch. With short names and one status the
+      table fits at 768 and the right-hand board columns are empty, so the page
+      looks clean for the wrong reason: CI caught the original bug only because
+      its fonts happened to be wider than the local ones, which is luck, not a
+      test. Long strings and a card in the last column make it deterministic.
+    */
+    const statuses = ['saved', 'applied', 'assessment', 'interview', 'offer'];
+    for (const [index, status] of statuses.entries()) {
+      await createApplication(api, accessToken, {
+        company: `A Deliberately Long Company Name Number ${String(index)}`,
+        role: 'An Extremely Long Role Title That Widens The Table Layout',
+        status,
+      });
     }
     await api.dispose();
 

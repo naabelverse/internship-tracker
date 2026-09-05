@@ -1588,47 +1588,62 @@ The half deferred when the phase was split. Closes Phase 11.
 
 ## Phase 15 — E2E, performance, repo hygiene
 
-- **The Phase 9 horizontal-scroll bug does not exist, and never did — the defect was in the
-  measurement.** This is the phase's most important correction, so the mechanism is recorded in
-  full rather than summarised.
+- **The Phase 9 horizontal-scroll bug: an absolutely positioned `sr-only` label escaping its
+  scroll container.** Real, now fixed, and worth recording in full because the first two attempts
+  at diagnosing it both went wrong.
 
-  What Phase 9 reported: the document scrolls sideways on the board route at every width, and on
-  applications at 768, "even though the board's own strip scrolls correctly and `body.scrollWidth`
-  equals the viewport". `overflow-x-clip` on `main` did not help and was reverted.
+  **The mechanism.** An absolutely positioned box is clipped by an ancestor's `overflow` only if
+  that ancestor is in its _containing block chain_, and a `position: static` ancestor never is.
+  Tailwind's `sr-only` is `position: absolute`. The applications table's last header cell contains
+  `<span class="sr-only">Actions</span>`, and the wrapper around the table — `overflow-x-auto`, but
+  `position: static` — was therefore **not** that span's containing block. Its containing block was
+  the initial one, so the wrapper neither clipped nor contained it: the 1px box sat wherever the
+  table's last column fell, and when the table was wider than the wrapper that was past the
+  viewport. It extended the **document's** scrollable overflow, and the whole page scrolled
+  sideways.
 
-  What is actually true, measured in Chromium at 375 / 768 / 1440 on all seven routes:
-  `documentElement.scrollWidth === clientWidth` everywhere, and setting
-  `document.scrollingElement.scrollLeft = 9999` moves it by **0 px** everywhere. There is nothing
-  to scroll.
+  **Why the original symptoms looked contradictory.** Every one of Phase 9's observations follows
+  from that and only from that:
 
-  Where the report came from. A naive detector flags any element whose `getBoundingClientRect()`
-  reaches past the viewport. Two kinds of box do that here, and neither can extend the document:
+  - _"`body.scrollWidth` equals the viewport" while the document scrolls._ An absolutely positioned
+    box whose containing block is the initial one is out of body's flow, so it contributes to
+    `documentElement`'s scrollable overflow and not to body's. Measured directly: `body` 768,
+    `html` 781, document scrolls 13px. The reading that looked like the anomaly was correct; it was
+    the box scan that was wrong.
+  - _"`overflow-x-clip` on `main` did not resolve it."_ Of course not — `main` is `position: static`
+    too, so it is equally absent from the span's containing block chain. Confirmed by measurement:
+    `overflow-x: clip` on `main`, on `body`, and on `html` all leave the overflow at 781.
+  - _Board at every width, applications only at 768._ The condition is "the content is wider than
+    its scroll container", which for the board's strip is true at every width, and for the table is
+    true at 768 but not at 375 (stacked cards) or 1440 (it fits).
 
-  1. **The off-canvas navigation drawer**, `position: fixed` at `left: -256px` below `lg`. A fixed
-     box is laid out against the viewport and contributes nothing to the initial containing block's
-     scrollable overflow. Hiding it leaves `documentElement.scrollWidth` unchanged, at 375 and at
-     768 — which the probe confirms directly.
-  2. **The board's own columns**, inside the strip whose `overflow-x: auto` reports
-     `scrollWidth 2388 / clientWidth 1120`. Their rects sit at `right = 1476, 1776, 2076…` against
-     a 1440 viewport. That is not a fault; it is what correct internal scrolling looks like from
-     the outside.
+  **The fix.** `position: relative` on the scroll container. That makes it the containing block for
+  its absolutely positioned descendants, so its `overflow-x: auto` finally contains what it appears
+  to contain, and the table still scrolls inside itself exactly as before — verified: wrapper
+  `clientWidth` 718 against `scrollWidth` 800, document back to 768 and immovable. Applied to all
+  four horizontal scroll containers, not just the one that was caught: `DeadlineChip` renders an
+  `sr-only` span too, so the board strip had the same latent defect and would have shown it as soon
+  as a card with a deadline sat in a right-hand column.
 
-  This predicts the exact asymmetry Phase 9 recorded, which is what makes it the explanation rather
-  than merely a plausible story. The board's strip is wider than its container at _every_ width, so
-  the board is flagged at every width. The applications table sits in the same kind of `overflow-x`
-  wrapper but only exceeds it at 768 — at 375 it renders as stacked cards and at 1440 it fits — so
-  applications is flagged at 768 and nowhere else. Exactly as reported.
+  `contain: paint` and `contain: layout` also fix it, for the same reason, and were rejected as
+  heavier: both bring paint or layout containment and a stacking context along with the containing
+  block, which is more behaviour than this needs.
 
-  And `body.scrollWidth` equalling the viewport was the one _correct_ measurement in the original
-  report. It was treated as the anomaly to be explained away; it was the answer. `body` is also not
-  the document's scroller, so it was the right number read off the wrong element — which is why
-  `overflow-x-clip` on `main` could not have helped either: it cannot change a descendant's rect
-  inside that descendant's own scroll container, and it cannot touch a fixed box at all.
+  **How it was actually found, after two failures.** Phase 9 guessed from the markup and reverted a
+  plausible CSS property that did nothing. This phase's first attempt was no better: with the box
+  scan filtered down to something sensible, the bug stopped reproducing locally and it was written
+  up as "a measurement error, no bug exists" — a conclusion that was wrong, and that only survived
+  because the local table happened to fit at 768 while CI's fonts made it overflow. CI caught it on
+  the first run. What settled it was refusing to reason from the markup a third time and asking the
+  browser instead: bisect by hiding one element at a time and re-measuring `documentElement`, then
+  print the computed overflow and containing block of every ancestor. That named the `sr-only` span
+  in one pass. `e2e/support/overflow.ts` keeps both instruments.
 
-  `e2e/audits/overflow.spec.ts` is the regression test. It decides pass/fail by **attempting a
-  scroll**, never by scanning boxes; the box scan exists only to explain a failure, and it now
-  excludes fixed boxes and boxes with a scrolling ancestor so its output is diagnostic rather than
-  the same noise that caused this in the first place.
+  **The regression test does not depend on luck.** `e2e/audits/overflow.spec.ts` now seeds
+  deliberately long company and role names spread across five statuses, so the table exceeds its
+  wrapper at 768 and the board's right-hand columns are populated, by construction rather than by
+  the font the runner happens to have. Verified both ways: it reports `scrolled 29px` against the
+  unfixed component and passes against the fixed one.
 
 - **Full route lazy loading was safe all along; Phase 13's diagnosis was wrong.** Phase 13 recorded
   that making all routes lazy "destabilised 25 previously-green tests, because mounting `<App />`

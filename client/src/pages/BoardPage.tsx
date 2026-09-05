@@ -13,7 +13,7 @@ import type { ApplicationStatus, VersionConflict } from '@/types/application';
 
 function BoardSkeleton(): JSX.Element {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2" data-testid="board-skeleton">
+    <div className="relative flex gap-3 overflow-x-auto pb-2" data-testid="board-skeleton">
       {[0, 1, 2, 3, 4].map((column) => (
         <div key={column} className="w-72 shrink-0 space-y-2">
           <Skeleton className="h-8 w-full" label="Loading the board" />
