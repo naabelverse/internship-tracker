@@ -320,11 +320,15 @@ actual attempted scroll):
 - Both themes behave identically at every breakpoint.
 
 Deferred / open:
-- **The document scrolls horizontally on the board route at every width**, even though the
-  board's own strip scrolls correctly and `body.scrollWidth` equals the viewport. The
-  applications route does the same at 768. `overflow-x-clip` on `main` did not resolve it and
-  was reverted rather than left in place claiming a fix it did not deliver. Root cause not
-  isolated; carried to Phase 15 with the rest of the responsive work.
+- **FIXED in Phase 15 — the document scrolling horizontally.** Root cause: Tailwind's `sr-only` is
+  `position: absolute`, and the scroll containers were `position: static`, so an ancestor's
+  `overflow` could not clip them — a static box is never in an absolutely positioned descendant's
+  containing block chain. The table's "Actions" header label and `DeadlineChip`'s label therefore
+  escaped their scroll containers and extended the document whenever the content was wider than the
+  container. That is why `body.scrollWidth` read clean (an out-of-flow box contributes to
+  `documentElement`, not to body) and why `overflow-x-clip` on `main` did nothing (`main` is static
+  too). Fixed by making all four horizontal scroll containers `relative`. Regression test:
+  `e2e/audits/overflow.spec.ts`, which asserts by actually scrolling the document.
 - `sr-only` on a `<table>` does not constrain its width, because a `display: table` box treats
   `width: 1px` as a minimum. The chart summaries now wrap the table in an `sr-only` div.
 
@@ -633,11 +637,71 @@ Notes:
   production configuration in Phase 16.
 
 ## Phase 15 — E2E, performance, repo hygiene
-- [ ] All eight Playwright flows pass in CI
-- [ ] axe checks: zero critical/serious violations
-- [ ] Code splitting, bundle budgets met, sizes reported
-- [ ] LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, GitHub templates
-- [ ] Git history scanned, no secrets
+- [x] All eight Playwright flows pass in CI
+- [x] axe checks: zero critical/serious violations
+- [x] Code splitting, bundle budgets met, sizes reported
+- [x] LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, GitHub templates
+- [x] Git history scanned, no secrets
+
+Notes:
+- **The suite is 13 tests: the eight flows, two axe cases and three responsive cases.** It runs
+  against its own compose project on shifted ports (web 5174, api 5001, mongo 27018) so it never
+  competes with a development stack. `retries` is 0 deliberately — a retry hides the intermittency
+  the suite exists to catch — and the bar was three clean consecutive runs, met at 13/13 each.
+- **Playwright found three real defects, none of them test problems.**
+  1. **`Content-Disposition` was invisible to the client across origins.** The server named every
+     download but never sent `Access-Control-Expose-Headers`, so a browser hid the header from
+     JavaScript and both exports fell back to a generic filename. Production deploys the client and
+     API to separate hosts (SPEC §15), so this was live in every deployed build; same-origin
+     development cannot show it. Fixed in `app.ts`; `server/tests/cors.exposedHeaders.test.ts`
+     fails against the old code and passes against the new.
+  2. **The CSV export had no UI at all.** `GET /applications/export` shipped in Phase 4 and nothing
+     ever called it, so SPEC §17's manual pass and §10's sixth flow could not be walked. Added an
+     Export CSV control to the applications toolbar, plus `client/src/lib/download.ts` shared with
+     the account export rather than a second copy of the same blob-saving code.
+  3. **Five nameless `role="img"` canvases on the dashboard**, a serious axe violation.
+     react-chartjs-2 labels the canvas `role="img"`; the charts already ship an `sr-only` data
+     table, so the canvases are now `aria-hidden` and the table is the single text alternative.
+- **The Phase 9 horizontal-scroll bug was real, and is fixed: an absolutely positioned `sr-only`
+  label escaping its scroll container.** Tailwind's `sr-only` is `position: absolute`, and an
+  absolutely positioned box is only clipped by an ancestor's `overflow` when that ancestor is in
+  its containing block chain — which a `position: static` box never is. The applications table's
+  wrapper was `overflow-x-auto` but static, so the "Actions" header label escaped it, landed past
+  the viewport whenever the table was wider than the wrapper, and extended the *document*. Fixed by
+  making the four horizontal scroll containers `relative`. Full mechanism in DECISIONS, including
+  why `body.scrollWidth` read clean and why Phase 9's `overflow-x-clip` on `main` could not have
+  worked.
+- **This phase got that wrong once before getting it right, which is worth recording.** With the
+  box scan filtered sensibly the bug stopped reproducing locally and was written up as "a
+  measurement error, no bug exists". That was wrong: the local table happened to fit at 768 while
+  CI's fonts made it overflow. **CI caught it on the first run of the new suite.** What settled it
+  was asking the browser rather than reading the markup a third time — bisect by hiding one element
+  at a time and re-measuring `documentElement`, then print every ancestor's containment. The audit
+  now seeds long names across five statuses so the condition holds by construction, not by font
+  luck: `scrolled 29px` against the unfixed component, clean against the fixed one.
+- **Full lazy loading was safe all along.** Phase 13's belief that it destabilised 25 tests was
+  wrong: with `asyncUtilTimeout` at RTL's 1 s default the *same 13 tests* fail whether 9 routes are
+  lazy or all 16 — byte-identical lists, and two of them exercise routes that are eager in the
+  baseline. The timeout raise Phase 13 made at the same time was the whole fix. All 16 routes are
+  lazy now and the landing route dropped from 139.8 KB to **111.4 KB**.
+- **`maxWorkers: '50%'` on the client suite.** Four tests failed during a `verify` run that shared
+  the machine with the E2E containers. The cause was measured, not guessed: the first test in a file
+  absorbs its lazy chunk's first transform at 3.4-4.4 s against ~0.7 s for every later test in the
+  same file, and an uncapped worker pool oversubscribes the box until that crosses the 10 s async
+  budget. Capping halves the CPU work at no wall-time cost (collect 105 s -> 48 s, 44.5 s -> 44.9 s
+  wall) and the contended run then passes. The budget itself was left alone.
+- **Bundle sizes are now reported for every route**, not just the two with budgets, by
+  `client/scripts/checkBundle.mjs`. Landing 111.4 KB against 150, dashboard 215.4 KB against 300;
+  the heaviest unbudgeted route is the application detail page at 177.4 KB.
+- **Secret scan: gitleaks over all 22 commits, `no leaks found`.** The first run reported 9
+  findings, all of them synthetic literals in test files — deliberately wrong passwords and a forged
+  unsubscribe token — now recorded in `.gitleaks.toml` as the only exceptions rather than silently
+  ignored. No `.env`, credential or personal email has ever been committed: the only env files in
+  the history are the two `.env.example` placeholders, and the author address appears solely in
+  commit metadata, never in file content. Repeatable with `scripts/scan-secrets.sh`.
+- Deferred: nothing from this phase. The `{{CONTACT_EMAIL}}` placeholder now also sits in
+  SECURITY.md and CODE_OF_CONDUCT.md, fed from the same Phase 13 constant, so filling it in stays a
+  one-line change.
 
 ## Phase 16 — Ship
 - [ ] `DEPLOYMENT.md` complete (Atlas + Render + Vercel, env vars, cross-origin cookies, trust proxy)
@@ -669,9 +733,9 @@ _The agent appends anything it cannot do itself here — DNS records, account si
 ## Deferred / known issues
 _Anything intentionally postponed, with the reason._
 
-- Real-browser verification of the client is deferred to Phase 15: no Chrome/Playwright browser is
-  installed on this machine yet, so Phase 1 proved the stack with HTTP-level checks against the
-  compose containers instead. Phase 15 installs the Playwright browsers and covers this properly.
+- **RESOLVED in Phase 15.** Real-browser verification is no longer deferred: `@playwright/test` and
+  Chromium are installed, and `e2e/audits/overflow.spec.ts` drives all seven routes at 375, 768 and
+  1440 px on every run, in CI as well as locally.
 - Production Docker image stages and the split-host deployment configuration are Phase 16 work.
 - **FIXED before Phase 11 began — the board's version-conflict dialog vanishing mid-interaction.**
   The mutation, the conflict state, the pending drop and the dialog were hoisted out of

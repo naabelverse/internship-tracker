@@ -9,6 +9,7 @@ import * as accountApi from '@/api/account';
 import type { AccountUsage } from '@/api/account';
 import { getErrorMessage } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
+import { saveFile } from '@/lib/download';
 
 /** How long the usage figures stay fresh. They move slowly; a refetch per visit is plenty. */
 const USAGE_STALE_MS = 60_000;
@@ -19,29 +20,6 @@ export function useAccountUsage(): UseQueryResult<AccountUsage> {
     queryFn: accountApi.fetchUsage,
     staleTime: USAGE_STALE_MS,
   });
-}
-
-/**
- * Hands the export to the browser as a file.
- *
- * Built from an object URL rather than pointed at the endpoint directly, because
- * the request needs the `Authorization` header the axios client attaches - a
- * plain `<a href>` would arrive without it and get a 401. The URL is revoked on
- * the next frame; revoking synchronously races the download in Safari.
- */
-function saveFile({ filename, blob }: accountApi.AccountExportFile): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-
-  window.setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 0);
 }
 
 export function useExportAccount(): UseMutationResult<accountApi.AccountExportFile, unknown, void> {

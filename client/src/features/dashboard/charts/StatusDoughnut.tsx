@@ -62,7 +62,13 @@ export function StatusDoughnut({
     >
       <div className="flex flex-col items-center gap-4 sm:flex-row">
         <div className="relative h-48 w-48 shrink-0" data-testid="status-doughnut">
-          <Doughnut data={data} options={options} />
+          {/* react-chartjs-2 puts `role="img"` on the canvas, and a nameless
+              `role="img"` is a serious axe violation. Naming it here would be the
+              wrong fix: the canvas has no content assistive technology can read,
+              and the numbers are already carried by the `sr-only` table below, so
+              an `aria-label` would only announce the same chart twice. Hiding the
+              canvas leaves the table as the single text alternative. */}
+          <Doughnut data={data} options={options} aria-hidden />
           {/* The centre total is markup rather than a canvas plugin, so it is
               real text a screen reader and a text zoom both handle. */}
           <div

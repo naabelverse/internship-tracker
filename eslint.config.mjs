@@ -73,6 +73,19 @@ export default tseslint.config(
     rules: { 'no-console': 'off' },
   },
   {
+    // The Playwright suite. Node globals, and `console` is allowed for the same
+    // reason it is in the build scripts: SPEC section 10 asks for the axe report
+    // to be printed, and the responsive audit's overflow report is the record
+    // that isolated the board's horizontal-scroll bug. Silencing them would
+    // leave a pass/fail with nothing behind it.
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: {
+      globals: { ...globals.node },
+      parserOptions: { ecmaVersion: 2022, sourceType: 'module' },
+    },
+    rules: { 'no-console': 'off' },
+  },
+  {
     files: ['server/tests/**/*.ts', 'client/tests/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
     languageOptions: { globals: { ...globals.node, ...globals.jest } },
   },

@@ -1,0 +1,59 @@
+name: Feature request
+description: Suggest something the tracker should be able to do
+title: '[Feature]: '
+labels: ['enhancement', 'needs triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Scope for this project is set by [SPEC.md](../blob/main/SPEC.md). A request
+        that falls outside it can still be a good idea — say what problem it solves
+        and it will be weighed on that.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do that the app makes hard or impossible today?
+      placeholder: I apply through three job boards and cannot tell which one actually gets me interviews.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like it to do
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you have tried instead
+      description: Existing features, workarounds, or other tools, and why they fall short.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app
+      options:
+        - Applications list
+        - Board
+        - Calendar
+        - Dashboard and analytics
+        - Settings and account
+        - Email and reminders
+        - Import, export or attachments
+        - Something else
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and this is not a duplicate
+          required: true
+        - label: I have read the "possible extensions" section of the README
+          required: false

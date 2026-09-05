@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { filenameFrom, type DownloadedFile } from '@/lib/download';
 import type { ApplicationFilters } from '@/features/applications/filterParams';
 import { toQueryParams } from '@/features/applications/filterParams';
 import type { ApiSuccessBody, PaginationMeta } from '@/types/api';
@@ -95,4 +96,25 @@ export async function bulkAction(
 
   const { data } = await apiClient.post<ApiSuccessBody<BulkResult>>('/applications/bulk', body);
   return data.data;
+}
+
+/**
+ * Downloads the account's applications as a file.
+ *
+ * SPEC section 5 exposes `GET /applications/export?format=csv|json`; the CSV is
+ * what the toolbar offers, because a spreadsheet is what someone tracking a job
+ * search actually opens it in. Requested as a blob for the same reason the
+ * account export is: axios would otherwise parse the whole file into a
+ * JavaScript value only for it to be re-serialised on the way to disk.
+ */
+export async function exportApplications(format: 'csv' | 'json'): Promise<DownloadedFile> {
+  const response = await apiClient.get<Blob>('/applications/export', {
+    params: { format },
+    responseType: 'blob',
+  });
+
+  return {
+    filename: filenameFrom(response.headers['content-disposition'], `applications.${format}`),
+    blob: response.data,
+  };
 }

@@ -17,7 +17,12 @@ backups/
 coverage/
 .nyc_output/
 playwright-report/
+blob-report/
 test-results/
+.playwright/
+
+# bundle analysis output (regenerate with `npm run analyze`)
+bundle-report.html
 
 # environment — never commit real secrets
 .env

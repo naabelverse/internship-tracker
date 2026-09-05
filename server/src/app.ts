@@ -41,7 +41,27 @@ export function createApp(): Express {
 
   app.use(requestId);
   app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_ORIGIN, credentials: true }));
+  /*
+    `exposedHeaders` is not optional here, it is what makes downloads work.
+
+    The client and the API are served from different origins in production (SPEC
+    section 15 deploys them to separate hosts), and a cross-origin response only
+    hands JavaScript the CORS-safelisted headers unless the server names the
+    others. `Content-Disposition` is not on that list, so without this line
+    `response.headers['content-disposition']` is `undefined` in the browser and
+    every download the client saves falls back to a generic name — the dated
+    `applications-2026-01-31.csv` the server chose arrives as `applications.csv`.
+
+    Same-origin development never shows it, which is precisely why Phase 15's
+    end-to-end run against a real cross-origin stack is where it surfaced.
+  */
+  app.use(
+    cors({
+      origin: env.CLIENT_ORIGIN,
+      credentials: true,
+      exposedHeaders: ['Content-Disposition'],
+    }),
+  );
   app.use(compression());
   app.use(express.json({ limit: BODY_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));

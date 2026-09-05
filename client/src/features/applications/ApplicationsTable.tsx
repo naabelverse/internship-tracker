@@ -77,8 +77,26 @@ export function ApplicationsTable({
   const [sortField, sortDirection] = sort.split(':');
   const allSelected = applications.length > 0 && selectedIds.length === applications.length;
 
+  /*
+    `relative` on the scroll wrapper below is load-bearing, not decoration.
+
+    An absolutely positioned element is clipped by an ancestor's `overflow` only
+    when that ancestor is in its containing block chain, and a `position: static`
+    box never is. Tailwind's `sr-only` is `position: absolute`, so the "Actions"
+    label in the last header cell escaped this scroll container entirely: its
+    containing block was the initial one, and its 1px box — sitting past the
+    viewport whenever the table is wider than the wrapper — extended the
+    *document* rather than the wrapper. The result was a horizontal scrollbar on
+    the whole page, while `body.scrollWidth` still reported the viewport width,
+    because an absolutely positioned box is out of body's flow.
+
+    Making the wrapper positioned makes it the containing block, so
+    `overflow-x: auto` finally contains what it appears to contain. Applying
+    `overflow-x: clip` further up cannot fix this — those ancestors are `static`
+    too, so they are equally not in the chain.
+  */
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-surface">
+    <div className="relative overflow-x-auto rounded-card border border-border bg-surface">
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border">

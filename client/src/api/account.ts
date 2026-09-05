@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import { filenameFrom, type DownloadedFile } from '@/lib/download';
 import type { ApiSuccessBody } from '@/types/api';
 
 export interface UsageCounter {
@@ -19,17 +20,7 @@ export async function fetchUsage(): Promise<AccountUsage> {
   return data.data;
 }
 
-export interface AccountExportFile {
-  filename: string;
-  blob: Blob;
-}
-
-/** Pulls the filename out of `Content-Disposition`, falling back to a sane one. */
-function filenameFrom(header: unknown): string {
-  const match = typeof header === 'string' ? /filename="([^"]+)"/.exec(header) : null;
-
-  return match?.[1] ?? 'internship-tracker-export.json';
-}
+export type AccountExportFile = DownloadedFile;
 
 /**
  * Downloads everything the server stores about this account.
@@ -43,7 +34,10 @@ export async function fetchAccountExport(): Promise<AccountExportFile> {
   const response = await apiClient.get<Blob>('/auth/me/export', { responseType: 'blob' });
 
   return {
-    filename: filenameFrom(response.headers['content-disposition']),
+    filename: filenameFrom(
+      response.headers['content-disposition'],
+      'internship-tracker-export.json',
+    ),
     blob: response.data,
   };
 }

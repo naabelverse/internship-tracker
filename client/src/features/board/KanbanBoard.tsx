@@ -67,8 +67,15 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
 
   return (
     <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={onDragEnd}>
-      {/* SPEC section 6: at 375 px this scrolls sideways rather than squeezing. */}
-      <div className="flex gap-3 overflow-x-auto pb-2" data-testid="kanban-board">
+      {/*
+        SPEC section 6: at 375 px this scrolls sideways rather than squeezing.
+
+        `relative` for the same reason the applications table needs it: `sr-only`
+        is `position: absolute`, and `DeadlineChip` renders one inside every card,
+        so without a positioned wrapper those boxes escape this scroll container
+        and extend the document instead. See ApplicationsTable for the full note.
+      */}
+      <div className="relative flex gap-3 overflow-x-auto pb-2" data-testid="kanban-board">
         {columns.map((column) => (
           <BoardColumn key={column.status} column={column} onOpen={onOpen} />
         ))}

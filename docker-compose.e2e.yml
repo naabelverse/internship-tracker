@@ -1,0 +1,64 @@
+# Overrides that turn the development stack into an isolated end-to-end stack.
+#
+# Used with a separate compose project name, so it runs *alongside* a running
+# development stack rather than fighting it for ports, containers and volumes:
+#
+#   docker compose -p internship-tracker-e2e \
+#     -f docker-compose.yml -f docker-compose.e2e.yml up -d
+#
+# `npm run e2e:up` is that command. Ports are shifted by one (5174 web, 5001 api,
+# 27018 mongo) and every container is renamed, because `container_name` in the
+# base file is absolute and would otherwise collide.
+
+services:
+  mongo:
+    container_name: internship-tracker-e2e-mongo
+    # `!override` rather than a plain list: Compose *appends* `ports` when it
+    # merges files, so without it this stack would inherit 27017 as well and
+    # collide with a running development stack on the very port shift that is
+    # meant to keep them apart.
+    ports: !override
+      - '27018:27017'
+    volumes: !override
+      # A named volume scoped to this project, so seeding the E2E database never
+      # touches the data a developer has in the normal stack.
+      - e2e-mongo-data:/data/db
+
+  api:
+    container_name: internship-tracker-e2e-api
+    ports: !override
+      - '5001:5000'
+    environment:
+      # The browser talks to the client on 5174, so that is the origin CORS must
+      # allow and the origin every generated link has to point at.
+      CLIENT_ORIGIN: http://localhost:5174
+      APP_URL: http://localhost:5174
+      API_URL: http://localhost:5001
+      # Console transport prints the whole message, verification and reset links
+      # included, which is where the E2E suite reads its tokens from. SPEC
+      # section 10 asks for exactly this: "read it from the console/mail
+      # transport in test mode".
+      MAIL_TRANSPORT: console
+      LOG_LEVEL: info
+      # Nothing in the suite waits on a cron, and a reminder sweep firing
+      # mid-test would write rows no assertion expects.
+      ENABLE_CRON: 'false'
+      # The credential limiters key on `req.ip`, at five attempts per fifteen
+      # minutes. Every request from the suite arrives from one container IP, so
+      # without this the seventh sign-in of a run is a 429 rather than a result.
+      # Trusting one proxy hop makes `req.ip` the last `X-Forwarded-For` entry,
+      # which `e2e/support/network.ts` sets to a per-file address. The limiter is
+      # still fully enforced — it is enforced per synthetic client instead of
+      # collapsing the whole suite onto one bucket.
+      TRUST_PROXY: '1'
+
+  web:
+    container_name: internship-tracker-e2e-web
+    ports: !override
+      - '5174:5173'
+    environment:
+      VITE_API_URL: http://localhost:5001
+      VITE_APP_URL: http://localhost:5174
+
+volumes:
+  e2e-mongo-data:
