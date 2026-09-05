@@ -59,7 +59,13 @@ export function TopCompaniesBar({
     >
       <>
         <div className="h-full" data-testid="top-companies-bar">
-          <Bar data={data} options={options} />
+          {/* react-chartjs-2 puts `role="img"` on the canvas, and a nameless
+              `role="img"` is a serious axe violation. Naming it here would be the
+              wrong fix: the canvas has no content assistive technology can read,
+              and the numbers are already carried by the `sr-only` table below, so
+              an `aria-label` would only announce the same chart twice. Hiding the
+              canvas leaves the table as the single text alternative. */}
+          <Bar data={data} options={options} aria-hidden />
         </div>
         <ChartDataSummary
           caption="Companies applied to most often"
