@@ -1,0 +1,27 @@
+# gitleaks configuration for the secret scan in scripts/scan-secrets.sh.
+#
+# Extends the bundled rule set rather than replacing it, so every default rule
+# still applies and this file only records the deliberate exceptions.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately fake credentials that only exist to be rejected"
+
+paths = [
+  # `.env.example` documents the shape of the configuration. Every value in it
+  # is a placeholder telling the reader to generate a real one; the env loader
+  # refuses to boot in production if any of them survives.
+  '''\.env\.example$''',
+]
+
+regexes = [
+  # Passwords the auth tests send precisely because they are wrong. The lockout,
+  # rate-limit and login suites need a credential that fails, and the generic
+  # high-entropy rule cannot tell a deliberately wrong password from a real one.
+  '''DefinitelyWr0ng''',
+  '''DefinitelyWrong1''',
+  # A forged unsubscribe token in the email test, asserted to be rejected.
+  '''507f1f77bcf86cd799439011\.reminders\.forged''',
+]

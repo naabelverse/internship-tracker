@@ -1,0 +1,71 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+Nothing yet.
+
+## [1.0.0] - 2026-09-05
+
+First public release: a full-stack internship application tracker with a Kanban
+board, a calendar, deadline reminders and an analytics dashboard.
+
+### Added
+
+- **Accounts and sessions.** Registration with an explicit Terms acceptance,
+  email verification, sign-in with account lockout after repeated failures,
+  forgot/reset password, email change with confirmation to the new address, a
+  signed-in device list with per-session revocation, soft delete with a 30-day
+  purge, and JWT access tokens with rotating refresh tokens and reuse detection.
+- **Applications.** Full CRUD with server-side pagination, filtering, search and
+  sorting; all list state synced to the URL so a view is shareable and survives a
+  reload. Bulk actions, column visibility, inline status changes, a status
+  history, interviews as a subresource, attachments, and notes in markdown.
+- **Board.** A dnd-kit Kanban with a column per status, optimistic status changes
+  with rollback, keyboard-operable card moves, and a version-conflict prompt when
+  two edits race.
+- **Calendar.** A month grid of deadlines and interviews, rendered in the user's
+  own timezone, with a per-day event panel.
+- **Dashboard.** Six stat cards with period-over-period deltas, five Chart.js
+  visuals that re-render on a theme change, an activity heatmap, and an upcoming
+  panel. Every chart ships a screen-reader data table.
+- **Import and export.** CSV import with per-row error reporting, CSV and JSON
+  export of the applications list, and a single-file JSON export of everything
+  the system stores about an account.
+- **Email.** Six transactional templates over a provider-agnostic SMTP seam, a
+  retry queue, a console fallback, per-user preferences and one-click
+  unsubscribe. Deadline reminders and a weekly summary run on cron.
+- **Public surface.** A landing page, a sandboxed demo account that blocks
+  destructive actions and resets nightly, Terms and Privacy rendered from
+  markdown, and full SEO metadata with a generated OG image, sitemap and manifest.
+- **Hardening.** Per-account resource caps, a disposable-email blocklist, a
+  registration honeypot and timing check, EXIF stripping on uploads, an S3/R2
+  storage adapter, request IDs, structured logs with secret redaction, optional
+  Sentry, a `/ready` probe and a backup script.
+- **Testing.** Unit and integration suites on both workspaces with an enforced
+  server coverage threshold, a Playwright end-to-end suite covering eight flows
+  against a real compose stack, `@axe-core/playwright` audits, and a responsive
+  audit asserting no route scrolls the document sideways at 375, 768 or 1440 px.
+
+### Fixed
+
+- **`Content-Disposition` is now exposed through CORS.** The client and the API
+  are served from different origins in production, and a browser hides response
+  headers a server does not explicitly expose, so every download the client saved
+  fell back to a generic filename instead of the dated one the server chose.
+  Found by the first end-to-end run against a real cross-origin stack;
+  same-origin development never showed it.
+- **Chart canvases are no longer nameless `role="img"` elements.** react-chartjs-2
+  labels the canvas `role="img"`, which axe reports as a serious violation when
+  it has no accessible name. The canvas is now hidden from assistive technology,
+  leaving the existing screen-reader data table as the single text alternative.
+- **The applications CSV export is reachable from the UI.** The endpoint had
+  existed since the analytics phase with nothing calling it, so the export step
+  of the documented user journey could not be walked at all.
+
+[Unreleased]: https://github.com/naabelverse/internship-tracker/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/naabelverse/internship-tracker/releases/tag/v1.0.0

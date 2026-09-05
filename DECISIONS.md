@@ -1585,3 +1585,166 @@ The half deferred when the phase was split. Closes Phase 11.
   good copy, and it deletes an empty archive rather than reporting success.
 - **`npm run stats` (SPEC section 14) was not built.** Section 16's Phase 14 definition does not
   list it and neither does the definition of done; it is noted here so it is not silently lost.
+
+## Phase 15 — E2E, performance, repo hygiene
+
+- **The Phase 9 horizontal-scroll bug does not exist, and never did — the defect was in the
+  measurement.** This is the phase's most important correction, so the mechanism is recorded in
+  full rather than summarised.
+
+  What Phase 9 reported: the document scrolls sideways on the board route at every width, and on
+  applications at 768, "even though the board's own strip scrolls correctly and `body.scrollWidth`
+  equals the viewport". `overflow-x-clip` on `main` did not help and was reverted.
+
+  What is actually true, measured in Chromium at 375 / 768 / 1440 on all seven routes:
+  `documentElement.scrollWidth === clientWidth` everywhere, and setting
+  `document.scrollingElement.scrollLeft = 9999` moves it by **0 px** everywhere. There is nothing
+  to scroll.
+
+  Where the report came from. A naive detector flags any element whose `getBoundingClientRect()`
+  reaches past the viewport. Two kinds of box do that here, and neither can extend the document:
+
+  1. **The off-canvas navigation drawer**, `position: fixed` at `left: -256px` below `lg`. A fixed
+     box is laid out against the viewport and contributes nothing to the initial containing block's
+     scrollable overflow. Hiding it leaves `documentElement.scrollWidth` unchanged, at 375 and at
+     768 — which the probe confirms directly.
+  2. **The board's own columns**, inside the strip whose `overflow-x: auto` reports
+     `scrollWidth 2388 / clientWidth 1120`. Their rects sit at `right = 1476, 1776, 2076…` against
+     a 1440 viewport. That is not a fault; it is what correct internal scrolling looks like from
+     the outside.
+
+  This predicts the exact asymmetry Phase 9 recorded, which is what makes it the explanation rather
+  than merely a plausible story. The board's strip is wider than its container at _every_ width, so
+  the board is flagged at every width. The applications table sits in the same kind of `overflow-x`
+  wrapper but only exceeds it at 768 — at 375 it renders as stacked cards and at 1440 it fits — so
+  applications is flagged at 768 and nowhere else. Exactly as reported.
+
+  And `body.scrollWidth` equalling the viewport was the one _correct_ measurement in the original
+  report. It was treated as the anomaly to be explained away; it was the answer. `body` is also not
+  the document's scroller, so it was the right number read off the wrong element — which is why
+  `overflow-x-clip` on `main` could not have helped either: it cannot change a descendant's rect
+  inside that descendant's own scroll container, and it cannot touch a fixed box at all.
+
+  `e2e/audits/overflow.spec.ts` is the regression test. It decides pass/fail by **attempting a
+  scroll**, never by scanning boxes; the box scan exists only to explain a failure, and it now
+  excludes fixed boxes and boxes with a scrolling ancestor so its output is diagnostic rather than
+  the same noise that caused this in the first place.
+
+- **Full route lazy loading was safe all along; Phase 13's diagnosis was wrong.** Phase 13 recorded
+  that making all routes lazy "destabilised 25 previously-green tests, because mounting `<App />`
+  then resolved a chunk mid-test", and retreated to nine lazy routes. Re-running the experiment
+  showed that reasoning does not hold. With `asyncUtilTimeout` at RTL's 1 s default, **the same 13
+  tests fail whether nine routes are lazy or all sixteen — byte-identical failure lists** — and two
+  of them (`LoginForm`, `RegisterForm`) drive routes that are _eager_ in the nine-route baseline.
+  Lazy breadth is not the variable. The variable is the async budget under Vite's on-demand
+  transform, and the `asyncUtilTimeout` raise Phase 13 made in the same change was the entire fix.
+  The retreat was unnecessary and cost 28 KB on the landing route: all sixteen routes are lazy now
+  and landing fell from 139.8 KB to 111.4 KB gzipped. Two changes were made at once and the wrong
+  one was credited.
+
+- **`Content-Disposition` is exposed through CORS, and this was a live production defect.** A
+  cross-origin response only hands JavaScript the CORS-safelisted headers unless the server names
+  the rest in `Access-Control-Expose-Headers`. `Content-Disposition` is not safelisted, so
+  `response.headers['content-disposition']` was `undefined` in the browser and both downloads — the
+  applications CSV and the account JSON export — fell back to a generic filename instead of the
+  dated one the server had chosen. SPEC section 15 deploys the client and the API to separate
+  hosts, so every deployed build had this; local development is same-origin and cannot show it.
+  Found by the first end-to-end run against a real cross-origin stack, which is precisely the class
+  of bug SPEC section 10 says end-to-end tests exist for.
+
+- **The chart canvases are `aria-hidden`, not `aria-label`led.** react-chartjs-2 puts `role="img"`
+  on the canvas, and a `role="img"` with no accessible name is a serious axe violation — five of
+  them on the dashboard. Naming each canvas would have cleared the rule while making the page
+  worse: the charts already ship an `sr-only` data table with a caption, so a label would announce
+  every chart twice, once as an unreadable image and once as the table. Hiding the canvas leaves
+  the table as the single text alternative. Zero violations at _any_ impact level now, on all five
+  audited surfaces.
+
+- **The CSV export got a UI, because it never had one.** `GET /applications/export?format=csv|json`
+  shipped in Phase 4 and nothing in the client ever called it, so SPEC section 17's manual pass
+  ("… view charts → export CSV → logout") and section 10's sixth flow could not be walked by a user
+  at all. The toolbar control was added rather than the flow being written against the API, since
+  a flow that bypasses the UI would have proved nothing about the gap. `client/src/lib/download.ts`
+  holds the blob-saving and `Content-Disposition` parsing that the account export already did, so
+  there is one copy rather than two.
+
+- **The end-to-end stack is a separate compose project, not the development one.** Same base file,
+  overridden onto ports 5174 / 5001 / 27018 with renamed containers and its own volume, so the
+  suite can run while a development stack is up and neither disturbs the other's data. The
+  `!override` tags on `ports` are load-bearing: Compose _appends_ port lists when merging, so
+  without them the E2E mongo would also try to claim 27017 and collide with the very stack the
+  shift exists to avoid.
+
+- **Mail tokens are read from the API's console transport, not from a test-only endpoint.** SPEC
+  section 10 asks for the token to come "from the console/mail transport in test mode", and the
+  alternative — a route that hands out verification tokens — would be a real security hole kept
+  alive by a test. `MAIL_TRANSPORT=console` prints the rendered body, and `e2e/support/mailLog.ts`
+  scans `docker compose logs api` in reverse, matching on the recipient as well as the path so a
+  run that registers several accounts cannot attribute one account's link to another.
+
+- **Each end-to-end test presents its own synthetic client address.** Every limiter the API mounts
+  keys on `req.ip` — credentials at 5 per 15 minutes, the blanket one at 200 — and all the suite's
+  traffic leaves one machine, so on a single address the sixth sign-in of a run is a 429 and a
+  route-sweeping audit exhausts the global budget alone. Worse, the window is fifteen minutes and
+  the counters are in-process, so the _second_ consecutive run would start already spent, and three
+  clean consecutive runs is this phase's bar. The E2E API therefore runs `TRUST_PROXY=1` and each
+  test sends `X-Forwarded-For: 10.<run>.<file>.<test>`, with the run octet randomised per
+  invocation. The limiters stay fully enforced, per synthetic client rather than collapsed onto
+  one, and the limiting behaviour itself is covered by the server suite rather than here. No
+  production code was changed to accommodate the tests.
+
+- **Flow 8 invalidates the token on the wire rather than deleting it.** SPEC section 10 says
+  "delete the access token", but the token is a memory-only zustand slice with no `persist` —
+  SPEC section 7 requires that — so there is no storage entry to delete and no handle to reach it
+  without shipping a test seam in production code. Rewriting one request's `Authorization` header
+  produces exactly the condition the flow is about: the server genuinely returns 401, the axios
+  interceptor genuinely refreshes, and the replay genuinely succeeds. Only the first request is
+  broken, so the replay carries the real token.
+
+- **`retries: 0`, deliberately.** A retry would hide precisely the intermittency this suite exists
+  to catch. The stability bar was three clean consecutive runs of all 13 tests, which is what was
+  recorded, rather than a green run obtained on a second attempt.
+
+- **Flow 1 waits out the sign-up timing check instead of bypassing it.** Phase 14 rejects a
+  registration completed in under `MIN_SIGNUP_FILL_MS` (2.5 s) as automated, and Playwright fills a
+  form far faster than that, so the first run failed on "That sign-up looked automated". The test
+  waits, because a human would: the guard is behaving correctly and this is the flow representing a
+  human. Its firing on the first run is the only end-to-end proof that guard works.
+
+- **Flow 4 uses `click()` and a retrying assertion, not `check()`.** The filter checkboxes are
+  controlled inputs whose state round-trips through the URL: the change handler navigates, and the
+  box only re-renders as checked once React commits the new query string. `check()` clicks and then
+  reads `input.checked` synchronously, landing inside the window where React has reset the DOM
+  property to match a render that has not happened yet, and reports "Clicking the checkbox did not
+  change its state" — while the URL, the checked state and the filtered rows all settle correctly a
+  moment later. Verified directly in a browser before changing the test, rather than assumed:
+  `click()` and `check()` leave identical end states, and only `check()`'s inline assertion fails.
+
+- **The client suite is capped at `maxWorkers: '50%'`.** Four tests failed during a `verify` run
+  that shared the machine with the E2E containers, and the cause was measured rather than guessed:
+  with every route lazy, the first test in a file absorbs its chunk's first transform at 3.4-4.4 s
+  while every later test in the same file runs in about 0.7 s, and an uncapped worker pool
+  oversubscribes the machine until that first figure crosses the 10 s async budget. Capping halves
+  the CPU work at no wall-time cost — collection 105 s to 48 s, wall clock 44.5 s to 44.9 s on a
+  12-core box — and the contended run then passes. The async budget itself was left alone: padding
+  it would have hidden the oversubscription rather than removed it, and a two-core CI runner is the
+  case that needs the cap most.
+
+- **Bundle sizes are reported for every route, gated on two.** SPEC section 12 sets a number only
+  for landing and dashboard, so only those fail the build; the other fourteen are printed because a
+  route that doubles is worth seeing even when nothing fails. Landing 111.4 KB against 150,
+  dashboard 215.4 KB against 300, and the heaviest unbudgeted route is the application detail page
+  at 177.4 KB.
+
+- **The secret scan is gitleaks over the whole history, with a checked-in allowlist.** "We were
+  careful" is not a verification, and a scan of the working tree would miss a secret that was
+  committed and later deleted. The first run reported nine findings, every one a synthetic literal
+  in a test file — the deliberately wrong passwords the lockout and rate-limit suites send, and a
+  forged unsubscribe token asserted to be rejected. They are recorded in `.gitleaks.toml` as named
+  exceptions rather than suppressed wholesale, so a real secret in those same files would still be
+  caught. Result across all 22 commits: `no leaks found`.
+
+- **`{{CONTACT_EMAIL}}` reuses Phase 13's mechanism rather than adding a second one.** SECURITY.md
+  and CODE_OF_CONDUCT.md carry the same literal placeholder the two legal markdown documents do,
+  fed from `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts`, so filling it in stays the one-line
+  change Phase 13 designed it to be.

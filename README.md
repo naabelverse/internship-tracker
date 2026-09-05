@@ -279,20 +279,25 @@ is a free-tier deployment, so errors are the point.
 
 Run from the repository root unless noted.
 
-| Script                  | What it does                                                     |
-| ----------------------- | ---------------------------------------------------------------- |
-| `npm run dev`           | API and client together with hot reload                          |
-| `npm run build`         | Type-checked build of both workspaces                            |
-| `npm run lint`          | ESLint with `--max-warnings 0`, then `prettier --check`          |
-| `npm run lint:fix`      | ESLint autofix                                                   |
-| `npm run format`        | Prettier write                                                   |
-| `npm run typecheck`     | `tsc --noEmit` in both workspaces                                |
-| `npm run test`          | Jest (server), then Vitest (client)                              |
-| `npm run test:coverage` | Server tests with the coverage report, enforcing the §10 target  |
-| `npm run verify`        | lint → typecheck → test → build. **Must pass before any commit** |
-| `npm run seed`          | Create the demo account and its 64 applications                  |
-| `npm run seed:reset`    | Wipe the demo account's data and reseed                          |
-| `npm run migrate`       | Apply pending schema migrations (see below)                      |
+| Script                  | What it does                                                        |
+| ----------------------- | ------------------------------------------------------------------- |
+| `npm run dev`           | API and client together with hot reload                             |
+| `npm run build`         | Type-checked build of both workspaces                               |
+| `npm run lint`          | ESLint with `--max-warnings 0`, then `prettier --check`             |
+| `npm run lint:fix`      | ESLint autofix                                                      |
+| `npm run format`        | Prettier write                                                      |
+| `npm run typecheck`     | `tsc --noEmit` in both workspaces                                   |
+| `npm run test`          | Jest (server), then Vitest (client)                                 |
+| `npm run test:coverage` | Server tests with the coverage report, enforcing the §10 target     |
+| `npm run verify`        | lint → typecheck → test → build. **Must pass before any commit**    |
+| `npm run seed`          | Create the demo account and its 64 applications                     |
+| `npm run seed:reset`    | Wipe the demo account's data and reseed                             |
+| `npm run migrate`       | Apply pending schema migrations (see below)                         |
+| `npm run e2e:up`        | Build and start the isolated end-to-end stack (5174 / 5001)         |
+| `npm run test:e2e`      | Playwright: the eight SPEC §10 flows, axe, and the responsive sweep |
+| `npm run e2e:down`      | Stop that stack and drop its volume                                 |
+| `npm run e2e:logs`      | Tail the E2E API log, where mail tokens are printed                 |
+| `npm run analyze`       | `vite-bundle-visualizer` treemap of the client bundle               |
 
 Plus `./scripts/backup.sh`, which is a shell script rather than an npm script on purpose: a backup
 has to run from cron on a host that has never installed this project's dependencies.
@@ -481,7 +486,43 @@ the same second; analytics day and week boundaries are correct for two distant t
 produces a genuine six-month spread rather than one day's worth of rows; and the OpenAPI document
 matches the router exactly in both directions.
 
-End-to-end Playwright flows and the axe accessibility sweep arrive in phase 15.
+### End to end
+
+```bash
+npm run e2e:up        # isolated compose stack: web 5174, api 5001, mongo 27018
+npm run test:e2e      # eight flows, axe, and the responsive sweep
+npm run e2e:down
+```
+
+Thirteen Playwright tests run against a real stack — a real API, a real Mongo, and a real
+cross-origin boundary between the client and the API. That last part earns its keep: it is what
+surfaced a missing `Access-Control-Expose-Headers`, which had made every file download in a
+deployed build fall back to a generic filename. Same-origin development cannot show that.
+
+The eight flows are SPEC §10's: register and verify from the emailed link; create an application
+and find it in the table and the right board column; drag a card and reload; filter and search
+through the URL and reload; reset a password and confirm the old one is refused; export the CSV
+and check its header row; log out and get redirected off a protected route; and recover from an
+expired access token through the silent refresh with no visible error.
+
+Alongside them, `@axe-core/playwright` audits the landing page, login, dashboard, board and the
+create-application modal — currently zero violations at any impact level, not merely zero serious
+ones — and a responsive audit loads all seven routes at 375, 768 and 1440 px and asserts the
+document does not scroll sideways.
+
+`retries` is set to `0` on purpose: a retry hides exactly the intermittency the suite exists to
+catch. See [e2e/README.md](e2e/README.md) for how the stack is isolated, how mail tokens are read,
+and why each test presents its own synthetic client address.
+
+### Secret scanning
+
+```bash
+scripts/scan-secrets.sh
+```
+
+Runs gitleaks over every commit in the history, not just the working tree — a secret that was
+committed and later deleted is still committed. `.gitleaks.toml` records the only exceptions:
+`.env.example` placeholders and the deliberately-wrong passwords the auth tests send.
 
 ---
 
@@ -582,13 +623,18 @@ version. Selecting on the version is what makes a re-run harmless — the second
 
 ## Repository documents
 
-| File                         | Contents                                                       |
-| ---------------------------- | -------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)           | Full product and technical specification — the source of truth |
-| [PROGRESS.md](PROGRESS.md)   | Phase-by-phase build status                                    |
-| [DECISIONS.md](DECISIONS.md) | Every assumption made during the build, with reasons           |
-| [CLAUDE.md](CLAUDE.md)       | Working conventions for this repository                        |
+| File                                     | Contents                                                       |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth |
+| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                    |
+| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons           |
+| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                        |
+| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar       |
+| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                       |
+| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                        |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                       |
+| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                    |
 
 ## License
 
-MIT.
+[MIT](LICENSE).

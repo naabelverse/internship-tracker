@@ -1,0 +1,92 @@
+name: Bug report
+description: Something behaves differently from how it should
+title: '[Bug]: '
+labels: ['bug', 'needs triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report.
+
+        **Do not use this form for a security vulnerability.** Follow
+        [SECURITY.md](../blob/main/SECURITY.md) instead, so the problem is not
+        public before there is a fix.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, in one or two sentences.
+      placeholder: Dragging a card to Interviewing snapped it back after a second.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, starting from a signed-out browser or a fresh `npm run seed`.
+      value: |
+        1. Sign in as the demo account
+        2. Go to /applications/board
+        3. Drag the first card from Saved to Interviewing
+        4. Reload
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console or server output
+      description: Browser console, network tab, or API logs. Redact anything that identifies a real person.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The release from CHANGELOG.md, or `git rev-parse --short HEAD`.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: How are you running it
+      options:
+        - Local (npm run dev)
+        - Local (docker compose)
+        - A deployment
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 141 on Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: viewport
+    attributes:
+      label: Viewport width, if it is a layout or responsive problem
+      placeholder: 768 px
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues and this is not a duplicate
+          required: true
+        - label: This is not a security vulnerability
+          required: true
