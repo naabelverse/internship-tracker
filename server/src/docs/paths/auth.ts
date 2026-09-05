@@ -27,6 +27,38 @@ const registerBody = {
     },
     timezone: { type: 'string', example: 'Asia/Kuala_Lumpur' },
     acceptTerms: { type: 'boolean', enum: [true] },
+    website: {
+      type: 'string',
+      description:
+        'Honeypot. The sign-up form renders this off-screen and leaves it empty; any value rejects the request as automated.',
+    },
+    elapsedMs: {
+      type: 'integer',
+      description:
+        'Milliseconds between the form mounting and submitting. Under 2500 is rejected as automated. Optional: omitting it is allowed.',
+    },
+  },
+};
+
+const usageCounter = {
+  type: 'object',
+  properties: {
+    used: { type: 'integer' },
+    limit: { type: 'integer' },
+    remaining: { type: 'integer' },
+  },
+};
+
+const sessionSummary = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    userAgent: { type: 'string' },
+    ip: { type: 'string' },
+    lastUsedAt: { type: 'string', format: 'date-time' },
+    createdAt: { type: 'string', format: 'date-time' },
+    expiresAt: { type: 'string', format: 'date-time' },
+    current: { type: 'boolean', description: 'True for the device making this request' },
   },
 };
 
@@ -181,6 +213,62 @@ export const authPaths: Record<string, unknown> = {
       },
     },
   },
+  '/api/v1/auth/me/export': {
+    get: {
+      tags: TAG,
+      summary: 'Download everything stored about this account',
+      description:
+        'A single JSON file containing the profile, every application with its embedded interviews, status history and attachment records, every reminder, and the metadata of every session. Password and token hashes are excluded: they are credentials, not user data. Attachment bytes are not inlined - the records point at files downloaded through their own signed URLs. Limited to 5 requests an hour per account.',
+      security: AUTHENTICATED,
+      responses: {
+        '200': {
+          description: 'The export, sent as a file download rather than in the envelope',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  meta: objectOf({
+                    application: { type: 'string' },
+                    version: { type: 'string' },
+                    exportedAt: { type: 'string', format: 'date-time' },
+                    counts: { type: 'object', additionalProperties: { type: 'integer' } },
+                    notes: { type: 'array', items: { type: 'string' } },
+                  }),
+                  profile: ref('User'),
+                  applications: { type: 'array', items: ref('Application') },
+                  reminders: { type: 'array', items: ref('Reminder') },
+                  sessions: { type: 'array', items: sessionSummary },
+                },
+              },
+            },
+          },
+        },
+        '401': COMMON_ERRORS['401'],
+        ...RATE_LIMITED,
+      },
+    },
+  },
+  '/api/v1/auth/me/usage': {
+    get: {
+      tags: TAG,
+      summary: 'Report this account against its resource limits',
+      description:
+        'SPEC section 12 caps an account at 2000 applications, 100 MB of uploads in total and 20 attachments on any one application. Breaching a cap answers 403 on the write that would have crossed it; this endpoint is what Settings renders so it never comes as a surprise.',
+      security: AUTHENTICATED,
+      responses: {
+        ...ok(
+          'Current usage and the ceilings it is measured against',
+          objectOf({
+            applications: usageCounter,
+            storageBytes: usageCounter,
+            attachmentsPerApplication: objectOf({ limit: { type: 'integer' } }),
+          }),
+        ),
+        '401': COMMON_ERRORS['401'],
+      },
+    },
+  },
   '/api/v1/auth/me/password': {
     patch: {
       tags: TAG,
@@ -202,19 +290,6 @@ export const authPaths: Record<string, unknown> = {
         '401': COMMON_ERRORS['401'],
       },
     },
-  },
-};
-
-const sessionSummary = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    userAgent: { type: 'string' },
-    ip: { type: 'string' },
-    lastUsedAt: { type: 'string', format: 'date-time' },
-    createdAt: { type: 'string', format: 'date-time' },
-    expiresAt: { type: 'string', format: 'date-time' },
-    current: { type: 'boolean', description: 'True for the device making this request' },
   },
 };
 

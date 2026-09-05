@@ -7,6 +7,15 @@ export type Theme = (typeof THEMES)[number];
 /** SPEC section 4: bcrypt cost factor for every password hash. */
 export const BCRYPT_ROUNDS = 12;
 
+/**
+ * The shape version every new user document is written at.
+ *
+ * Bumped by a migration that changes the User shape, never by hand: the number
+ * here and the migration that moves documents onto it are one change, and
+ * `server/src/migrations/` is where the other half lives.
+ */
+export const CURRENT_USER_SCHEMA_VERSION = 1;
+
 /** SPEC section 4: soft lock for 15 minutes after 10 consecutive failures. */
 export const MAX_FAILED_LOGIN_ATTEMPTS = 10;
 export const ACCOUNT_LOCK_MS = 15 * 60 * 1000;
@@ -104,7 +113,7 @@ const userSchema = new Schema<UserAttributes, UserModelType, UserMethods>(
     acceptedTermsAt: { type: Date, required: true },
     deletedAt: { type: Date },
     isDemo: { type: Boolean, default: false },
-    schemaVersion: { type: Number, default: 1 },
+    schemaVersion: { type: Number, default: CURRENT_USER_SCHEMA_VERSION },
   },
   {
     timestamps: true,

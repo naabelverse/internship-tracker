@@ -3,10 +3,21 @@ import { createApp } from '@/app';
 import { connectDatabase, disconnectDatabase } from '@/config/db';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
+import { flushSentry, initSentry } from '@/config/sentry';
 import { startScheduledJobs, stopScheduledJobs } from '@/jobs';
 import { initMailer } from '@/services/mailer.service';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
+
+// Before the app is built, so an error thrown while wiring routes is still
+// reported. A no-op when SENTRY_DSN is unset.
+//
+// Sentry's automatic HTTP instrumentation wants to load before the modules it
+// patches, which a static import graph cannot guarantee; that only affects
+// tracing, which is off by default here, and the deploy step to preload the SDK
+// belongs with the rest of the production configuration in DEPLOYMENT.md.
+// Error capture, which is what this integration is for, does not depend on it.
+initSentry();
 
 const app = createApp();
 
@@ -39,6 +50,9 @@ async function shutdown(reason: string, exitCode = 0): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
+    // Before the connection closes, so the crash that caused the shutdown is
+    // actually delivered rather than dropped with the buffer.
+    await flushSentry();
     await disconnectDatabase();
     clearTimeout(forceExit);
     logger.info('Shutdown complete');

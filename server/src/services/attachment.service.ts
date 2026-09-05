@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Types } from 'mongoose';
 import { Application, type ApplicationDocument } from '@/models/Application';
 import { getStorage } from '@/storage';
+import { assertAttachmentCapacity } from '@/services/usage.service';
 import { DEFAULT_SIGNED_URL_TTL_SECONDS } from '@/storage/StorageAdapter';
 import { ApiError } from '@/utils/ApiError';
 import { stripImageMetadata } from '@/utils/images';
@@ -57,6 +58,12 @@ export async function addAttachment(
 
   const application = await loadOwned(userId, applicationId);
   const body = await stripImageMetadata(file.buffer, file.mimetype);
+
+  // Measured after stripping, because that is what actually gets stored and
+  // therefore what the account should be charged for. Checked before the put, so
+  // a refused upload never leaves an orphan in the bucket.
+  await assertAttachmentCapacity(userId, application, body.length);
+
   const key = buildStorageKey(userId, applicationId, file.mimetype);
 
   await getStorage().put({ key, body, contentType: file.mimetype });

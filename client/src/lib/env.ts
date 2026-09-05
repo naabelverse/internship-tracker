@@ -28,10 +28,22 @@ function readFlag(value: string | undefined, fallback: boolean): boolean {
   return value.trim().toLowerCase() !== 'false';
 }
 
+/** Optional, and unset in every environment that has not configured Sentry. */
+function readOptional(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : undefined;
+}
+
 export const clientEnv = {
   apiUrl,
   /** Versioned base every request goes through; `/health` sits outside it. */
   apiBaseUrl: `${apiUrl}/api/v1`,
   appUrl: readUrl(import.meta.env.VITE_APP_URL, 'http://localhost:5173', 'VITE_APP_URL'),
   demoEnabled: readFlag(import.meta.env.VITE_DEMO_ENABLED, true),
+  /**
+   * Error reporting. Unset means the SDK is never even downloaded: `initSentry`
+   * returns before its dynamic import, so the chunk stays off the wire.
+   */
+  sentryDsn: readOptional(import.meta.env.VITE_SENTRY_DSN),
 } as const;

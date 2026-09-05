@@ -30,6 +30,19 @@ export const registerSchema = z
     acceptTerms: z.literal(true, {
       errorMap: () => ({ message: 'you must accept the Terms and Privacy Policy' }),
     }),
+    /**
+     * Honeypot. The form renders it off-screen and a person never fills it, so
+     * any value at all means something filled the form by field name. Accepted
+     * by the schema rather than rejected here, so `signupGuard` owns the
+     * decision and the response says nothing about which check tripped.
+     */
+    website: z.string().max(2048).optional(),
+    /**
+     * Milliseconds between the form mounting and submitting, reported by the
+     * client. See `MIN_SIGNUP_FILL_MS` for why this and the honeypot are both
+     * optional rather than required.
+     */
+    elapsedMs: z.number().int().min(0).max(86_400_000).optional(),
   })
   .strict();
 

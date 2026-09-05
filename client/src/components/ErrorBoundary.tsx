@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { AlertIcon } from '@/components/ui/icons';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -26,6 +27,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
     logger.error('Unhandled render error', { message: error.message, stack: info.componentStack });
+    // A no-op unless VITE_SENTRY_DSN is set. This is the one place a render
+    // error is caught, so it is the one place worth reporting from.
+    void reportError(error, { componentStack: info.componentStack });
   }
 
   private readonly handleRetry = (): void => {

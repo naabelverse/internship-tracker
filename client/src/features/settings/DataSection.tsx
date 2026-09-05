@@ -1,67 +1,50 @@
 import { Button } from '@/components/ui/Button';
 import { SettingsSection } from '@/features/settings/SettingsSection';
+import { useExportAccount } from '@/features/settings/useAccountData';
 
 /**
- * The two account-level actions SPEC section 12 requires, as affordances only.
+ * Taking your data with you.
  *
- * Neither endpoint exists yet, and both are the kind of thing that must not be
- * half-built:
+ * Until Phase 14 this section rendered two disabled buttons and said neither
+ * action existed yet, which had stopped being true for deletion the moment Phase
+ * 11 shipped `DangerZoneSection`. Deletion now lives there and only there - one
+ * affordance for one action - and this section owns the export, which is real.
  *
- *  - **Export all my data** needs a single document containing everything the
- *    system holds about the account. `GET /applications/export` covers only the
- *    applications, so shipping it under this label would quietly under-deliver
- *    on a promise the privacy page will make. Phase 14.
- *  - **Delete my account** needs the soft delete, the 30 day purge and the
- *    typed-confirmation flow. A button that deletes without that machinery is
- *    worse than no button. Phase 11 and 14.
- *
- * They are rendered disabled with the reason stated rather than hidden, because
- * a user looking for "how do I get my data out" needs to find the answer here
- * even while the answer is "not yet".
+ * The copy states exactly what the file contains, because SPEC section 12 makes
+ * a promise about it on the privacy page and a vaguer description here would be
+ * the place the promise quietly stopped being kept.
  */
 export function DataSection(): JSX.Element {
+  const exportAccount = useExportAccount();
+
   return (
     <SettingsSection
       title="Your data"
-      description="Take everything with you, or close the account for good."
+      description="Everything this account holds, in one file you can keep."
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-content">Export all my data</h3>
           <p className="mt-0.5 text-sm text-content-muted">
-            One JSON file with your profile, every application, interview, reminder and attachment
-            record.
+            One JSON file with your profile, every application and its interviews, notes and status
+            history, every reminder, and the record of each signed-in device.
           </p>
           <p className="mt-1 text-xs text-content-subtle">
-            Not available yet. Until then, the applications table can export your applications on
-            their own as CSV or JSON.
+            Attachments are listed with their name, type and size; download the files themselves
+            from each application. Passwords and session tokens are never included.
           </p>
         </div>
-        <Button variant="secondary" disabled aria-describedby="export-status">
+
+        <Button
+          variant="secondary"
+          isLoading={exportAccount.isPending}
+          loadingLabel="Preparing"
+          onClick={() => {
+            exportAccount.mutate();
+          }}
+        >
           Export
         </Button>
-        <span id="export-status" className="sr-only">
-          Full account export is not available yet
-        </span>
-      </div>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-sm font-medium text-content">Delete my account</h3>
-          <p className="mt-0.5 text-sm text-content-muted">
-            Removes your account and everything in it. This cannot be undone.
-          </p>
-          <p className="mt-1 text-xs text-content-subtle">
-            Not available yet. Deleting needs the confirmation and purge flow that arrives with the
-            account lifecycle work.
-          </p>
-        </div>
-        <Button variant="danger" disabled aria-describedby="delete-status">
-          Delete account
-        </Button>
-        <span id="delete-status" className="sr-only">
-          Account deletion is not available yet
-        </span>
       </div>
     </SettingsSection>
   );

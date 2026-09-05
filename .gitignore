@@ -8,6 +8,11 @@ dist/
 build/
 *.tsbuildinfo
 
+# database dumps from scripts/backup.sh — an archive of the production database
+# is every user's data in one file, so it must never be committed
+backups/
+*.archive.gz
+
 # test / coverage
 coverage/
 .nyc_output/

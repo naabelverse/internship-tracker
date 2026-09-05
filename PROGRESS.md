@@ -2,8 +2,8 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 13 complete
-**Current phase:** 14
+**Status:** Phase 14 complete
+**Current phase:** 15
 **Last updated:** 2026-09-05
 
 ---
@@ -590,12 +590,47 @@ Notes:
   protecting nothing — those routes need a session, so a crawler gets an empty shell.
 
 ## Phase 14 — Hardening
-- [ ] Resource caps, disposable email blocklist, honeypot
-- [ ] Upload validation, EXIF stripping, S3/R2 adapter working in production mode
-- [ ] Timezone pass: UTC storage, user-tz rendering and aggregations, two-timezone tests
-- [ ] Optimistic concurrency 409 handled in UI, migration runner + example migration
-- [ ] Data export, account deletion UI
-- [ ] Request IDs, structured logs, optional Sentry, backup script
+- [x] Resource caps, disposable email blocklist, honeypot
+- [x] Upload validation, EXIF stripping, S3/R2 adapter working in production mode
+- [x] Timezone pass: UTC storage, user-tz rendering and aggregations, two-timezone tests
+- [x] Optimistic concurrency 409 handled in UI, migration runner + example migration
+- [x] Data export, account deletion UI
+- [x] Request IDs, structured logs, optional Sentry, backup script
+
+Notes:
+- **Roughly half of this phase already existed and was verified rather than built.** Real before
+  this phase, and confirmed by reading the code: `middleware/requestId.ts` (mounted first in
+  `app.ts`, validates the inbound header rather than echoing it), `/ready` pinging Mongo,
+  `LocalDiskStorage`/`S3Storage` genuinely wired through `getStorage()` in `attachment.service.ts`
+  with the env loader refusing to boot on `STORAGE_DRIVER=local` in production, EXIF stripping
+  really going through `sharp` in `utils/images.ts`, `Content-Disposition: attachment` plus
+  `randomUUID()` storage keys, `optimisticConcurrency: true` with the 409-and-current-document UI
+  from Phase 6, and the delete-account flow from Phase 11. None of it was a stub.
+- **Built this phase:** resource caps, the disposable-email blocklist, honeypot and timing check,
+  the account data export, the migration runner, optional Sentry, and `scripts/backup.sh`.
+- **The honeypot and timing fields are both optional on the server.** Requiring `elapsedMs` buys
+  nothing — anything that can strip an unrecognised field can also send `elapsedMs: 9999` — while
+  breaking every non-browser client. Threshold is 2500 ms; see DECISIONS.
+- **`DataSection.tsx` was a stale Phase 9 stub telling users deletion was "not available yet"**,
+  which stopped being true when Phase 11 shipped `DangerZoneSection`. Rewritten: it owns the export,
+  deletion lives only in the danger zone. The test pinning the old placeholder was deliberately
+  rewritten, not deleted — it was asserting a placeholder rather than the product.
+- **Usage is surfaced in a new Settings section, "Storage and limits"**, above "Your data".
+- **Timezone and concurrency were re-run, not assumed.** 55/55 timezone tests across five suites
+  (`dates`, `analytics.timezone`, `reminderJob.timezone`, `mail.digestTimezone`,
+  `weeklySummaryJob.timezone`) and 5/5 server plus 11/11 client concurrency tests. No regression
+  from Phases 11-13.
+- **The observability audit found two real defects, both fixed with regression tests.**
+  `redactSecrets` flattened an `Error` to `{}` because `message` and `stack` are non-enumerable, so
+  `purgeDeletedUsersJob`'s `logger.error('Purge job failed', { error })` had been recording every
+  failure as `error: {}`. And `seed.ts` interpolated `DEMO_PASSWORD` into a log message, where
+  redaction cannot reach it.
+- **Sentry is behind a dynamic import on the client**, so the SDK is a separate chunk and the
+  landing route's static closure is unchanged. Landing is 140.0 KB gzipped against the 150 KB
+  budget, with Chart.js, dnd-kit and the markdown pair still provably absent.
+- Deferred: `npm run stats` (SPEC section 14) is not part of section 16's Phase 14 definition and
+  is not built. Sentry source-map upload needs an auth token and belongs with the rest of the
+  production configuration in Phase 16.
 
 ## Phase 15 — E2E, performance, repo hygiene
 - [ ] All eight Playwright flows pass in CI

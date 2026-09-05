@@ -1490,3 +1490,98 @@ The half deferred when the phase was split. Closes Phase 11.
 - **The `{{CONTACT_EMAIL}}` placeholder is fed from one constant.** `CONTACT_EMAIL` in
   `siteMeta.ts` supplies the footer mailto and is substituted into both markdown documents at
   render time, so filling it in is a one-line change rather than a hunt through prose.
+
+## Phase 14 — Hardening
+
+- **The honeypot and timing fields are optional, not required.** Requiring `elapsedMs` would buy
+  nothing: anything sophisticated enough to strip a field it does not recognise is also
+  sophisticated enough to send `elapsedMs: 9999`, while a required field breaks every non-browser
+  client and every existing test's registration path. What these two actually catch is the naive
+  form-replay bot, which resends whatever the form contained — honeypot included — and posts
+  immediately. The real gates on an open signup are the per-IP and per-email rate limiters already
+  on `/auth/register`, and email verification.
+- **The timing threshold is 2500 ms.** A person has to read the label, type a name, an address, a
+  password satisfying three character-class rules, and tick the terms box. Even with a password
+  manager filling every field that is several seconds. 2.5 s sits below the plausible human floor,
+  so nobody real is turned away, and far above the milliseconds a script spends between GET and
+  POST.
+- **A rejected signup gets one message that does not name the check that tripped**, and stays
+  recoverable: "That sign-up looked automated. Wait a moment and try again." Naming the failing
+  check would tell a bot exactly what to change; a permanent rejection would punish the rare human
+  who trips it.
+- **The disposable-domain list is 207 hand-picked domains, not a mirror of a 100k-entry list.** The
+  long lists are mostly dead domains plus a steady trickle of false positives against small real
+  providers, and it is the false positives that cost a real user their account. Adding a domain is
+  a one-line change to `server/data/disposable-email-domains.txt`.
+- **The blocklist loads synchronously and fails open, and there is a test for each half.** A
+  missing or unreadable file yields an empty set, so every address is allowed — including a
+  disposable one, which `signupGuard.test.ts` asserts explicitly. Allowing a throwaway signup is a
+  nuisance; refusing every signup because a text file is missing is an outage. Synchronous because
+  the set must exist before the first registration is answered, and one small read on first use is
+  cheaper than the coordination an async cache would need.
+- **Caps return 403, not 429.** The account is not going too fast, it is full, and waiting will not
+  help. 429 is used for the stricter per-account limiters SPEC section 12 also asks for on the
+  upload and export routes — 30 uploads per 15 minutes and 5 exports per hour, keyed by account so
+  one user on a shared network cannot spend everyone else's budget.
+- **The caps are constants in `config/limits.ts`, not environment variables.** They are a product
+  decision about what one free account may consume, not a per-deployment knob. A deployment that
+  wants different numbers is forking the policy and should do it where the reasoning lives.
+- **A CSV import is checked against the ceiling as a whole, before any row is written.** Filling
+  the last few slots and then reporting hundreds of identical "limit reached" row errors is a worse
+  answer than one refusal.
+- **Uploads are charged at their stored size, not their posted size.** `assertAttachmentCapacity`
+  runs after `stripImageMetadata` and before the `put`, so the account is billed for the bytes that
+  actually reach the bucket and a refused upload never leaves an orphan behind.
+- **The export omits attachment bytes and every credential.** Base64-inlining up to 100 MB of
+  uploads would turn "what do you know about me" into a memory spike that can take the process
+  down, so the records are exported and the files stay behind their signed URLs. Password hashes,
+  refresh-token hashes and single-use email-token hashes are excluded because they are credentials
+  rather than the user's data — `dataExport.test.ts` asserts they are absent from the bytes, not
+  merely from the expected keys.
+- **The export is written against the model list rather than the screens**, and its test seeds a
+  row in every model then asserts the count of each collection is non-zero, so an omission fails
+  here instead of shipping as a gap.
+- **The migration ledger is one row per migration, not a version counter.** A counter cannot say
+  when a migration ran or how long it took, and it hides a gap if migrations are applied out of
+  order by hand. `version` is unique, which is what makes two instances racing during a rolling
+  restart safe: the second insert fails rather than the migration running twice.
+- **`npm run migrate` is a separate command, not something the server runs at boot.** A migration
+  that has to finish before the new code is correct must not compete with that code for the same
+  documents.
+- **`redactSecrets` was fixed to keep an `Error` readable.** It walked Errors with the generic
+  object branch, which yields `{}` because `name`, `message` and `stack` are non-enumerable — so
+  `purgeDeletedUsersJob`'s `logger.error('Purge job failed', { error })` had been recording every
+  failure it ever had as `error: {}`. Found by auditing every call site rather than by a failure,
+  which is exactly what the "confirm it still holds" instruction was for.
+- **`seed.ts` no longer prints `DEMO_PASSWORD`.** It is a published fixture rather than a secret,
+  but it is still a password, and interpolating one into a log _message_ puts it somewhere the
+  logger's key-based redaction cannot reach. The line now names the address and points at the env
+  var.
+- **The client Sentry SDK is behind a dynamic import.** `scripts/checkBundle.mjs` enforces the
+  landing budget by walking the static import closure, so a statically imported `@sentry/react`
+  would be roughly 30 KB gzipped on the critical path of the page most visitors bounce off. Behind
+  a dynamic import it is its own chunk, and with no DSN it is never requested at all. Client init
+  failure is swallowed: a blocked CDN or an ad blocker must not stop the app rendering.
+- **Sentry reports only 5xx on the server.** 4xx are answers, not faults; reporting them would bury
+  real failures under every mistyped password and every 404. `tracesSampleRate` defaults to 0
+  because traces are billed per event and this is a free-tier deployment.
+- **Sentry's automatic HTTP instrumentation is not wired.** It wants to load before the modules it
+  patches, which a static import graph cannot guarantee; that affects tracing only, which is off,
+  and the preload flag belongs with the rest of the production configuration in Phase 16. Error
+  capture, which is what this integration is for, does not depend on it.
+- **`DataSection.tsx` was rewritten and its test with it, deliberately.** The section had rendered
+  two disabled buttons captioned "not available yet" since Phase 9; that had already stopped being
+  true for deletion when Phase 11 shipped `DangerZoneSection`, and it was the only place in the UI
+  still claiming a shipped feature did not exist. Deletion now lives only in the danger zone — one
+  affordance for one action — and this section owns the export. The test that pinned the
+  placeholder was rewritten rather than deleted: it was asserting a placeholder, not the product,
+  and the replacement includes a case that fails if "not available yet" copy ever returns.
+- **Usage went into a new Settings section, "Storage and limits", rather than into "Your data".**
+  The limits are the reason a write can be refused, so a user needs to find them before the
+  refusal, not after a 403 on the form they just filled in.
+- **`scripts/backup.sh` is a shell script rather than an npm script.** A backup has to be runnable
+  from cron on a host that has never installed this project's dependencies; `mongodump` is the only
+  thing it needs. It prunes only after a successful dump, so a failed run never destroys the last
+  good copy, and it deletes an empty archive rather than reporting success.
+- **`npm run stats` (SPEC section 14) was not built.** Section 16's Phase 14 definition does not
+  list it and neither does the definition of done; it is noted here so it is not silently lost.

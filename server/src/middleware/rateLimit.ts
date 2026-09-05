@@ -141,7 +141,57 @@ export const resendVerificationLimiter = (() => {
   });
 })();
 
+/**
+ * SPEC section 12 asks for a stricter limit on the upload and export endpoints
+ * than the blanket one, because both are far more expensive per request than a
+ * read: an upload writes to object storage, and an export reads every document
+ * the account owns and serialises the lot.
+ *
+ * Keyed by account rather than by IP, so one user on a university network cannot
+ * spend everybody else's budget. They fall back to the IP only if they somehow
+ * run unauthenticated, which no route mounts them to do.
+ */
+const accountStores: MemoryStore[] = [];
+
+function createAccountLimiter(limit: number, windowMs: number, message: string, code: string) {
+  const store = new MemoryStore();
+  accountStores.push(store);
+
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    store,
+    skip: () => isTest,
+    keyGenerator: (req) => (req as { user?: { id?: string } }).user?.id ?? req.ip ?? '',
+    handler: (_req, _res, next) => {
+      next(ApiError.tooManyRequests(message, code));
+    },
+  });
+}
+
+/** Uploads: 30 files in 15 minutes is far more than any real session needs. */
+export const uploadLimiter = createAccountLimiter(
+  30,
+  FIFTEEN_MINUTES_MS,
+  'Too many uploads in a short time. Try again in a few minutes.',
+  'RATE_LIMITED_UPLOAD',
+);
+
+/**
+ * Exports: 5 an hour. A full account export reads every document the user owns,
+ * and nobody legitimately needs a sixth copy of it within the hour.
+ */
+export const exportLimiter = createAccountLimiter(
+  5,
+  60 * 60 * 1000,
+  'You have requested several exports recently. Try again in an hour.',
+  'RATE_LIMITED_EXPORT',
+);
+
 /** Clears every auth counter. Used by tests so one case cannot throttle the next. */
 export function resetAuthRateLimiters(): void {
   for (const store of authStores) store.resetAll();
+  for (const store of accountStores) store.resetAll();
 }

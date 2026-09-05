@@ -12,7 +12,9 @@ import type {
 } from '@/schemas/auth.schema';
 import * as accountLifecycle from '@/services/accountLifecycle.service';
 import * as authService from '@/services/auth.service';
+import { exportAccountData, exportFilename } from '@/services/dataExport.service';
 import * as sessionService from '@/services/session.service';
+import { getAccountUsage } from '@/services/usage.service';
 import { rotateSession, type SessionContext } from '@/services/token.service';
 import { ApiError } from '@/utils/ApiError';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -109,6 +111,31 @@ export const me = asyncHandler(async (req, res) => {
   const user = await authService.getMe(getAuthenticatedUser(req)._id);
 
   sendSuccess(res, { user: user.toJSON() });
+});
+
+/**
+ * SPEC section 12's "single JSON download containing everything the system
+ * stores about the user".
+ *
+ * Sent as a download rather than inside the usual envelope, for the same reason
+ * the CSV export is: the file the user saves should be the export itself, not an
+ * export nested under a `data` key they have to unwrap before anything can read
+ * it.
+ */
+export const exportData = asyncHandler(async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const account = await exportAccountData(user._id);
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${exportFilename()}"`);
+  res.send(JSON.stringify(account, null, 2));
+});
+
+/** What the account is using against SPEC section 12's per-account ceilings. */
+export const usage = asyncHandler(async (req, res) => {
+  const user = getAuthenticatedUser(req);
+
+  sendSuccess(res, await getAccountUsage(user._id));
 });
 
 export const updateMe = asyncHandler(async (req, res) => {

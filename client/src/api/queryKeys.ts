@@ -12,6 +12,8 @@ const auth = {
   all: ['auth'] as const,
   session: () => ['auth', 'session'] as const,
   sessions: () => ['auth', 'sessions'] as const,
+  /** What the account is using against its resource caps. */
+  usage: () => ['auth', 'usage'] as const,
 };
 
 const applications = {

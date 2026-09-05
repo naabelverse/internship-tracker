@@ -9,6 +9,13 @@ export interface RegisterPayload {
   password: string;
   timezone: string;
   acceptTerms: true;
+  /**
+   * Honeypot, always the empty string from this form. The field exists so a bot
+   * filling inputs by name fills it too; the server rejects any non-empty value.
+   */
+  website: string;
+  /** Milliseconds the form was on screen. The server rejects implausibly fast submits. */
+  elapsedMs: number;
 }
 
 export interface LoginPayload {

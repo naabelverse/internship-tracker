@@ -17,6 +17,7 @@ import type {
 } from '@/schemas/auth.schema';
 import { issueVerification } from '@/services/accountLifecycle.service';
 import { sendMail } from '@/services/mailer.service';
+import { assertHumanSignup } from '@/services/signupGuard.service';
 import {
   createSession,
   revokeAllForUser,
@@ -44,6 +45,10 @@ function getDummyPasswordHash(): string {
 }
 
 export async function register(input: RegisterInput, context: SessionContext): Promise<AuthResult> {
+  // Before the existence check, so a rejected signup costs one synchronous pass
+  // and never touches the database or the mail queue.
+  assertHumanSignup(input);
+
   const existing = await User.findOne({ email: input.email });
 
   if (existing) {

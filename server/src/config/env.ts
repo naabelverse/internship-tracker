@@ -76,6 +76,18 @@ const baseSchema = z.object({
    * opinion about when mail from us should arrive, not two.
    */
   WEEKLY_SUMMARY_WEEKDAY: z.coerce.number().int().min(1).max(7).default(1),
+  /**
+   * Optional error reporting. Unset - the default, and what CI and every local
+   * checkout run with - means Sentry is never initialised at all, so the app
+   * makes no outbound call and behaves exactly as it did before it was wired in.
+   */
+  SENTRY_DSN: z.string().url().optional(),
+  /**
+   * Performance traces are billed per event and this is a free-tier deployment,
+   * so they are off by default. Errors are what this integration is for.
+   */
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
+
   ENABLE_CRON: z.preprocess(
     (value) => (value === undefined ? undefined : value !== 'false' && value !== false),
     z.boolean().default(true),

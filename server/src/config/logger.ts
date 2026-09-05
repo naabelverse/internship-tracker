@@ -35,6 +35,14 @@ export function redactSecrets(value: unknown, depth = 0): unknown {
   if (depth >= MAX_DEPTH || value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((item) => redactSecrets(item, depth + 1));
 
+  // An Error keeps `name`, `message` and `stack` on its prototype as
+  // non-enumerable properties, so the generic walk below would produce `{}` and
+  // throw away the only part anybody reads. Found in Phase 14: the purge job
+  // logged `{ error }` and every failure it ever had was recorded as `error: {}`.
+  if (value instanceof Error) {
+    return { name: value.name, message: value.message, stack: value.stack };
+  }
+
   const output: Record<string, unknown> = {};
   for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
     output[key] = SENSITIVE_KEYS.has(key.toLowerCase())

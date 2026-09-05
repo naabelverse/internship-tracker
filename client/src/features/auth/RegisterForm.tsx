@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,8 +15,29 @@ const FIELDS = ['name', 'email', 'password'] as const;
 
 const LEGAL_LINK = 'font-medium text-primary underline underline-offset-2 hover:no-underline';
 
+/**
+ * The honeypot input, off screen rather than `display: none`.
+ *
+ * A field hidden with `display: none` or `hidden` is the first thing a form
+ * filler skips; one positioned out of view still looks fillable to anything
+ * working from the DOM. `aria-hidden` and `tabIndex={-1}` keep it away from
+ * screen readers and the tab order, so nobody using the form can reach it, and
+ * `autoComplete="off"` stops a browser helpfully filling it for a real person.
+ */
+const HONEYPOT_STYLE = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const;
+
 export function RegisterForm(): JSX.Element {
   const registerAccount = useRegister(paths.dashboard);
+  // Set once, on first render, so it measures the form's whole time on screen.
+  const mountedAt = useRef(Date.now());
+  const honeypot = useRef<HTMLInputElement>(null);
 
   const {
     register,
@@ -35,6 +57,10 @@ export function RegisterForm(): JSX.Element {
         password: values.password,
         acceptTerms: true,
         timezone: detectTimezone(),
+        // Both are read at submit time rather than held in form state: neither
+        // is a field the user edits, and neither should re-render anything.
+        website: honeypot.current?.value ?? '',
+        elapsedMs: Date.now() - mountedAt.current,
       });
     } catch (error) {
       applyServerErrors(error, setError, FIELDS, 'Could not create your account');
@@ -51,6 +77,22 @@ export function RegisterForm(): JSX.Element {
           {errors.root.message}
         </p>
       )}
+
+      {/*
+        Not registered with react-hook-form, and not in the zod schema: it is not
+        a value the user provides, so it has no validation and no error state.
+        See HONEYPOT_STYLE for why it is positioned away rather than hidden.
+      */}
+      <input
+        ref={honeypot}
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={HONEYPOT_STYLE}
+        defaultValue=""
+      />
 
       <TextField
         label="Name"

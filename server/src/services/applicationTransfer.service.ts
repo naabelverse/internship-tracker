@@ -6,6 +6,7 @@ import {
   type CreateApplicationInput,
 } from '@/schemas/application.schema';
 import { createApplication } from '@/services/application.service';
+import { assertApplicationCapacity } from '@/services/usage.service';
 import { ApiError } from '@/utils/ApiError';
 import { parseCsv, toCsv, type CsvCell } from '@/utils/csv';
 
@@ -189,6 +190,11 @@ export async function importApplications(
       'IMPORT_TOO_LARGE',
     );
   }
+
+  // The batch is checked against the account ceiling as a whole, before a single
+  // row is written. Filling the last few slots and then reporting hundreds of
+  // identical "limit reached" row errors is a worse answer than one refusal.
+  await assertApplicationCapacity(userId, rows.length);
 
   const errors: ImportRowError[] = [...parseErrors];
   let imported = 0;

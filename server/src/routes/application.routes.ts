@@ -4,6 +4,7 @@ import * as interviews from '@/controllers/interview.controller';
 import * as attachments from '@/controllers/attachment.controller';
 import * as demoData from '@/controllers/demoData.controller';
 import { csvUpload } from '@/middleware/csvUpload';
+import { exportLimiter, uploadLimiter } from '@/middleware/rateLimit';
 import { attachmentUpload } from '@/middleware/upload';
 import { requireAuth } from '@/middleware/requireAuth';
 import { requireVerifiedEmail } from '@/middleware/requireVerifiedEmail';
@@ -31,8 +32,8 @@ router.use(requireAuth);
 router.use(requireVerifiedEmail);
 
 // Literal paths must be declared before /:id or they would be read as an id.
-router.get('/export', validateQuery(exportQuerySchema), applications.exportAll);
-router.post('/import', csvUpload, applications.importCsv);
+router.get('/export', exportLimiter, validateQuery(exportQuerySchema), applications.exportAll);
+router.post('/import', uploadLimiter, csvUpload, applications.importCsv);
 router.post('/bulk', validateBody(bulkActionSchema), applications.bulk);
 // Fills an empty account with the fixture set behind the dashboard empty state.
 // It refuses any account that already holds applications, so it can never mix
@@ -77,6 +78,7 @@ router.delete('/:id/interviews/:interviewId', validateParams(interviewIdParams),
 router.post(
   '/:id/attachments',
   validateParams(applicationIdParams),
+  uploadLimiter,
   attachmentUpload,
   attachments.upload,
 );

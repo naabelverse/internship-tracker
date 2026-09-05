@@ -28,6 +28,8 @@ single-tenant per user, and ownership is enforced in every database query rather
 - [Data model](#data-model)
 - [Testing](#testing)
 - [Possible extensions](#possible-extensions)
+- [Backups and restore](#backups-and-restore)
+- [Schema migrations](#schema-migrations)
 
 ---
 
@@ -252,6 +254,12 @@ empty.
 | `REMINDER_DIGEST_HOUR`                     | `8`                     | Local hour at which each user receives their digest                        |
 | `ENABLE_CRON`                              | `true`                  | `false` keeps the scheduler off; the test suite sets this                  |
 
+`SENTRY_DSN` is optional and unset by default: with no DSN the SDK is never initialised, so the
+server makes no outbound call and behaves exactly as it does without it. When set, only 5xx
+responses are reported, request headers, cookies and bodies are stripped, and the reported user is
+reduced to an id. `SENTRY_TRACES_SAMPLE_RATE` defaults to `0` — traces are billed per event and this
+is a free-tier deployment, so errors are the point.
+
 ### Client (`client/.env`)
 
 | Variable       | Default                 | Notes                                        |
@@ -284,6 +292,10 @@ Run from the repository root unless noted.
 | `npm run verify`        | lint → typecheck → test → build. **Must pass before any commit** |
 | `npm run seed`          | Create the demo account and its 64 applications                  |
 | `npm run seed:reset`    | Wipe the demo account's data and reseed                          |
+| `npm run migrate`       | Apply pending schema migrations (see below)                      |
+
+Plus `./scripts/backup.sh`, which is a shell script rather than an npm script on purpose: a backup
+has to run from cron on a host that has never installed this project's dependencies.
 
 Workspace-only extras: `npm run test:watch -w server`, `npm run test:watch -w client`,
 `npm run preview -w client`, and `npm run start -w server` to run the compiled `dist/`.
@@ -489,6 +501,82 @@ End-to-end Playwright flows and the axe accessibility sweep arrive in phase 15.
   offer lands.
 - **iCal feed** of deadlines and interviews for Google or Apple Calendar.
 - **Saved filter presets** and a weekly email digest of the board's state.
+
+---
+
+## Backups and restore
+
+`./scripts/backup.sh` writes a single gzipped `mongodump` archive to `backups/`, keeping the last
+14 by default. It reads `MONGO_URI` from the environment, falling back to `server/.env`, and never
+echoes it — a connection string carries the database password and a cron log is not a place to
+leave one. The script needs only the
+[MongoDB Database Tools](https://www.mongodb.com/docs/database-tools/installation/), not this
+project's dependencies, so it can run on a host that has never checked the repository out.
+
+```bash
+./scripts/backup.sh                             # ./backups, keep 14 days
+BACKUP_DIR=/var/backups RETAIN_DAYS=30 ./scripts/backup.sh
+```
+
+Old archives are pruned only **after** a successful dump, so a failed run never destroys the last
+good copy on its way out, and an empty archive is deleted and reported as a failure rather than
+counted as a backup.
+
+Nightly at 03:00, via cron:
+
+```cron
+0 3 * * * cd /srv/internship-tracker && BACKUP_DIR=/var/backups ./scripts/backup.sh >> /var/log/tracker-backup.log 2>&1
+```
+
+### Restoring
+
+```bash
+# Inspect first — this lists the collections in the archive without writing anything.
+mongorestore --archive=backups/internship-tracker-2026-09-05T03-00-00Z.archive.gz --gzip --dryRun -v
+
+# Restore into a scratch database and check it before going near the live one.
+mongorestore --uri="$MONGO_URI" --archive=backups/<file>.archive.gz --gzip   --nsFrom='internship_tracker.*' --nsTo='internship_tracker_restore.*'
+
+# Only once that looks right, replace the live database.
+mongorestore --uri="$MONGO_URI" --archive=backups/<file>.archive.gz --gzip --drop
+```
+
+`--drop` empties each collection in the archive before restoring it, which is what makes the result
+match the backup rather than merge with whatever is there. It does **not** remove collections that
+are absent from the archive, so a collection added after the backup survives. Run `npm run migrate`
+after any restore: an older archive can hold documents at an older `schemaVersion`.
+
+**Atlas free tier.** M0 clusters have no automated backups — the setting only appears from M10 up.
+Until then this script is the backup, and it needs to run somewhere that is not the database host.
+On a paid tier, enable _Cloud Backup_ under the cluster's **Backup** tab and keep this script as the
+off-provider copy.
+
+---
+
+## Schema migrations
+
+`schemaVersion` on `User` and `Application` records which shape a document is in. Once real users
+exist you cannot change a schema by editing the model alone, so the mechanism exists before launch.
+
+```bash
+npm run migrate    # applies everything this database has not seen, oldest first
+```
+
+Migrations live in `server/src/migrations/` as `NNN-what-it-does.ts` and are listed in
+`index.ts`. Each records itself in a `migrations` collection with a unique version, so:
+
+- a run applies only what is pending, in ascending order;
+- a second instance racing the first loses the ledger insert and stops;
+- a failure aborts the run with its ledger row unwritten, so the next attempt retries that
+  migration rather than skipping past it.
+
+Run it **before** starting the new server version, not from inside it: a migration that has to
+finish before the new code is correct must not be competing with that code for the same documents.
+
+Writing one: add the new fields to the model as optional, bump `CURRENT_*_SCHEMA_VERSION`, and write
+a migration that selects on the old `schemaVersion`, writes the new fields and stamps the new
+version. Selecting on the version is what makes a re-run harmless — the second pass matches nothing.
+`001-backfill-schema-version.ts` is the worked example.
 
 ---
 

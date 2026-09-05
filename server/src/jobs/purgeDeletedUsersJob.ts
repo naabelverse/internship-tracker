@@ -55,7 +55,10 @@ export async function purgeDeletedUsers(now = new Date()): Promise<PurgeResult> 
 export function startPurgeCron(): ScheduledTask {
   return cron.schedule('15 3 * * *', () => {
     void purgeDeletedUsers().catch((error: unknown) => {
-      logger.error('Purge job failed', { error });
+      logger.error('Purge job failed', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     });
   });
 }

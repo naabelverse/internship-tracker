@@ -46,6 +46,12 @@ export type InterviewOutcome = (typeof INTERVIEW_OUTCOMES)[number];
 
 export const MAX_NOTES_LENGTH = 10_000;
 
+/**
+ * The shape version every new application document is written at. See
+ * `CURRENT_USER_SCHEMA_VERSION` for how this is meant to be changed.
+ */
+export const CURRENT_APPLICATION_SCHEMA_VERSION = 1;
+
 export interface Interview {
   _id: Types.ObjectId;
   type: InterviewType;
@@ -228,7 +234,7 @@ const applicationSchema = new Schema<ApplicationAttributes, ApplicationModelType
     statusHistory: { type: [statusHistorySchema], default: [] },
     archived: { type: Boolean, default: false },
     attachments: { type: [attachmentSchema], default: [] },
-    schemaVersion: { type: Number, default: 1 },
+    schemaVersion: { type: Number, default: CURRENT_APPLICATION_SCHEMA_VERSION },
   },
   {
     timestamps: true,

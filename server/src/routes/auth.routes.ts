@@ -3,6 +3,7 @@ import {
   changePassword,
   deleteMe,
   demoLogin,
+  exportData,
   forgotPassword,
   listSessions,
   login,
@@ -15,10 +16,12 @@ import {
   resetPassword,
   revokeSession,
   updateMe,
+  usage,
   verifyEmail,
 } from '@/controllers/auth.controller';
 import {
   demoLoginIpLimiter,
+  exportLimiter,
   forgotPasswordEmailLimiter,
   forgotPasswordIpLimiter,
   loginEmailLimiter,
@@ -105,6 +108,11 @@ router.post(
   validateBody(resetPasswordSchema),
   resetPassword,
 );
+
+// Reading the whole account is far more expensive than any other GET here, so
+// it carries its own per-account limit on top of the global one.
+router.get('/me/export', requireAuth, exportLimiter, exportData);
+router.get('/me/usage', requireAuth, usage);
 
 router.get('/sessions', requireAuth, listSessions);
 router.delete('/sessions/:id', requireAuth, revokeSession);

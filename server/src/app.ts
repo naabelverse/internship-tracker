@@ -11,6 +11,7 @@ import { httpLogger } from '@/middleware/httpLogger';
 import { notFound } from '@/middleware/notFound';
 import { globalRateLimiter } from '@/middleware/rateLimit';
 import { requestId } from '@/middleware/requestId';
+import { attachSentryErrorHandler } from '@/config/sentry';
 import apiRouter from '@/routes/index';
 import healthRouter from '@/routes/health.routes';
 
@@ -64,6 +65,10 @@ export function createApp(): Express {
   app.use('/api/v1', apiRouter);
 
   app.use(notFound);
+  // Reports the failure with the request still in scope, then falls through to
+  // the handler below, which is what actually answers the client. A no-op unless
+  // SENTRY_DSN is set.
+  attachSentryErrorHandler(app);
   app.use(errorHandler);
 
   return app;

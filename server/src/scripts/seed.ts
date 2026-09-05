@@ -130,7 +130,11 @@ async function main(): Promise<void> {
     const result = await seedDemoAccount({ reset });
 
     logger.info('Seed complete', result);
-    logger.info(`Sign in with ${result.email} / ${env.DEMO_PASSWORD}`);
+    // The address only. The password is a published fixture rather than a
+    // secret, but it is still a password, and interpolating one into a message
+    // string puts it somewhere the logger's redaction cannot reach - see
+    // DEMO_PASSWORD in server/.env, or the demo account section of the README.
+    logger.info(`Sign in as ${result.email} with the password in DEMO_PASSWORD`);
   } finally {
     await disconnectDatabase();
   }

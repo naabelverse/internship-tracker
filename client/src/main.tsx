@@ -8,6 +8,7 @@ import { App } from '@/App';
 import { createQueryClient } from '@/api/queryClient';
 import { ROUTER_FUTURE } from '@/routes/routerFuture';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { initSentry } from '@/lib/sentry';
 import '@/index.css';
 
 const container = document.getElementById('root');
@@ -15,6 +16,11 @@ const container = document.getElementById('root');
 if (!container) {
   throw new Error('Root element #root is missing from index.html');
 }
+
+// Not awaited: the SDK is optional and lazily imported, so blocking the first
+// paint on it would make monitoring cost the thing it is monitoring. Errors
+// thrown before it resolves are the ones a boundary reports anyway.
+void initSentry();
 
 const queryClient = createQueryClient();
 

@@ -12,6 +12,7 @@ import type {
   StatusChangeInput,
   UpdateApplicationInput,
 } from '@/schemas/application.schema';
+import { assertApplicationCapacity } from '@/services/usage.service';
 import { ApiError } from '@/utils/ApiError';
 import { buildPaginationMeta, toSkip, type PageRequest } from '@/utils/pagination';
 import { containsRegex, exactRegex } from '@/utils/regex';
@@ -202,6 +203,8 @@ export async function createApplication(
   userId: Types.ObjectId,
   input: CreateApplicationInput,
 ): Promise<ApplicationDocument> {
+  await assertApplicationCapacity(userId);
+
   const status: ApplicationStatus = input.status ?? 'saved';
 
   const application = new Application({

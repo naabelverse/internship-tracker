@@ -7,6 +7,7 @@ import { PasswordSection } from '@/features/settings/PasswordSection';
 import { PreferencesSection } from '@/features/settings/PreferencesSection';
 import { ProfileSection } from '@/features/settings/ProfileSection';
 import { SessionsSection } from '@/features/settings/SessionsSection';
+import { UsageSection } from '@/features/settings/UsageSection';
 import { useSession } from '@/hooks/useSession';
 
 /**
@@ -55,6 +56,7 @@ export function SettingsPage(): JSX.Element {
         <PreferencesSection user={user} />
         <PasswordSection />
         <SessionsSection />
+        <UsageSection />
         <DataSection />
         <DangerZoneSection />
       </div>

@@ -24,8 +24,18 @@ const ACCOUNT = makeUser({
   emailRemindersEnabled: true,
 });
 
+/** `UsageSection` fetches on mount, so every render of this page needs it answered. */
+const USAGE: Responder = () => ({
+  status: 200,
+  data: successBody({
+    applications: { used: 12, limit: 2000, remaining: 1988 },
+    storageBytes: { used: 5_242_880, limit: 104_857_600, remaining: 99_614_720 },
+    attachmentsPerApplication: { limit: 20 },
+  }),
+});
+
 function renderSettings(routes: Record<string, Responder> = {}): MockApi {
-  const api = installMockApi(routes);
+  const api = installMockApi({ 'GET /auth/me/usage': USAGE, ...routes });
   signIn(makeSession({ user: ACCOUNT }));
   renderWithProviders(<SettingsPage />);
 
@@ -266,17 +276,55 @@ describe('settings password', () => {
   });
 });
 
+/**
+ * Rewritten in Phase 14, deliberately.
+ *
+ * This block used to assert that both actions were disabled and labelled "not
+ * available yet". That had already stopped being true for deletion when Phase 11
+ * shipped `DangerZoneSection`, and Phase 14 makes the export real - so the old
+ * assertions were pinning a placeholder rather than describing the product. The
+ * replacement asserts what the section now actually does, and the "no stale
+ * copy" case is what stops the placeholder wording creeping back.
+ */
 describe('settings data section', () => {
-  it('shows both actions as unavailable rather than hiding them', async () => {
+  it('offers a working export rather than a disabled placeholder', async () => {
     renderSettings();
 
-    const exportButton = await screen.findByRole('button', { name: 'Export' });
+    expect(await screen.findByRole('button', { name: 'Export' })).toBeEnabled();
+  });
 
-    // Present and findable, so somebody looking for "how do I get my data out"
-    // gets an answer, but inert because neither endpoint exists yet.
-    expect(exportButton).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Delete account' })).toBeDisabled();
-    expect(screen.getByText(/full account export is not available yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/account deletion is not available yet/i)).toBeInTheDocument();
+  it('says what the file contains, because the privacy page promises it', async () => {
+    renderSettings();
+    await screen.findByRole('button', { name: 'Export' });
+
+    const section = screen.getByRole('region', { name: 'Your data' });
+
+    expect(within(section).getByText(/every application and its interviews/i)).toBeInTheDocument();
+    expect(within(section).getByText(/every reminder/i)).toBeInTheDocument();
+    expect(within(section).getByText(/each signed-in device/i)).toBeInTheDocument();
+    // The two exclusions the export service really makes.
+    expect(
+      within(section).getByText(/attachments are listed with their name/i),
+    ).toBeInTheDocument();
+    expect(
+      within(section).getByText(/passwords and session tokens are never included/i),
+    ).toBeInTheDocument();
+  });
+
+  it('carries no copy claiming a feature is unavailable', async () => {
+    renderSettings();
+    await screen.findByRole('button', { name: 'Export' });
+
+    expect(screen.queryByText(/not available yet/i)).not.toBeInTheDocument();
+  });
+
+  it('leaves deletion to the danger zone, so there is one affordance for it', async () => {
+    renderSettings();
+    await screen.findByRole('button', { name: 'Export' });
+
+    // The old placeholder button is gone; the real flow lives in its own section
+    // and opens a confirmation rather than deleting on the first click.
+    expect(screen.queryByRole('button', { name: 'Delete account' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close my account' })).toBeEnabled();
   });
 });
