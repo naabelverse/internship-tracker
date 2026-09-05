@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';
-import { measureOverflow, overflowWithout } from '../support/overflow';
+import { bisectOverflow, measureOverflow, overflowWithout } from '../support/overflow';
 import { signIn } from '../support/ui';
 
 const test = testForClient(10);
@@ -48,6 +48,15 @@ async function reportOverflow(page: Page, label: string, width: number): Promise
   }
 
   console.log(`  OVER ${header}`);
+
+  // Ask the browser which element owns the width before reading the rect scan,
+  // which is a heuristic and can legitimately come back empty.
+  const trail = await bisectOverflow(page);
+  console.log(
+    trail.length > 0
+      ? `         owns the overflow: ${trail.join(' > ')}`
+      : '         bisection found no single element; the overflow is on body itself',
+  );
   for (const node of measured.offenders.slice(0, 12)) {
     console.log(
       `         ${node.path}` +
