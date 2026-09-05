@@ -1,11 +1,18 @@
 # Deployment
 
-Everything needed to put this app on the public internet on free tiers, in order, with nothing
-assumed. Work top to bottom; each step names what the next one needs from it.
+Everything needed to put this app on the public internet, in order, with nothing assumed. Work top
+to bottom; each step names what the next one needs from it.
+
+This guide targets **Railway for both the API and the client**, plus MongoDB Atlas and an
+S3-compatible bucket. One dashboard, one bill. If you would rather split the two halves across Render
+and Vercel, that path is summarised under
+[Alternatives](#alternatives-render--vercel-instead-of-railway).
 
 **Read [Step 6](#step-6--make-the-two-origins-trust-each-other) before you deploy, not after.** The
-client and the API end up on two different domains, and three separate settings have to agree for a
-login to survive a page refresh. It is the one part of this deployment that fails silently.
+client and the API are two separate Railway services with two separate hostnames, so a browser treats
+them as **cross-origin even though they sit in the same project on the same platform**. Three
+settings have to agree for a login to survive a page refresh, and it is the one part of this
+deployment that fails silently.
 
 ---
 
@@ -15,18 +22,18 @@ login to survive a page refresh. It is the one part of this deployment that fail
 2. [Step 1 — MongoDB Atlas](#step-1--mongodb-atlas)
 3. [Step 2 — Object storage for uploads](#step-2--object-storage-for-uploads)
 4. [Step 3 — Generate the secrets](#step-3--generate-the-secrets)
-5. [Step 4 — Deploy the API to Render](#step-4--deploy-the-api-to-render)
-6. [Step 5 — Deploy the client to Vercel](#step-5--deploy-the-client-to-vercel)
+5. [Step 4 — Deploy the API to Railway](#step-4--deploy-the-api-to-railway)
+6. [Step 5 — Deploy the client to Railway](#step-5--deploy-the-client-to-railway)
 7. [Step 6 — Make the two origins trust each other](#step-6--make-the-two-origins-trust-each-other)
 8. [Step 7 — Transactional email and deliverability](#step-7--transactional-email-and-deliverability)
 9. [Step 8 — Custom domain, HTTPS and HSTS](#step-8--custom-domain-https-and-hsts)
-10. [Step 9 — Cold starts and keeping the API warm](#step-9--cold-starts-and-keeping-the-api-warm)
+10. [Step 9 — Cold starts and keeping the API warm](#step-9--sleeping-cold-starts-and-keeping-the-api-warm)
 11. [Step 10 — Uptime, errors and backups](#step-10--uptime-errors-and-backups)
 12. [Step 11 — Seed the demo account](#step-11--seed-the-demo-account)
 13. [Production environment variables](#production-environment-variables)
 14. [Automated deploys](#automated-deploys)
 15. [Pre-launch checklist](#pre-launch-checklist)
-16. [Alternatives: Railway and Netlify](#alternatives-railway-and-netlify)
+16. [Alternatives: Render + Vercel](#alternatives-render--vercel-instead-of-railway)
 17. [Troubleshooting](#troubleshooting)
 
 ---
@@ -34,29 +41,55 @@ login to survive a page refresh. It is the one part of this deployment that fail
 ## What you are building
 
 ```
-     browser
-        │
-        ├──── https://tracker.example.com ──────►  Vercel     static client build (client/dist)
-        │
-        └──── https://api.tracker.example.com ──►  Render     Express API (server/dist)
-                                                     │
-                                    ┌────────────────┼────────────────┐
-                                    ▼                ▼                ▼
-                             MongoDB Atlas    Cloudflare R2     Email provider
-                             (M0, free)       (uploads)         (Resend / SendGrid / Mailgun)
+                          ┌───────────── ONE Railway project ─────────────┐
+     browser              │                                               │
+        │                 │   ┌─────────────────┐   ┌─────────────────┐   │
+        ├─ tracker.example.com ─►  web service   │   │   api service   │   │
+        │                 │   │  Caddy + static │   │  Express        │   │
+        └─ api.tracker.example.com ─────────────────►  server/dist    │   │
+                          │   │  client/dist    │   │                 │   │
+                          │   └─────────────────┘   └────────┬────────┘   │
+                          └───────────────────────────────────┼──────────┘
+                                             ┌────────────────┼────────────────┐
+                                             ▼                ▼                ▼
+                                      MongoDB Atlas    Cloudflare R2     Email provider
+                                      (M0, free)       (uploads)         (Resend / SendGrid / …)
 ```
 
-Four accounts, all with a free tier: MongoDB Atlas, Render, Vercel, and an email provider. A custom
-domain is optional for the app itself but **required** for email that reaches an inbox — see
+Two services, **two hostnames**, one project. Three accounts: Railway, MongoDB Atlas, and an email
+provider — plus an S3-compatible bucket, which Cloudflare R2 gives you free. A custom domain is
+optional for the app itself but **required** for email that reaches an inbox, see
 [Step 7](#step-7--transactional-email-and-deliverability).
 
-Total cost at these tiers: the domain, and nothing else.
+> **Two services in the same project are still cross-origin.** `web-production-a1b2.up.railway.app`
+> and `api-production-c3d4.up.railway.app` are different hostnames, so every browser rule keyed on
+> origin — CORS, and the `SameSite` cookie attribute — applies exactly as it would across two
+> unrelated companies. Sharing a dashboard, a project, a bill and a private network changes none of
+> it. This trips people up often enough that [Step 6](#step-6--make-the-two-origins-trust-each-other)
+> says it again in more detail.
+
+### What this actually costs
+
+Railway does not have a Render-style "free instance that sleeps". Be clear-eyed before you start:
+
+| Plan  | What you get                                                                                  |
+| ----- | --------------------------------------------------------------------------------------------- |
+| Trial | A one-time **$5** grant, valid up to 30 days. Enough to stand both services up and test them. |
+| Free  | **$1 of credit per month**, non-rolling, capped at 1 vCPU / 0.5 GB RAM and **one project**.   |
+| Hobby | **$5/month** minimum, including $5 of usage credit.                                           |
+
+Two always-on containers will not fit inside $1 a month. Plan on the Trial to get everything working
+and **Hobby at $5/month** to keep it up, or enable serverless sleeping
+([Step 9](#step-9--sleeping-cold-starts-and-keeping-the-api-warm)) to stretch the credit. Atlas M0,
+R2 and the email provider stay free regardless.
 
 ### Before you start
 
 - The repository pushed to GitHub.
 - A shell with `openssl` (Git Bash, WSL, macOS, Linux) for generating secrets.
 - Node 20+ locally if you want to seed the demo account from your machine.
+- Optionally the Railway CLI (`npm i -g @railway/cli`), which the deploy workflow in
+  [Automated deploys](#automated-deploys) uses.
 
 ---
 
@@ -66,9 +99,9 @@ Total cost at these tiers: the domain, and nothing else.
 
 1. Sign up at <https://www.mongodb.com/cloud/atlas/register>.
 2. **Build a Database** → **M0** (the free forever tier, 512 MB).
-3. Pick a provider and a region **physically close to your Render region** — every query pays that
-   round trip, and Render's free instances default to Oregon (`us-west`) or Frankfurt
-   (`eu-central`). Mismatching them adds 100 ms or more to every request.
+3. Pick a provider and a region **physically close to the Railway region you will deploy into** —
+   every query pays that round trip, and mismatching them adds 100 ms or more to every request.
+   Railway shows the region on each service under Settings → Deploy; pick your Atlas region to match.
 4. Name the cluster, e.g. `internship-tracker`.
 
 ### 1.2 Create the database user
@@ -81,17 +114,19 @@ Total cost at these tiers: the domain, and nothing else.
 - Role: **Read and write to any database**, or `readWrite` scoped to `internship_tracker` if you
   prefer least privilege.
 
-### 1.3 Allow Render to connect
+### 1.3 Allow the API to connect
 
 **Network Access** → **Add IP Address**.
 
-Render's free web services do not get a dedicated outbound IP address, so there is no small set of
-addresses to allowlist. Two honest choices:
+This step is platform-independent in shape — Atlas needs to know which addresses may reach the
+cluster — but the answer depends on whether your host gives you a fixed outbound IP. Railway
+containers do not have one by default, so there is no small set of addresses to allowlist. Two honest
+choices:
 
-| Option                                                               | When                                                     | Trade-off                                                                |
-| -------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `0.0.0.0/0` ("allow access from anywhere")                           | Free Render instances                                    | The database password becomes the only control. Make it long and unique. |
-| The addresses under your Render service's **Connect** → **Outbound** | Paid Render instances, which publish static outbound IPs | Tighter, but not available on the free tier.                             |
+| Option                                     | When                                                                   | Trade-off                                                                |
+| ------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `0.0.0.0/0` ("allow access from anywhere") | The normal case on Railway, and on any host without a static egress IP | The database password becomes the only control. Make it long and unique. |
+| A specific egress IP or CIDR               | Only if you have arranged static egress for the service                | Tighter, but it is extra setup and not the default anywhere.             |
 
 Do not treat `0.0.0.0/0` as fine merely because it is common. It means the cluster is reachable from
 any host on the internet that has the password, so that password must never be reused anywhere else
@@ -124,9 +159,11 @@ mongodb+srv://tracker_app:UrlEncodedPassword@internship-tracker.abc12.mongodb.ne
 ## Step 2 — Object storage for uploads
 
 **This is not optional in production, and the app enforces it.** `server/src/config/env.ts` refuses
-to boot with `STORAGE_DRIVER=local` when `NODE_ENV=production`, because Render's filesystem is
-ephemeral: every redeploy, every restart and every wake from idle destroys local disk. Attachments
-written there would vanish silently, at a time nobody was watching.
+to boot with `STORAGE_DRIVER=local` when `NODE_ENV=production`, because a container filesystem is
+ephemeral: every redeploy, every restart and every wake from sleep starts from the image again.
+Railway can attach a persistent volume, but a volume is billed storage and is bound to one service,
+so an object store is still the right answer — and it is the one the storage adapter was built for.
+Attachments written to local disk would vanish silently, at a time nobody was watching.
 
 Cloudflare R2 is the cheapest S3-compatible option (10 GB and no egress fees on the free tier). Any
 S3-compatible service works — the adapter only speaks the S3 API.
@@ -176,48 +213,118 @@ That is the correct response to a suspected leak.
 
 ---
 
-## Step 4 — Deploy the API to Render
+## Step 4 — Deploy the API to Railway
 
-### 4.1 Create the service
+### 4.0 One project, two services — and why
 
-<https://dashboard.render.com> → **New** → **Web Service** → connect the GitHub repository.
+Create **one Railway project containing two services**, not two projects. Three reasons:
 
-| Field             | Value                                             |
-| ----------------- | ------------------------------------------------- |
-| Name              | `internship-tracker-api`                          |
-| Region            | the one you matched Atlas to in Step 1.1          |
-| Branch            | `main`                                            |
-| Root Directory    | _leave blank_ — the repo root                     |
-| Runtime           | Node                                              |
-| Build Command     | `npm ci --include=dev && npm run build -w server` |
-| Start Command     | `npm run start -w server`                         |
-| Instance Type     | Free                                              |
-| Health Check Path | `/health`                                         |
+- Railway's own guidance for a monorepo is two services in one project, and the Free plan allows
+  **one project** anyway, so two projects is not an option there.
+- Services in one project share a private network and can reference each other's variables, which
+  keeps `CLIENT_ORIGIN` and `VITE_API_URL` from drifting apart (see 4.2).
+- One project is one place to look at logs, usage and billing — the reason for choosing a single
+  platform in the first place.
 
-**Root Directory stays blank on purpose.** This is an npm workspaces monorepo with one lockfile at
-the root; pointing Render at `server/` gives it a `package.json` whose dependencies it cannot
-resolve.
+**This repository is a _shared_ monorepo, and that changes the setup.** Railway distinguishes two
+shapes:
+
+| Shape        | What it means                                                       | How you configure it                                                      |
+| ------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Isolated** | Independent projects side by side, each with its own lockfile       | Set a **Root Directory** per service                                      |
+| **Shared**   | One lockfile at the root, workspaces sharing config — **this repo** | Leave the root alone; set **custom build and start commands** per service |
+
+So do **not** set Root Directory to `server/` or `client/`. There is one `package-lock.json` at the
+repository root and both workspaces resolve through it; pointing a service at a subdirectory gives it
+a `package.json` whose dependencies it cannot install. Every service builds from the repository root
+and is told which workspace to act on with `-w`.
+
+Railway can also auto-detect JavaScript workspaces on import and pre-stage one service per package
+with workspace-scoped commands. If it offers, let it — then correct the commands to match the tables
+below, because it cannot know about `build:deploy` or the `--include=dev` requirement.
+
+### 4.1 Create the API service
+
+<https://railway.app/new> → **Deploy from GitHub repo** → pick the repository. Railway creates the
+project and a first service; rename it `api` under **Settings → Service**.
+
+Then, still in that service's **Settings**:
+
+| Setting           | Value                                                                      |
+| ----------------- | -------------------------------------------------------------------------- |
+| Root Directory    | `/` — leave it alone, see 4.0                                              |
+| Build Command     | `npm ci --include=dev && npm run build -w server`                          |
+| Start Command     | `npm run start -w server`                                                  |
+| Watch Paths       | `/server/**`, `/package.json`, `/package-lock.json`, `/tsconfig.base.json` |
+| Healthcheck Path  | `/health`                                                                  |
+| Public Networking | **Generate Domain** — you need the hostname in 4.2                         |
 
 **`--include=dev` is not optional.** TypeScript, `tsc-alias` and the type packages are
 devDependencies, and npm skips devDependencies automatically when `NODE_ENV=production` is set in the
 environment — which you are about to set in the very next step. Without the flag the build fails with
 `tsc: not found`.
 
-Setting a **Health Check Path** matters beyond monitoring: Render uses it to decide whether a deploy
-succeeded, so a failing boot is rolled back instead of silently serving errors.
+**Watch Paths stop the API rebuilding when only the client changed.** Both services watch the same
+repository, so without them every push redeploys both, and on a metered plan you pay the build
+minutes twice. They are gitignore-style patterns.
+
+**The healthcheck earns its place beyond monitoring.** Railway polls it after starting a deployment
+and will not cut traffic over to a container that never answers, so a boot that dies on a bad
+environment variable fails the deploy instead of silently replacing a working one. `/health` is the
+right target rather than `/ready`: it answers as long as the process is alive, whereas `/ready` also
+pings Mongo and would fail a deploy over a transient database blip.
+
+If you would rather keep this in the repository than the dashboard, Railway reads `railway.json` or
+`railway.toml`, and **config-as-code overrides dashboard settings**:
+
+```json
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "buildCommand": "npm ci --include=dev && npm run build -w server"
+  },
+  "deploy": {
+    "startCommand": "npm run start -w server",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
+  }
+}
+```
+
+That file is per-service, so two services in one repository means two such files under different
+names with each service pointed at its own. For two services the dashboard is simpler, and the rest
+of this guide assumes it.
 
 ### 4.2 Environment variables
 
-**Environment** → **Add Environment Variable**, for each row in
-[Production environment variables](#production-environment-variables). Do not set `PORT` — Render
-assigns it and the app reads it.
+Railway variables are set **per service, not per project**. Open the `api` service → **Variables**
+and set every row from [Production environment variables](#production-environment-variables) there.
+The `VITE_*` values in Step 5 belong to the _other_ service and do nothing here — this distinction
+matters, and getting it wrong is the second most common way this deployment breaks.
 
-Two Render-specific ones worth calling out:
+Do not set `PORT`. Railway injects it and the app reads it.
 
-| Variable                      | Value | Why                                                                                                                                                                                                                                                                                                            |
-| ----------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRUST_PROXY`                 | `1`   | Render terminates TLS at its load balancer and forwards to your process over plain HTTP. Without this, `req.ip` is the balancer for every request, so all users share one rate-limit bucket and one person's burst throttles everybody; `req.secure` is also false, which makes Express drop `Secure` cookies. |
-| `MONGOMS_DISABLE_POSTINSTALL` | `1`   | `mongodb-memory-server` is a test dependency whose postinstall downloads a MongoDB binary. `--include=dev` pulls it in, and there is no reason to spend build minutes fetching a database the production image never runs.                                                                                     |
+**Use reference variables so the two services cannot drift apart.** Rather than pasting the client's
+hostname into `CLIENT_ORIGIN` by hand:
+
+```
+CLIENT_ORIGIN=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
+APP_URL=https://${{web.RAILWAY_PUBLIC_DOMAIN}}
+API_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}
+```
+
+`${{web.…}}` reads a variable from the sibling service named `web`; the bare form reads this
+service's own. Note the explicit `https://` — `RAILWAY_PUBLIC_DOMAIN` is a bare hostname with no
+scheme, and the env loader requires a full URL and will refuse to boot without one. Once you attach
+custom domains ([Step 8](#step-8--custom-domain-https-and-hsts)), replace these with the real
+origins: `RAILWAY_PUBLIC_DOMAIN` keeps returning the `*.up.railway.app` name.
+
+Two variables worth calling out for this platform:
+
+| Variable                      | Value | Why                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TRUST_PROXY`                 | `1`   | Railway terminates TLS at its edge and forwards to your container over plain HTTP — one hop, exactly as any managed platform does. Without this, `req.ip` is the proxy for every request, so all users share one rate-limit bucket and one person's burst throttles everybody; `req.secure` is also false, which makes Express drop `Secure` cookies, and per 6.2 that means no refresh cookie at all. |
+| `MONGOMS_DISABLE_POSTINSTALL` | `1`   | `mongodb-memory-server` is a test dependency whose postinstall downloads a MongoDB binary. `--include=dev` pulls it in, and there is no reason to spend build minutes fetching a database the production image never runs.                                                                                                                                                                             |
 
 ### 4.3 First deploy
 
@@ -236,8 +343,8 @@ variable.
 Confirm from your own machine:
 
 ```bash
-curl -i https://internship-tracker-api.onrender.com/health   # 200, with a JSON body
-curl -i https://internship-tracker-api.onrender.com/ready    # 200 only if Mongo is reachable
+curl -i https://api-production-c3d4.up.railway.app/health   # 200, with a JSON body
+curl -i https://api-production-c3d4.up.railway.app/ready    # 200 only if Mongo is reachable
 ```
 
 `/health` answers as long as the process is alive. `/ready` additionally checks the database, so a
@@ -246,33 +353,39 @@ curl -i https://internship-tracker-api.onrender.com/ready    # 200 only if Mongo
 ### 4.4 Run the migrations
 
 The migration runner is deliberately separate from server boot, so two instances behind a rolling
-deploy cannot race each other. From Render's **Shell** tab, or as a one-off job:
+deploy cannot race each other. Run it from your own machine through the Railway CLI, which executes
+the command with the service's environment injected:
 
 ```bash
-npm run migrate -w server
+railway link                                  # pick the project, then the api service
+railway run npm run migrate -w server
 ```
 
-Run it before each deploy that includes a new migration.
+`railway run` runs locally against the remote variables, so it needs the repository checked out and
+`npm ci` already done. Run it before each deploy that includes a new migration.
 
 ---
 
-## Step 5 — Deploy the client to Vercel
+## Step 5 — Deploy the client to Railway
 
-### 5.1 Create the project
+### 5.1 Add a second service to the same project
 
-<https://vercel.com/new> → import the repository.
+In the project canvas: **Create** → **GitHub Repo** → the same repository again. Rename it `web`.
 
-| Field            | Value                            |
-| ---------------- | -------------------------------- |
-| Framework Preset | Vite                             |
-| Root Directory   | _leave as the repo root_         |
-| Install Command  | `npm ci`                         |
-| Build Command    | `npm run build:deploy -w client` |
-| Output Directory | `client/dist`                    |
+Railway has no Vercel-style "static site" product: every service is a container. So the web service
+builds the client and then runs a tiny web server that serves `client/dist`. That is the single
+biggest structural difference from the Vercel path, and it is what 5.3 is about.
 
-**Use `build:deploy`, not `build`.** The Vite config emits source maps on purpose — an error tracker
-cannot symbolicate a minified stack without them — but `client/dist` is exactly what Vercel
-publishes, so a plain `build` would leave your complete readable source one predictable `.js.map`
+| Setting           | Value                                                                      |
+| ----------------- | -------------------------------------------------------------------------- |
+| Root Directory    | `/` — same reasoning as 4.0, one lockfile at the root                      |
+| Watch Paths       | `/client/**`, `/package.json`, `/package-lock.json`, `/tsconfig.base.json` |
+| Public Networking | **Generate Domain**                                                        |
+| Build / Start     | supplied by the Dockerfile in 5.3 — leave both blank                       |
+
+**You will use `build:deploy`, not `build`.** The Vite config emits source maps on purpose — an
+error tracker cannot symbolicate a minified stack without them — but `client/dist` is exactly what
+gets served, so a plain `build` would leave your complete readable source one predictable `.js.map`
 request away from any visitor. `build:deploy` runs the build and then
 `client/scripts/stripSourcemaps.mjs`, which deletes every `.map` and removes the
 `//# sourceMappingURL=` comments pointing at them. If you upload maps to Sentry, do it between the
@@ -280,8 +393,22 @@ two steps (see [Step 10](#step-10--uptime-errors-and-backups)).
 
 ### 5.2 Environment variables
 
-Vite inlines `VITE_*` values **at build time**, not at runtime. Changing one in the Vercel dashboard
-does nothing until you redeploy.
+Set these on the **`web` service**, not the `api` service and not "shared across the project".
+Railway scopes variables per service, and a `VITE_*` value sitting on the API service is simply never
+read by anything.
+
+Vite inlines `VITE_*` values **at build time**, not at runtime. Changing one in the dashboard does
+nothing until you redeploy — and because the build happens inside the Docker image in 5.3, the
+variables must be visible to that build, which Railway handles by passing service variables in as
+build arguments. If a changed value does not appear in the served bundle, redeploy rather than
+restart.
+
+You can use a reference variable here too, so the client always points at the sibling API:
+
+```
+VITE_API_URL=https://${{api.RAILWAY_PUBLIC_DOMAIN}}
+VITE_APP_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}
+```
 
 | Variable                                       | Value                                                 |
 | ---------------------------------------------- | ----------------------------------------------------- |
@@ -291,26 +418,91 @@ does nothing until you redeploy.
 | `VITE_SENTRY_DSN`                              | optional                                              |
 | `VITE_ANALYTICS_DOMAIN` / `VITE_ANALYTICS_SRC` | optional, cookieless analytics only                   |
 
-### 5.3 The SPA rewrite
+### 5.3 The SPA rewrite — a Dockerfile and a Caddyfile
 
-This app uses client-side routing. Without a rewrite, `https://tracker.example.com/applications`
-works when you navigate to it inside the app and **404s when you refresh the page or open the link
-directly** — the browser asks Vercel for a file at `/applications`, which does not exist.
+This app uses client-side routing. Without a fallback rule,
+`https://tracker.example.com/applications` works when you navigate to it inside the app and **404s
+when you refresh the page or open the link directly** — the server is asked for a file at
+`/applications`, which does not exist.
 
-Vercel's Vite preset normally configures this for you. Make it explicit anyway, so the behaviour
-survives a preset change. Create `client/vercel.json`:
+On Vercel this was three lines of `vercel.json`. **On Railway there is no rewrite setting to fill
+in**, because there is no static-hosting layer to configure: you ship a container, so you choose the
+web server and write its config. Railway's own SPA guide uses Caddy, and that is what this uses.
 
-```json
+Create **`Caddyfile`** in the repository root:
+
+```
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+	admin off
+	persist_config off
+	auto_https off
+	log {
+		format json
+	}
+	servers {
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	root * client/dist
+	encode gzip
+	file_server
+
+	try_files {path} /index.html
 }
 ```
 
-Static files still win: `robots.txt`, `sitemap.xml`, `manifest.webmanifest` and everything under
-`/assets` are served normally, because a rewrite only applies when no file matches.
+`try_files {path} /index.html` is the whole fix, and it is the exact equivalent of the Vercel
+rewrite: serve the requested file if it exists, otherwise hand back the entry HTML and let the router
+take over. Real files still win — `robots.txt`, `sitemap.xml`, `manifest.webmanifest` and everything
+under `/assets` are served normally — because Caddy orders `try_files` before `file_server` and only
+falls through when nothing matched.
+
+`:{$PORT:3000}` matters: Railway injects `PORT` and a container that ignores it is unreachable.
+`auto_https off` is right here because Railway terminates TLS at its edge; Caddy would otherwise try
+to obtain its own certificate and fail.
+
+Create **`client/Dockerfile.web`** (or any name you point the service at) to build with Node and
+serve with Caddy:
+
+```dockerfile
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY server/package.json ./server/package.json
+COPY client/package.json ./client/package.json
+RUN npm ci
+COPY . ./
+# Vite inlines VITE_* at build time, so they must be present in this stage.
+ARG VITE_API_URL
+ARG VITE_APP_URL
+ARG VITE_DEMO_ENABLED
+RUN npm run build:deploy -w client
+
+FROM caddy:alpine
+WORKDIR /srv
+COPY Caddyfile ./Caddyfile
+RUN caddy fmt Caddyfile --overwrite
+COPY --from=build /app/client/dist ./client/dist
+CMD ["caddy", "run", "--config", "Caddyfile", "--adapter", "caddyfile"]
+```
+
+Point the `web` service at it: **Settings → Build → Dockerfile Path** → `client/Dockerfile.web`.
+Railway builds the image and ignores the Nixpacks/Railpack detection entirely, which is what you
+want — the auto-detected build would try to run the whole workspace.
+
+> **Lighter alternative.** Railpack, Railway's builder, has static-site support with an
+> `index_fallback` option that generates a Caddyfile for you. It is less code, but it needs the build
+> output at a path it expects, which is awkward from a workspace root. The explicit Dockerfile above
+> is more lines and no guesswork; prefer it unless you enjoy debugging a builder's assumptions.
 
 **Test this specifically after deploying.** Open `https://tracker.example.com/applications` in a new
-tab and press reload. A 404 here is the single most common broken SPA deploy.
+tab and press reload. A 404 here is the single most common broken SPA deploy, on any platform.
 
 ### 5.4 Regenerate the SEO assets
 
@@ -325,9 +517,33 @@ VITE_APP_URL=https://tracker.example.com npm run assets -w client
 
 ## Step 6 — Make the two origins trust each other
 
-The client is on one domain and the API is on another. Four settings have to agree, and the failure
+The client is on one hostname and the API is on another. Four settings have to agree, and the failure
 mode of getting them wrong is not an error message — it is a user who logs in, refreshes the page,
 and finds themselves logged out.
+
+> **Hosting both halves on Railway does not make them same-origin. Read this before you skip the
+> section.**
+>
+> It is tempting to assume that two services in one project, on one platform, behind one bill, are
+> somehow "internal" to each other. They are not, and no part of the browser's security model knows
+> or cares that they share a dashboard. An origin is scheme + host + port. The API answers on
+> `api-production-c3d4.up.railway.app` and the client is served from
+> `web-production-a1b2.up.railway.app` — **two different hosts, therefore two different origins,
+> therefore every cross-origin rule applies in full**:
+>
+> - `fetch` from the client to the API is a cross-origin request and needs CORS, with credentials
+>   explicitly allowed and the client's origin explicitly named (6.1).
+> - The refresh cookie is set by the API's host and sent from a page on the client's host, so it
+>   needs `SameSite=None; Secure` or the browser silently omits it (6.2).
+>
+> The private network Railway gives you between services is real, but it is for **service-to-service**
+> traffic inside the platform. Every request in this app originates in the user's browser, out on the
+> public internet, so none of it travels that network. Custom domains do not change the picture
+> either: `tracker.example.com` and `api.tracker.example.com` are still different hosts.
+>
+> The only arrangement that would make this same-origin is putting both behind one hostname with a
+> path-based proxy — which this guide does not do, because it trades a settings problem you fix once
+> for a routing layer you maintain forever.
 
 ### 6.1 CORS — an exact origin allowlist
 
@@ -370,8 +586,8 @@ return { sameSite: 'strict', secure: production };
 ```
 
 Why it has to be this way: a browser omits a `SameSite=Strict` cookie from **every** request that a
-page on another site initiates. `POST /auth/refresh` from a Vercel page to a Render host is one of
-those, so a `Strict` cookie simply never arrives — the silent refresh returns 401, the axios
+page on another site initiates. `POST /auth/refresh` from a page on the web service to the API service is one
+of those, so a `Strict` cookie simply never arrives — the silent refresh returns 401, the axios
 interceptor reads that as a dead session, and the user is bounced to the login page every time their
 15-minute access token expires or they reload the tab. `SameSite=None` is the only value that
 travels, and browsers refuse to store `None` unless the cookie is also `Secure`, which is why the two
@@ -398,11 +614,14 @@ without a reason is a downgrade.
 
 ### 6.3 `trust proxy`
 
-`app.set('trust proxy', env.TRUST_PROXY)` — set `TRUST_PROXY=1` on Render (one hop: their load
-balancer). Covered in [4.2](#42-environment-variables); repeated here because it belongs to this set.
-Leaving it at `0` breaks two things at once: rate limits key on the balancer's IP so all users share
-one bucket, and Express treats the connection as insecure and will not set `Secure` cookies — which,
-per 6.2, means no refresh cookie at all.
+`app.set('trust proxy', env.TRUST_PROXY)` — set `TRUST_PROXY=1` on the API service (one hop: Railway's
+edge proxy). Covered in [4.2](#42-environment-variables); repeated here because it belongs to this
+set. The value is `1` on Railway for the same reason it is `1` on Render, Railway, Fly or anything
+else that terminates TLS in front of your container: the count is of proxies, not of vendors.
+
+Leaving it at `0` breaks two things at once: rate limits key on the proxy's IP so all users share one
+bucket, and Express treats the connection as insecure and will not set `Secure` cookies — which, per
+6.2, means no refresh cookie at all.
 
 Do not set it higher than the number of proxies actually in front of you. Trusting more hops than
 exist lets a client forge `X-Forwarded-For` and evade the rate limiter entirely.
@@ -414,9 +633,14 @@ cannot cover the cookie**: its web container is `localhost:5174` and its API is 
 which are different _origins_ but the same _site_, because a port is not part of a site. A
 `SameSite=Strict` cookie travels happily between them. Only a real two-domain deploy exercises 6.2.
 
+Deploying both services to one Railway project does **not** close this gap — the two
+`*.up.railway.app` hostnames are as cross-origin as two unrelated domains would be, so 6.2 is
+exercised for real the moment you deploy, whether or not you have attached custom domains yet.
+
 So after deploying, in a real browser:
 
-1. Sign in at `https://tracker.example.com`.
+1. Sign in at the web service's URL (`https://web-production-a1b2.up.railway.app`, or your custom
+   domain once Step 8 is done).
 2. Open DevTools → **Application** → **Cookies** → the API's domain. The `refresh_token` cookie must
    show `SameSite=None`, `Secure` ✓, `HttpOnly` ✓, `Path=/api/v1/auth`.
 3. **Hard-reload the page.** You must still be signed in. In the **Network** tab,
@@ -426,7 +650,7 @@ So after deploying, in a real browser:
    should happen invisibly — no error toast, no bounce to login.
 5. On the applications page, click **Export CSV**. The saved file must be named
    `applications-YYYY-MM-DD.csv`. If it saved as `applications.csv`, `exposedHeaders` is not reaching
-   the browser — check 6.1, and that nothing in front of Render is stripping the header.
+   the browser — check 6.1, and that nothing in front of the API is stripping the header.
 
 ---
 
@@ -595,47 +819,55 @@ mail still lands in spam, and only a real inbox tells you.
 
 ## Step 8 — Custom domain, HTTPS and HSTS
 
-### 8.1 The client on Vercel
+You do not have a domain yet, so this section is forward-looking: nothing here needs doing to get the
+app running on the generated `*.up.railway.app` hostnames. Come back when you buy one.
 
-Vercel project → **Settings** → **Domains** → add `tracker.example.com`. It shows the record to add
-at your registrar:
+Custom domains are supported on every Railway plan, free trial included, with certificates issued and
+renewed automatically.
 
-| Type  | Name      | Value                   |
-| ----- | --------- | ----------------------- |
-| CNAME | `tracker` | `cname.vercel-dns.com.` |
+### 8.1 Two domains, one per service
 
-For an apex domain (`example.com` with no subdomain) use Vercel's `A` record instead — a CNAME at the
-apex is not valid DNS at most registrars.
+Each service gets its own hostname, because each service is its own origin. In the Railway project,
+for **each** of the two services: **Settings** → **Networking** → **Custom Domain**.
 
-### 8.2 The API on Render
+| Service | Domain to add             | Record type | Name      | Value                        |
+| ------- | ------------------------- | ----------- | --------- | ---------------------------- |
+| `web`   | `tracker.example.com`     | CNAME       | `tracker` | the target Railway shows you |
+| `api`   | `api.tracker.example.com` | CNAME       | `api`     | the target Railway shows you |
 
-Render service → **Settings** → **Custom Domains** → add `api.tracker.example.com`:
+Railway displays the exact CNAME target when you add the domain — it is per-service and per-region,
+so copy it from the dashboard rather than guessing. It then shows the domain as pending until DNS
+resolves.
 
-| Type  | Name  | Value                                  |
-| ----- | ----- | -------------------------------------- |
-| CNAME | `api` | `internship-tracker-api.onrender.com.` |
+**Apex domains need care.** A CNAME at the apex (`example.com` with no subdomain) is not valid DNS at
+most registrars. Either use a subdomain for both services, as above, or use a registrar that supports
+CNAME flattening / ALIAS records at the apex (Cloudflare and a few others do).
 
-### 8.3 Certificates
+### 8.2 Certificates
 
-Both platforms issue and renew Let's Encrypt certificates automatically once the DNS resolves.
-Nothing to install. Both also redirect HTTP to HTTPS by default — confirm with
-`curl -I http://api.tracker.example.com/health` and look for a `301`.
+Railway issues and renews certificates automatically once DNS resolves. Nothing to install, and
+HTTP is redirected to HTTPS — confirm with `curl -I http://api.tracker.example.com/health` and look
+for a redirect.
 
-### 8.4 Update every origin variable, then redeploy
+### 8.3 Update every origin variable, then redeploy
 
-Domains are not live until the app agrees they are. Change all of these together:
+Domains are not live until the app agrees they are. If you used the reference variables from 4.2,
+**replace them now with the literal domains** — `RAILWAY_PUBLIC_DOMAIN` keeps returning the
+`*.up.railway.app` name, so leaving the references in place means CORS keeps allowlisting the old
+hostname and the new one is rejected.
 
-| Where  | Variable        | New value                         |
-| ------ | --------------- | --------------------------------- |
-| Render | `CLIENT_ORIGIN` | `https://tracker.example.com`     |
-| Render | `APP_URL`       | `https://tracker.example.com`     |
-| Render | `API_URL`       | `https://api.tracker.example.com` |
-| Vercel | `VITE_API_URL`  | `https://api.tracker.example.com` |
-| Vercel | `VITE_APP_URL`  | `https://tracker.example.com`     |
+| Service | Variable        | New value                         |
+| ------- | --------------- | --------------------------------- |
+| `api`   | `CLIENT_ORIGIN` | `https://tracker.example.com`     |
+| `api`   | `APP_URL`       | `https://tracker.example.com`     |
+| `api`   | `API_URL`       | `https://api.tracker.example.com` |
+| `web`   | `VITE_API_URL`  | `https://api.tracker.example.com` |
+| `web`   | `VITE_APP_URL`  | `https://tracker.example.com`     |
 
-Redeploy **both**. The Vercel values are compiled into the bundle, so the client keeps calling the
-old API until it is rebuilt. Then re-run the browser checks in
-[6.4](#64-verify-it-end-to-end-in-a-browser) — changing these is precisely what can break the cookie.
+Redeploy **both** services. The `VITE_*` values are compiled into the bundle at image build time, so
+the client keeps calling the old API until the `web` service is rebuilt — a restart is not enough.
+Then re-run the browser checks in [6.4](#64-verify-it-end-to-end-in-a-browser): changing these is
+precisely what can break the cookie.
 
 ### 8.5 HSTS
 
@@ -645,8 +877,13 @@ Already sent. `helmet()` in `server/src/app.ts` emits:
 Strict-Transport-Security: max-age=31536000; includeSubDomains
 ```
 
-on every API response — one year, covering subdomains. Vercel sends its own HSTS header for custom
-domains. Verify once the domain is live:
+on every API response — one year, covering subdomains. This is the app's own header and is
+platform-independent: it ships from Express, so it is identical on Railway, Render or anywhere else.
+The `web` service serves static files through Caddy and does not add HSTS of its own; if you want it
+on the client host too, add `header Strict-Transport-Security "max-age=31536000; includeSubDomains"`
+inside the site block of the Caddyfile in [5.3](#53-the-spa-rewrite--a-dockerfile-and-a-caddyfile).
+
+Verify once the domain is live:
 
 ```bash
 curl -sI https://api.tracker.example.com/health | grep -i strict-transport
@@ -662,28 +899,48 @@ Two cautions before you consider adding `preload`:
 
 ---
 
-## Step 9 — Cold starts and keeping the API warm
+## Step 9 — Sleeping, cold starts and keeping the API warm
 
-**Render's free web services spin down after roughly 15 minutes with no inbound traffic.** The next
-request restarts the container: Node boots, Mongoose connects to Atlas, and the caller waits. Expect
-**30–60 seconds** for that first request. Everything after it runs at normal speed.
+**Railway's model is the opposite of Render's, and this is the single biggest behavioural difference
+between the two paths.** Railway runs long-lived containers that stay up by default. There is no
+forced spin-down on any plan, so out of the box there is **no cold start at all** — the trade is that
+you pay for the time, and an idle container still burns credit.
 
-For a portfolio project shown to a recruiter, that is the difference between "fast, polished app" and
-"broken link". Mitigate it:
+Serverless sleeping is available as an **opt-in per-service setting**, not something imposed on you.
+Enable it and the service sleeps after it stops sending outbound traffic, and wakes on the next
+request. Two details matter before you turn it on:
 
-1. **Ping `/health` every 5 minutes** with the uptime monitor from
-   [Step 10](#step-10--uptime-errors-and-backups). That is under the 15-minute idle threshold, so the
-   service never sleeps. One monitor does double duty as availability alerting and keep-warm.
-2. **Watch the free-tier hours.** Render's free plan includes 750 instance-hours per month across all
-   free services. A calendar month is about 730 hours, so _one_ always-warm service fits and two do
-   not — deploy a second and both run out before month end.
-3. **Do not point the pinger at `/ready`.** It queries Mongo on every call, and 8,640 pointless round
+- **The idle timer watches _outbound_ traffic, not inbound.** A service is considered inactive once
+  it stops sending packets — and that counts telemetry, NTP and **database connections**. This API
+  holds a Mongoose connection pool open, so it may well never look idle enough to sleep, and you can
+  end up paying as if sleeping were off. Cron is another wakeful path: `ENABLE_CRON=true` runs an
+  hourly reminder tick. In practice a service sleeps somewhere between 5 and 10 minutes after its
+  last outbound packet, if it ever gets there.
+- **The first request to a slept service may return `502 Bad Gateway`,** not merely a slow `200`.
+  That is worse than Render's slow-but-successful wake: a recruiter opening your link gets an error
+  page rather than a pause.
+
+So pick deliberately:
+
+| Goal                           | Setting                                                                                              |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| A link that is always instant  | Leave sleeping **off**. Budget for two always-on containers — realistically the $5/month Hobby plan. |
+| Stretch a small credit balance | Turn sleeping **on** for both services, and accept a possible 502 on the first hit after idle.       |
+
+Whichever you choose:
+
+1. **Point an uptime monitor at `/health` every 5 minutes** ([Step 10](#step-10--uptime-errors-and-backups)).
+   With sleeping off it is pure availability alerting; with sleeping on it also keeps the service
+   awake — though that then defeats the credit saving, so do not enable both and expect a discount.
+2. **Do not point the pinger at `/ready`.** It queries Mongo on every call, and 8,640 pointless round
    trips a day against a 512 MB shared Atlas cluster is a poor use of it. `/health` is a liveness
    probe by design and touches nothing.
-4. **Handle the case where it does sleep anyway.** The client already renders skeletons rather than a
-   blank screen, so a cold start reads as slow rather than broken.
-
-Vercel has no equivalent problem — the client is static files on a CDN.
+3. **The client suffers the same way.** Unlike the Vercel path, where the client is static files on a
+   CDN and never sleeps, here the `web` service is a container too. If you enable sleeping, enable it
+   knowing the landing page itself can 502 on a cold hit. Caddy serving static files is cheap, so
+   leaving the `web` service always-on is the easier call.
+4. **The UI degrades gracefully either way.** The client renders skeletons rather than a blank screen,
+   so a slow API reads as slow rather than broken.
 
 ---
 
@@ -711,20 +968,20 @@ no outbound call, and behaviour is identical. That is what CI runs with.
 To enable:
 
 1. <https://sentry.io> → new project → **Node.js** for the API, **React** for the client.
-2. Render: `SENTRY_DSN=https://…`. Leave `SENTRY_TRACES_SAMPLE_RATE` at `0` — traces are billed per
+2. On the `api` service: `SENTRY_DSN=https://…`. Leave `SENTRY_TRACES_SAMPLE_RATE` at `0` — traces are billed per
    event and errors are the point.
-3. Vercel: `VITE_SENTRY_DSN=https://…`. The client SDK sits behind a dynamic import, so an unset DSN
+3. On the `web` service: `VITE_SENTRY_DSN=https://…`. The client SDK sits behind a dynamic import, so an unset DSN
    costs the landing bundle nothing.
 4. Only 5xx responses are reported. Request headers, cookies and bodies are stripped before an event
    is sent and the user is reduced to an id, so no PII leaves the process.
 5. **Source maps.** For readable stack traces, upload the maps to Sentry _between_ the build and the
-   strip, by setting the Vercel build command to:
+   strip. In the Dockerfile from 5.3, replace the single `RUN npm run build:deploy -w client` with:
 
    ```bash
    npm run build -w client && npx --yes @sentry/cli sourcemaps upload --release "$VERCEL_GIT_COMMIT_SHA" client/dist && node client/scripts/stripSourcemaps.mjs
    ```
 
-   with `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` set in the Vercel environment. Sentry
+   with `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and `SENTRY_PROJECT` passed in as build args. Sentry
    then has the maps and the public site does not. Drop the middle command and this is exactly
    `build:deploy`.
 
@@ -757,7 +1014,7 @@ Test a restore at least once **before** you need one. An untested backup is a hy
 npm run stats -w server   # active users, soft-deleted users, applications, signups in the last 7 days
 ```
 
-Runs from the Render shell against the live database. There is no admin web UI by design: no extra
+Run it with `railway run npm run stats -w server` against the live database. There is no admin web UI by design: no extra
 authentication surface, no route, no role model.
 
 ---
@@ -765,7 +1022,7 @@ authentication surface, no route, no role model.
 ## Step 11 — Seed the demo account
 
 The landing page's **Try the demo** button signs a visitor into a sandboxed account, and it needs
-that account to exist. From the Render shell, or locally with `MONGO_URI` pointed at Atlas:
+that account to exist. Run it through the Railway CLI so it uses the deployed variables:
 
 ```bash
 npm run seed -w server
@@ -801,7 +1058,7 @@ refuses to start on a bad configuration, listing every problem at once.
 | `CLIENT_ORIGIN`        | `https://tracker.example.com`                      | Exact origin, no trailing slash. Rejected if it points at localhost.                                              |
 | `APP_URL`              | `https://tracker.example.com`                      | Used to build links inside emails.                                                                                |
 | `API_URL`              | `https://api.tracker.example.com`                  | Signed download links, unsubscribe links, **and the cookie policy in 6.2**.                                       |
-| `TRUST_PROXY`          | `1`                                                | One hop on Render. See 6.3.                                                                                       |
+| `TRUST_PROXY`          | `1`                                                | One hop on Railway's edge. See 6.3.                                                                               |
 | `STORAGE_DRIVER`       | `s3`                                               | `local` is refused in production.                                                                                 |
 | `S3_ENDPOINT`          | `https://<account>.r2.cloudflarestorage.com`       | Omit for AWS S3.                                                                                                  |
 | `S3_REGION`            | `auto`                                             | `auto` for R2; the real region for AWS.                                                                           |
@@ -827,7 +1084,7 @@ refuses to start on a bad configuration, listing every problem at once.
 
 | Variable                       | Default                          | Notes                                                                 |
 | ------------------------------ | -------------------------------- | --------------------------------------------------------------------- |
-| `PORT`                         | `5000`                           | **Do not set on Render** — it assigns one.                            |
+| `PORT`                         | `5000`                           | **Do not set on Railway** — it injects one.                           |
 | `ACCESS_TOKEN_TTL`             | `15m`                            |                                                                       |
 | `REFRESH_TOKEN_TTL`            | `7d`                             |                                                                       |
 | `COOKIE_DOMAIN`                | unset                            | Leave unset for split-host. See 6.2.                                  |
@@ -839,7 +1096,7 @@ refuses to start on a bad configuration, listing every problem at once.
 | `SENTRY_DSN`                   | unset                            | Unset means Sentry is never initialised.                              |
 | `SENTRY_TRACES_SAMPLE_RATE`    | `0`                              | Errors only.                                                          |
 
-### Client (Vercel) — build-time
+### Client (`web` service) — build-time
 
 | Variable                                       | Example                           | Notes                                                     |
 | ---------------------------------------------- | --------------------------------- | --------------------------------------------------------- |
@@ -856,24 +1113,36 @@ refuses to start on a bad configuration, listing every problem at once.
 
 ## Automated deploys
 
-`.github/workflows/deploy.yml` waits for the full CI suite to pass and only then calls the platform
-deploy hooks. **It is disabled by default** and does nothing at all until you opt in, so a fork or a
-clone cannot accidentally deploy to anything.
+`.github/workflows/deploy.yml` waits for the full CI suite to pass and only then deploys. **It is
+disabled by default** and does nothing at all until you opt in, so a fork or a clone cannot
+accidentally deploy to anything.
+
+**Railway has no URL deploy hook.** Render and Vercel both hand you a secret URL you `POST` to;
+Railway does not work that way. Deployment is driven by its CLI, authenticated with a **project
+token**, so the workflow installs `@railway/cli` and runs `railway redeploy` per service. That is the
+one substantive change from the Render/Vercel version of this workflow — the CI gate, the
+`DEPLOY_ENABLED` switch and the green-skip resting state are all unchanged.
 
 To enable it, add these repository secrets under **Settings → Secrets and variables → Actions**:
 
-| Secret                   | Where it comes from                                           |
-| ------------------------ | ------------------------------------------------------------- |
-| `DEPLOY_ENABLED`         | Set it to `true`. Absent or anything else and the job skips.  |
-| `RENDER_DEPLOY_HOOK_URL` | Render → service → Settings → **Deploy Hook**                 |
-| `VERCEL_DEPLOY_HOOK_URL` | Vercel → project → Settings → Git → **Deploy Hooks** → create |
+| Secret                | Where it comes from                                                          |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `DEPLOY_ENABLED`      | Set it to `true`. Absent or anything else and the job skips.                 |
+| `RAILWAY_TOKEN`       | Railway → project → **Settings → Tokens** → create a **project token**       |
+| `RAILWAY_API_SERVICE` | The `api` service's name or id — not secret, but kept alongside for tidiness |
+| `RAILWAY_WEB_SERVICE` | The `web` service's name or id                                               |
+
+A **project token** is scoped to one project and one environment, which is what you want here: it
+cannot touch anything else in your account. Do not use a personal account token.
 
 With `DEPLOY_ENABLED` unset the workflow still runs and reports a green skip, which is the intended
 resting state: CI keeps guarding `main` and nothing deploys.
 
-Both platforms also offer their own git integration, which deploys on every push to `main` _without_
-waiting for tests. If you use that instead, be aware you have given up the gate — the entire value of
-this workflow is that a red test suite stops the deploy.
+**Turn off Railway's own GitHub auto-deploy if you want the gate to mean anything.** Railway deploys
+on every push to the connected branch by default, which happens _before_ CI has finished and
+regardless of whether it passes. Either disconnect the repo from each service and let this workflow
+be the only deploy path, or accept that the workflow is redundant. Having both is the worst of the
+two: you get an ungated deploy and a gated one racing each other.
 
 ---
 
@@ -888,14 +1157,16 @@ launch.
       different from each other, and never used in development.
 - [ ] The Atlas database password is unique to this deployment.
 - [ ] No `.env` file is committed. `scripts/scan-secrets.sh` runs gitleaks across the whole history.
-- [ ] `NODE_ENV=production` on Render. Confirm it in the boot log, not just in the dashboard.
+- [ ] `NODE_ENV=production` on the `api` service. Confirm it in the boot log, not just the dashboard.
+- [ ] Every variable is on the **right service**: `CLIENT_ORIGIN`/`APP_URL`/`API_URL` on `api`,
+      `VITE_*` on `web`. Railway scopes variables per service and a misplaced one is simply ignored.
 
 **The deployment**
 
 - [ ] `GET /health` → 200 and `GET /ready` → 200 on the live API.
 - [ ] `npm run migrate -w server` has been run against the production database.
 - [ ] Opening `https://tracker.example.com/applications` **directly** and reloading it returns the
-      app, not a 404. (Step 5.3.)
+      app, not a 404 — the Caddy `try_files` fallback. (Step 5.3.)
 - [ ] Source maps are not published: `curl -I https://tracker.example.com/assets/index-*.js.map`
       returns 404, and no `sourceMappingURL` comment appears in the served JavaScript.
 - [ ] HSTS present: `curl -sI https://api.tracker.example.com/health | grep -i strict-transport`.
@@ -930,42 +1201,61 @@ launch.
 
 ---
 
-## Alternatives: Railway and Netlify
+## Alternatives: Render + Vercel instead of Railway
 
-### Railway instead of Render
+Splitting the two halves across two platforms costs you a second dashboard and a second bill, but
+buys a genuinely free tier for the API and a CDN-hosted client that never sleeps and never costs
+anything. Everything in Steps 1, 2, 3, 6 and 7 applies unchanged — **including the whole of Step 6**,
+since a Vercel client calling a Render API is cross-origin in exactly the same way two Railway
+services are.
 
-Railway has no idle spin-down on its trial plan, so
-[Step 9](#step-9--cold-starts-and-keeping-the-api-warm) does not apply; it bills by usage instead.
+What differs:
 
-| Setting | Value                                             |
-| ------- | ------------------------------------------------- |
-| Build   | `npm ci --include=dev && npm run build -w server` |
-| Start   | `npm run start -w server`                         |
-| Watch   | root directory                                    |
+### The API on Render
 
-Same environment variables, `TRUST_PROXY=1` included — Railway also fronts your process with a proxy.
+| Setting           | Value                                                     |
+| ----------------- | --------------------------------------------------------- |
+| Root Directory    | blank — the repo root, same shared-monorepo reason as 4.0 |
+| Build Command     | `npm ci --include=dev && npm run build -w server`         |
+| Start Command     | `npm run start -w server`                                 |
+| Health Check Path | `/health`                                                 |
+| `TRUST_PROXY`     | `1` — still one hop                                       |
 
-### Netlify instead of Vercel
+Render's free web services **spin down after about 15 minutes idle**, and the next request pays a
+30–60 second wake. That is forced, not opt-in, unlike Railway. The free plan also allows 750
+instance-hours a month across all free services, so a `/health` ping every 5 minutes can keep exactly
+one service warm.
 
-| Setting           | Value                            |
-| ----------------- | -------------------------------- |
-| Build command     | `npm run build:deploy -w client` |
-| Publish directory | `client/dist`                    |
+### The client on Vercel
 
-Netlify's SPA rewrite is a `client/public/_redirects` file, which Vite copies into `dist` verbatim:
+| Setting          | Value                            |
+| ---------------- | -------------------------------- |
+| Framework Preset | Vite                             |
+| Root Directory   | the repo root                    |
+| Install Command  | `npm ci`                         |
+| Build Command    | `npm run build:deploy -w client` |
+| Output Directory | `client/dist`                    |
+
+No Dockerfile and no Caddyfile: Vercel hosts the static output directly, and the SPA fallback is
+three lines in `client/vercel.json` instead of a `try_files` directive:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+Netlify is equivalent, with `client/public/_redirects` — Vite copies it into `dist` verbatim:
 
 ```
 /*    /index.html   200
 ```
 
-Or the equivalent in `netlify.toml`:
+### The deploy workflow
 
-```toml
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-```
+Render and Vercel both expose a **deploy hook URL** you `POST` to, so `deploy.yml` would use two
+`curl` calls against `RENDER_DEPLOY_HOOK_URL` and `VERCEL_DEPLOY_HOOK_URL` instead of the Railway
+CLI. The `DEPLOY_ENABLED` gate is identical either way; see the comments in the workflow file.
 
 ---
 
@@ -977,7 +1267,7 @@ character — a trailing slash, `http` vs `https`, or a missing `www.` is enough
 API; the value is read at boot.
 
 **Login works, but a page refresh logs the user out.**
-The refresh cookie is not reaching the API. Check that `API_URL` on Render is the real API origin
+The refresh cookie is not reaching the API. Check that `API_URL` on the `api` service is its real origin
 (that is what 6.2 keys on), that the cookie shows `SameSite=None; Secure`, and that `TRUST_PROXY=1`.
 Walk [6.4](#64-verify-it-end-to-end-in-a-browser).
 
@@ -986,10 +1276,18 @@ Walk [6.4](#64-verify-it-end-to-end-in-a-browser).
 response lacks it, something in front of the API is stripping it.
 
 **Refreshing a deep link 404s.**
-The SPA rewrite is missing. Step 5.3 for Vercel, the Netlify section otherwise.
+The Caddy `try_files` fallback is missing or the image is serving the wrong directory. Step 5.3.
 
 **The build fails with `tsc: not found` or `Cannot find module 'tsc-alias'`.**
 `NODE_ENV=production` made npm skip devDependencies. Use `npm ci --include=dev` in the build command.
+
+**The build fails resolving a workspace dependency, or installs the wrong package.**
+Root Directory is set to `server/` or `client/`. This is a shared monorepo with one root lockfile;
+leave Root Directory at `/` and select the workspace with `-w`. See 4.0.
+
+**The client is served but every asset 404s, or you get a Caddy welcome page.**
+The `root * client/dist` path in the Caddyfile does not match where the build stage copied the output.
+Check the `COPY --from=build` line in the Dockerfile and the `root` directive agree. See 5.3.
 
 **The API boots, then exits.**
 Read the log. The env loader prints every invalid variable at once with the reason. The usual causes
@@ -1001,7 +1299,7 @@ The process is alive and Mongo is not reachable. Check the Atlas IP allowlist (S
 the password in `MONGO_URI` is URL-encoded.
 
 **The first request after a quiet period takes a minute.**
-Render free-tier cold start. [Step 9](#step-9--cold-starts-and-keeping-the-api-warm).
+The service slept. [Step 9](#step-9--sleeping-cold-starts-and-keeping-the-api-warm).
 
 **Emails send successfully but never arrive.**
 Check the provider's own activity log first — it will show delivered, bounced or dropped. If it says

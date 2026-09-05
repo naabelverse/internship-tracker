@@ -5,6 +5,12 @@ name: Deploy
 # step of ci.yml: the suite is defined once, and this workflow consumes its
 # verdict. Copying the jobs here instead would mean two definitions of "green"
 # that drift apart, and twice the runner minutes on every push.
+#
+# Deploys go to Railway, which — unlike Render and Vercel — publishes no deploy
+# hook URL, so the steps below drive its CLI with a project token instead of
+# POSTing to a secret address. DEPLOYMENT.md, "Automated deploys", covers the
+# secrets this needs and why Railway's own GitHub auto-deploy should be turned
+# off if you want this gate to mean anything.
 on:
   workflow_run:
     workflows: ['CI']
@@ -23,7 +29,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: trigger the platform deploy hooks
+    name: trigger the Railway deploys
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # `workflow_run` fires on failure and cancellation too, so the conclusion has
@@ -55,40 +61,48 @@ jobs:
             echo "See DEPLOYMENT.md, 'Automated deploys', to turn this on."
           fi
 
-      # Each hook is independently optional: deploying only the API, or only the
-      # client, is a legitimate setup and should not fail the run.
-      - name: Deploy the API (Render)
+      # Railway has no deploy-hook URL to POST to, unlike Render and Vercel.
+      # Deployment goes through its CLI, authenticated by a project token, so the
+      # CLI has to be on the runner before either service can be told to deploy.
+      - name: Install the Railway CLI
+        if: steps.gate.outputs.enabled == 'true'
+        run: npm install -g @railway/cli
+
+      # Each service is independently optional: deploying only the API, or only
+      # the client, is a legitimate setup and should not fail the run.
+      #
+      # `railway redeploy` rebuilds the service from the commit its GitHub
+      # connection already points at, which is this one — CI has just passed on
+      # it. `railway up` would instead upload the runner's working directory as
+      # an ad-hoc build context: the same code by a less traceable route, and it
+      # detaches the deployment from the commit history Railway shows you.
+      - name: Deploy the API service
         if: steps.gate.outputs.enabled == 'true'
         env:
-          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
         run: |
-          if [ -z "$HOOK" ]; then
-            echo "RENDER_DEPLOY_HOOK_URL is not set; skipping the API deploy."
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$SERVICE" ]; then
+            echo "RAILWAY_TOKEN or RAILWAY_API_SERVICE is not set; skipping the API deploy."
             exit 0
           fi
-          # --fail turns a 4xx/5xx into a non-zero exit. Without it curl reports
-          # success for a rejected hook and the job goes green on a deploy that
-          # never started.
-          status=$(curl --silent --show-error --fail --location \
-            --request POST "$HOOK" \
-            --output /dev/null --write-out '%{http_code}')
-          echo "Render deploy hook accepted the request (HTTP $status)."
+          railway redeploy --service "$SERVICE" --yes
+          echo "Railway accepted a redeploy for the API service."
 
-      - name: Deploy the client (Vercel)
+      - name: Deploy the web service
         if: steps.gate.outputs.enabled == 'true'
         env:
-          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          SERVICE: ${{ secrets.RAILWAY_WEB_SERVICE }}
         run: |
-          if [ -z "$HOOK" ]; then
-            echo "VERCEL_DEPLOY_HOOK_URL is not set; skipping the client deploy."
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$SERVICE" ]; then
+            echo "RAILWAY_TOKEN or RAILWAY_WEB_SERVICE is not set; skipping the client deploy."
             exit 0
           fi
-          status=$(curl --silent --show-error --fail --location \
-            --request POST "$HOOK" \
-            --output /dev/null --write-out '%{http_code}')
-          echo "Vercel deploy hook accepted the request (HTTP $status)."
+          railway redeploy --service "$SERVICE" --yes
+          echo "Railway accepted a redeploy for the web service."
 
-      # A hook returning 200 means the platform queued a build, not that the
+      # An accepted redeploy means the platform queued a build, not that the
       # build succeeded. Say so, rather than letting a green check here be read
       # as a green deploy.
       - name: Summarise
@@ -101,7 +115,7 @@ jobs:
             exit 0
           fi
           {
-            echo "### Deploy hooks fired"
-            echo "The platforms have **queued** a build. Watch the Render and Vercel"
-            echo "dashboards for the outcome — a queued build is not a finished one."
+            echo "### Railway redeploy requested"
+            echo "Railway has **queued** a build for each configured service. Watch the"
+            echo "project dashboard for the outcome — a queued build is not a finished one."
           } >> "$GITHUB_STEP_SUMMARY"

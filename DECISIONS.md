@@ -1857,3 +1857,66 @@ The half deferred when the phase was split. Closes Phase 11.
   SPEC section 14 asks for "the free-tier Atlas backup setting to enable"; there is not one below the
   paid tiers. The honest answer is `scripts/backup.sh` on a cron plus a tested restore, which is what
   the document prescribes.
+
+## Post-Phase 16 — retarget the deployment to Railway
+
+- **Both halves now deploy to Railway, at the owner's direction, for one dashboard and one bill.**
+  SPEC section 15 names "Render (or Railway) for the API + Vercel (or Netlify) for the client", so a
+  single-platform layout is inside what the spec allows rather than a departure from it. The
+  Render + Vercel walkthrough is kept as an alternative at the end of the document rather than
+  deleted, because it is genuinely the cheaper arrangement and someone may want it back.
+
+- **The cross-origin section did not change, and the document now says loudly why.** The intuition
+  that two services on one platform are somehow same-origin is wrong and expensive: an origin is
+  scheme + host + port, so `web-production-….up.railway.app` and `api-production-….up.railway.app`
+  are as cross-origin as two unrelated companies. CORS with credentials, the exact origin allowlist
+  and `SameSite=None; Secure` are all still required, and Railway's private network does not apply
+  because every request in this app starts in a browser on the public internet. Step 6 opens with a
+  callout making that explicit so a future reader does not "simplify" it away.
+
+- **No application code changed, and that was checked rather than assumed.** `TRUST_PROXY=1` is
+  correct on Railway for the same reason it was on Render — the value counts proxy hops, not
+  vendors, and both terminate TLS one hop in front of the container. The cookie policy keys on
+  `CLIENT_ORIGIN` vs `API_URL` _hostname inequality_, so two distinct Railway hostnames resolve to
+  `SameSite=None; Secure` regardless of whether the Public Suffix List treats `up.railway.app` as a
+  suffix. The conservative rule written in Phase 16 lands correctly here with no edit.
+
+- **Root Directory is deliberately left at `/`.** Railway distinguishes isolated monorepos, which are
+  configured with a per-service root directory, from shared monorepos, which are configured with
+  per-service build and start commands. This repository is the second kind: one `package-lock.json`
+  at the root and two workspaces resolving through it. Pointing a service at `server/` or `client/`
+  gives it a `package.json` whose dependencies it cannot install.
+
+- **The client is a container running Caddy, because Railway has no static-hosting product.** On
+  Vercel the SPA fallback was three lines of `vercel.json`; on Railway there is no rewrite setting to
+  fill in at all, so the service ships a Dockerfile that builds with Node and serves `client/dist`
+  with Caddy's `try_files {path} /index.html`. Railpack's static-site support with `index_fallback`
+  would be fewer lines but expects the build output somewhere awkward for a workspace root, so the
+  explicit Dockerfile is documented as the primary path.
+
+- **The Caddyfile and Dockerfile are documented as copy-paste blocks rather than committed.** This
+  matches how `vercel.json` was handled in Phase 16 and keeps the repository free of config for a
+  platform the owner has not signed up to yet. They move into the repository the moment the first
+  deploy happens, and DEPLOYMENT.md says so.
+
+- **Railway's free tier is documented as what it is, not as a free lunch.** Trial is a one-time $5
+  over 30 days; the Free plan is $1 of non-rolling credit a month on one project, 1 vCPU and 0.5 GB.
+  Two always-on containers do not fit in $1, so the document says plainly to expect the $5/month
+  Hobby plan or to enable sleeping. Writing "free tier" without that would have been the kind of
+  cheerful omission that turns into a surprise bill.
+
+- **Sleeping is opt-in on Railway and the trade is inverted from Render's.** Render forces a
+  spin-down and gives a slow but successful wake; Railway stays up by default and, if you opt into
+  serverless, the first request to a slept service **may return 502**. The idle timer also watches
+  _outbound_ traffic, which a Mongoose connection pool and an hourly cron keep alive, so sleeping may
+  never trigger and the credit saving may not materialise. Both facts are in Step 9 because either
+  one alone would mislead.
+
+- **`deploy.yml` drives the Railway CLI because Railway publishes no deploy-hook URL.** Render and
+  Vercel both hand out a secret address to POST to; Railway authenticates a CLI with a project token
+  instead. `railway redeploy` is used rather than `railway up` so the deployment stays tied to the
+  commit its GitHub connection already points at — the one CI just passed on — instead of an ad-hoc
+  upload of the runner's working directory. The CI gate, the `DEPLOY_ENABLED` switch and the
+  green-skip resting state are unchanged. The document also warns to disable Railway's own
+  auto-deploy, which would otherwise deploy on push before CI has finished and make the gate
+  decorative.

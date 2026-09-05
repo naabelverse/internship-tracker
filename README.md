@@ -603,14 +603,16 @@ minutes, and that limit is part of the configuration being measured. A longer ru
 
 ## Deployment
 
-[DEPLOYMENT.md](DEPLOYMENT.md) has copy-paste steps for the free-tier stack — MongoDB Atlas, Render
-for the API, Vercel for the client — with every production environment variable, the SPF/DKIM/DMARC
-records for email that reaches an inbox, the cold-start caveat, the SPA rewrite rule, custom domain
-and HSTS, and a pre-launch checklist.
+[DEPLOYMENT.md](DEPLOYMENT.md) has copy-paste steps for deploying to **Railway** — both the API and
+the client, as two services in one project — alongside MongoDB Atlas and an S3-compatible bucket. It
+covers every production environment variable, the SPF/DKIM/DMARC records for email that reaches an
+inbox, Railway's sleeping model, the SPA fallback, custom domains and HSTS, and a pre-launch
+checklist. A Render + Vercel split is written up as an alternative at the end.
 
 Read its [Step 6](DEPLOYMENT.md#step-6--make-the-two-origins-trust-each-other) before deploying. The
-client and the API land on separate domains, and the cross-origin cookie configuration is the one
-part that fails silently: a `SameSite=Strict` refresh cookie is never sent cross-site, so login
+client and the API land on separate hostnames — which two Railway services do just as much as two
+different platforms would — and the cross-origin cookie configuration is the one part that fails
+silently: a `SameSite=Strict` refresh cookie is never sent cross-site, so login
 appears to work and then drops the user on the next page refresh. The code derives the right value
 from `CLIENT_ORIGIN` and `API_URL`, but only if both name the real deployed origins.
 
@@ -713,18 +715,18 @@ version. Selecting on the version is what makes a re-run harmless — the second
 
 ## Repository documents
 
-| File                                     | Contents                                                               |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth         |
-| [DEPLOYMENT.md](DEPLOYMENT.md)           | Free-tier deployment, cross-origin config, email DNS, launch checklist |
-| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                            |
-| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons                   |
-| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                                |
-| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar               |
-| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                               |
-| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                                |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                               |
-| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                            |
+| File                                     | Contents                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth       |
+| [DEPLOYMENT.md](DEPLOYMENT.md)           | Railway deployment, cross-origin config, email DNS, launch checklist |
+| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                          |
+| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons                 |
+| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                              |
+| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar             |
+| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                             |
+| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                              |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                             |
+| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                          |
 
 ## License
 
