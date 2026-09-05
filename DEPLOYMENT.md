@@ -381,7 +381,8 @@ biggest structural difference from the Vercel path, and it is what 5.3 is about.
 | Root Directory    | `/` — same reasoning as 4.0, one lockfile at the root                      |
 | Watch Paths       | `/client/**`, `/package.json`, `/package-lock.json`, `/tsconfig.base.json` |
 | Public Networking | **Generate Domain**                                                        |
-| Build / Start     | supplied by the Dockerfile in 5.3 — leave both blank                       |
+| Dockerfile Path   | `client/Dockerfile` — its final stage is the production server, see 5.3    |
+| Build / Start     | supplied by that Dockerfile — leave both blank                             |
 
 **You will use `build:deploy`, not `build`.** The Vite config emits source maps on purpose — an
 error tracker cannot symbolicate a minified stack without them — but `client/dist` is exactly what
@@ -426,8 +427,24 @@ when you refresh the page or open the link directly** — the server is asked fo
 `/applications`, which does not exist.
 
 On Vercel this was three lines of `vercel.json`. **On Railway there is no rewrite setting to fill
-in**, because there is no static-hosting layer to configure: you ship a container, so you choose the
-web server and write its config. Railway's own SPA guide uses Caddy, and that is what this uses.
+in**, because there is no static-hosting layer to configure: you ship a container, so the container
+decides how unmatched paths are served.
+
+**The repository already ships a working answer, and it is the default path.** `client/Dockerfile`'s
+final stage builds the client with `build:deploy` and serves `client/dist` with `vite preview`, which
+performs the SPA fallback itself — no extra file to create. Point the service at `client/Dockerfile`
+with no target and you are done. The stage order matters: the production stage is last precisely so a
+builder that picks the final stage cannot end up running the development server.
+
+`vite preview` reads `PORT`, so Railway's injected port is used, and Vite's host allowlist is derived
+from `VITE_APP_URL` plus a `.up.railway.app` suffix (`client/allowedHosts.ts`) — which is why
+**`VITE_APP_URL` must be set on the `web` service** before a custom domain will be accepted.
+
+> **Caddy as an alternative.** Vite's own documentation notes that `vite preview` is meant for
+> previewing a build rather than serving as a hardened production server. For a low-traffic portfolio
+> deployment it is fine, and it keeps the image to one toolchain. If you would rather serve with a
+> real static server, the Caddy setup below replaces the final stage and is what Railway's own SPA
+> guide recommends.
 
 Create **`Caddyfile`** in the repository root:
 
@@ -495,6 +512,11 @@ CMD ["caddy", "run", "--config", "Caddyfile", "--adapter", "caddyfile"]
 Point the `web` service at it: **Settings → Build → Dockerfile Path** → `client/Dockerfile.web`.
 Railway builds the image and ignores the Nixpacks/Railpack detection entirely, which is what you
 want — the auto-detected build would try to run the whole workspace.
+
+Caddy serves static files with no knowledge of `allowedHosts`, so this route sidesteps Vite's host
+check rather than satisfying it. That is not by itself a reason to prefer it: the check only applies
+to a Vite-served deployment, and a wrong `VITE_APP_URL` still breaks canonical URLs, the sitemap and
+the OG tags either way.
 
 > **Lighter alternative.** Railpack, Railway's builder, has static-site support with an
 > `index_fallback` option that generates a Caddyfile for you. It is less code, but it needs the build

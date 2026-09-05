@@ -1,6 +1,19 @@
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+import { buildAllowedHosts } from './allowedHosts';
+
+/*
+  Vite refuses a request whose `Host` header it does not recognise, and a
+  deployment behind a platform-assigned domain is exactly the case that trips it.
+  The list is derived from the environment rather than written here, so no single
+  domain is baked into source: see `allowedHosts.ts`.
+
+  `preview.allowedHosts` falls back to `server.allowedHosts` when it is unset, but
+  both are set explicitly — the fallback is an implementation detail, and a
+  production server should not depend on one.
+*/
+const allowedHosts = buildAllowedHosts(process.env);
 
 export default defineConfig({
   plugins: [react()],
@@ -14,8 +27,16 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
+    allowedHosts,
   },
-  preview: { host: true, port: 4173, strictPort: true },
+  preview: {
+    host: true,
+    // A platform tells the container which port to listen on; locally there is no
+    // PORT and 4173 is Vite's own default.
+    port: Number(process.env.PORT) || 4173,
+    strictPort: true,
+    allowedHosts,
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,

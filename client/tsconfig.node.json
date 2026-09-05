@@ -9,6 +9,6 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["vite.config.ts", "tailwind.config.ts"],
+  "include": ["vite.config.ts", "tailwind.config.ts", "allowedHosts.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1920,3 +1920,56 @@ The half deferred when the phase was split. Closes Phase 11.
   green-skip resting state are unchanged. The document also warns to disable Railway's own
   auto-deploy, which would otherwise deploy on push before CI has finished and make the gate
   decorative.
+
+## Post-Phase 16 — Vite host allowlist, and what it exposed
+
+- **The reported symptom was `allowedHosts`; the actual finding was that production was serving the
+  app with `vite dev`.** Vite's own rejection message names the option it consulted, and its source
+  builds that string as `${isPreview ? "preview" : "server"}.allowedHosts`. The deployed error said
+  **`server`**, so the request had reached the development server, not the preview server. Nothing in
+  the repository could serve a built client at the time: there was no `start` script in either
+  workspace, and `client/Dockerfile` had exactly one stage after `deps` — `dev`, running
+  `npm run dev --workspace client`. A builder handed that Dockerfile with no target builds the last
+  stage, so the deployed container was a development server: unminified, transformed on demand from
+  source, HMR attached, and carrying the source maps `build:deploy` exists to strip.
+
+- **The allowlist is derived from the environment, with a platform suffix as a fallback.** Two
+  mechanisms rather than one, because they fail in different ways. `VITE_APP_URL` is already required
+  to be the deployed client origin, so a custom domain needs no new configuration and the allowlist
+  cannot drift from the canonical URLs. The `.up.railway.app` leading-dot suffix — Vite's documented
+  subdomain-wildcard syntax, confirmed in 6.4.3's matcher as
+  `allowedHost[0] === "." && (allowedHost.slice(1) === hostname || hostname.endsWith(allowedHost))` —
+  keeps a platform-assigned name working before a domain exists and survives reassignment. An
+  optional comma-separated `ALLOWED_HOSTS` covers the rest. No single domain appears in source.
+
+- **`localhost` is deliberately absent from the list.** Reading Vite's matcher rather than assuming
+  showed that any IPv4 literal, `localhost` and `*.localhost` are allowed unconditionally _before_
+  the configured list is consulted. Adding them would be dead configuration, and worse, it would
+  imply local development depends on this list. It does not, which is also the reason this change
+  cannot weaken development or CI.
+
+- **`buildAllowedHosts` takes the environment as an argument instead of reading `process.env`.** It
+  is compiled by two TypeScript projects — `tsconfig.node.json`, which has Node types, and
+  `tsconfig.json`, which does not, because the test imports it. A pure function of its input needs
+  neither, and is directly testable without stubbing globals.
+
+- **The test asserts the decision, not the list.** It reimplements Vite 6's matcher and drives it, so
+  a case like `tracker.example.com.evil.org` — which _contains_ an allowed host — is proven to be
+  refused rather than merely absent from an array. Half the cases exist only to prove hosts are still
+  blocked, because a change that allowed everything would satisfy every positive case and destroy the
+  protection. Confirmed against a real `vite preview` as well: three hosts answered 200 and five
+  answered 403.
+
+- **The server workspace has no equivalent exposure, for a concrete reason rather than an absence of
+  findings.** Express ships no host check, and this API never reads the `Host` header — every public
+  link is built from `env.APP_URL` or `env.API_URL`. Host-header injection matters when a server
+  derives URLs from the request, and this one derives them from configuration, which is what makes
+  the poisoned-password-reset-link class of attack unreachable here.
+
+- **A production stage was added to `client/Dockerfile`, last on purpose.** It builds with
+  `build:deploy` and serves with `vite preview`, so the platform default of "build the final stage"
+  now yields a production server rather than a development one. `docker-compose.yml` pins
+  `target: dev` explicitly and is unaffected. Verified by building the image and probing it: it
+  serves the hashed production bundle, ships zero `.map` files, binds the injected `PORT`, and still
+  returns 403 for an unrelated host. `vite preview` is not a hardened static server and Vite says so;
+  DEPLOYMENT.md keeps the Caddy setup as the alternative for anyone who wants one.
