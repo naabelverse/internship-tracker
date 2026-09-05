@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **The refresh cookie is now sent in a split-host deployment.** It was
+  `SameSite=Strict`, which a browser omits from every cross-site request, so
+  `POST /auth/refresh` from a client on one domain to an API on another carried
+  no cookie: sign-in worked and the next page reload logged the user out. The
+  cookie policy is now derived from `CLIENT_ORIGIN` and `API_URL` and relaxes to
+  `SameSite=None; Secure` when the hosts differ. Same-host deployments are
+  unchanged and keep `Strict`.
+- **Source maps are no longer published with the client.** `npm run build:deploy`
+  strips `.map` files and `sourceMappingURL` comments from `client/dist` after
+  the build, so a static host no longer serves the readable source.
+
+### Added
+
+- `DEPLOYMENT.md`: free-tier deployment to MongoDB Atlas, Render and Vercel,
+  covering every production environment variable, the cross-origin cookie and
+  CORS configuration, SPF/DKIM/DMARC records for email deliverability, cold-start
+  mitigation, the SPA rewrite rule, custom domains with HSTS, and a pre-launch
+  checklist.
+- `.github/workflows/deploy.yml`: fires the platform deploy hooks after the CI
+  suite passes, disabled by default behind a `DEPLOY_ENABLED` repository secret.
+- `COOKIE_DOMAIN`: optional, unset by default, for sharing the refresh cookie
+  across subdomains of one parent domain.
+- `npm run stats`: user, application and 7-day signup counts against the live
+  database.
+- Measured Lighthouse scores, bundle sizes and API latency in the README.
 
 ## [1.0.0] - 2026-09-05
 

@@ -1,0 +1,107 @@
+name: Deploy
+
+# Runs only after CI has finished on `main`, and only for a run that actually
+# passed. `workflow_run` is what makes that possible without duplicating a single
+# step of ci.yml: the suite is defined once, and this workflow consumes its
+# verdict. Copying the jobs here instead would mean two definitions of "green"
+# that drift apart, and twice the runner minutes on every push.
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  # A manual escape hatch for redeploying an unchanged commit — a rolled-back
+  # environment variable, say. It is still gated on DEPLOY_ENABLED below.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: trigger the platform deploy hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `workflow_run` fires on failure and cancellation too, so the conclusion has
+    # to be checked explicitly or a red suite would still deploy — which is the
+    # one thing this workflow exists to prevent. `workflow_dispatch` has no
+    # upstream run, so it passes on the first clause.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      # Disabled by default, and deliberately not an `if:` on the job. A fork or
+      # a fresh clone has no secrets, so it must be impossible to deploy by
+      # accident; setting DEPLOY_ENABLED to `true` is the single opt-in, and the
+      # resting state is a green skip rather than a red failure. Secrets cannot
+      # be read in a job-level `if:`, so the gate lives in the first step and
+      # publishes its verdict to the ones after it.
+      - name: Decide whether deploys are enabled
+        id: gate
+        env:
+          DEPLOY_ENABLED: ${{ secrets.DEPLOY_ENABLED }}
+        run: |
+          if [ "$DEPLOY_ENABLED" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Deploys are enabled for this repository."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Deploys are disabled: repository secret DEPLOY_ENABLED is not 'true'."
+            echo "See DEPLOYMENT.md, 'Automated deploys', to turn this on."
+          fi
+
+      # Each hook is independently optional: deploying only the API, or only the
+      # client, is a legitimate setup and should not fail the run.
+      - name: Deploy the API (Render)
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL is not set; skipping the API deploy."
+            exit 0
+          fi
+          # --fail turns a 4xx/5xx into a non-zero exit. Without it curl reports
+          # success for a rejected hook and the job goes green on a deploy that
+          # never started.
+          status=$(curl --silent --show-error --fail --location \
+            --request POST "$HOOK" \
+            --output /dev/null --write-out '%{http_code}')
+          echo "Render deploy hook accepted the request (HTTP $status)."
+
+      - name: Deploy the client (Vercel)
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is not set; skipping the client deploy."
+            exit 0
+          fi
+          status=$(curl --silent --show-error --fail --location \
+            --request POST "$HOOK" \
+            --output /dev/null --write-out '%{http_code}')
+          echo "Vercel deploy hook accepted the request (HTTP $status)."
+
+      # A hook returning 200 means the platform queued a build, not that the
+      # build succeeded. Say so, rather than letting a green check here be read
+      # as a green deploy.
+      - name: Summarise
+        run: |
+          if [ "${{ steps.gate.outputs.enabled }}" != "true" ]; then
+            {
+              echo "### Deploy skipped"
+              echo "\`DEPLOY_ENABLED\` is not set to \`true\`. See DEPLOYMENT.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "### Deploy hooks fired"
+            echo "The platforms have **queued** a build. Watch the Render and Vercel"
+            echo "dashboards for the outcome — a queued build is not a finished one."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -14,6 +14,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --runInBand",
     "migrate": "tsx src/scripts/migrate.ts",
+    "stats": "tsx src/scripts/stats.ts",
     "seed": "tsx src/scripts/seed.ts",
     "seed:reset": "tsx src/scripts/seed.ts --reset"
   },

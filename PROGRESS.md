@@ -704,10 +704,112 @@ Notes:
   one-line change.
 
 ## Phase 16 — Ship
-- [ ] `DEPLOYMENT.md` complete (Atlas + Render + Vercel, env vars, cross-origin cookies, trust proxy)
-- [ ] SPF/DKIM/DMARC documented; test email reached a real Gmail inbox, not spam
-- [ ] Deploy workflow, uptime monitor
-- [ ] Definition of Done (SPEC.md Section 17) verified item by item
+- [x] `DEPLOYMENT.md` complete (Atlas + Render + Vercel, env vars, cross-origin cookies, trust proxy)
+- [x] SPF/DKIM/DMARC documented — records, syntax, DMARC rollout, warm-up, unsubscribe headers
+- [ ] **Test email reached a real Gmail inbox, not spam** — needs a live domain. Manual, below.
+- [x] Deploy workflow (`.github/workflows/deploy.yml`, off by default behind `DEPLOY_ENABLED`)
+- [x] Uptime monitor documented (UptimeRobot on `/health` every 5 min, doubling as the keep-warm)
+- [ ] **Uptime monitor actually created** — needs the deployed URL. Manual, below.
+- [x] Cross-origin cookie configuration implemented in code, not only documented
+- [x] `npm run stats` (SPEC §14, deferred by Phase 14) built
+- [x] Source maps no longer published with the client build
+- [x] Definition of Done (SPEC.md Section 17) walked item by item — table below
+
+Notes:
+- **The refresh cookie was `SameSite=Strict`, which cannot work in the deployment this phase
+  documents. That is a production bug, found and fixed here.** A browser omits a `Strict` cookie
+  from every request a page on another *site* initiates, and SPEC §15 puts the client on Vercel and
+  the API on Render. `POST /auth/refresh` would have carried no cookie at all: sign-in appears to
+  work, then the next reload — or the first access-token expiry 15 minutes later — logs the user
+  out. `server/tests/cookies.crossSite.test.ts` fails two cases against the old policy and passes
+  against the new one.
+- **Neither the test suite nor the Phase 15 end-to-end stack could have caught it, and the reason is
+  worth keeping.** The E2E stack exists precisely to test a cross-origin boundary — it is what
+  surfaced the missing `Access-Control-Expose-Headers`. But its web container is `localhost:5174`
+  and its API is `localhost:5001`: different *origins*, the same *site*, because a port is not part
+  of a site. `Access-Control-Expose-Headers` is governed by origin, so CI catches it; `SameSite` is
+  governed by site, so CI cannot. Two different scopes, and the suite varies only one of them. The
+  fix derives the value from the `CLIENT_ORIGIN` and `API_URL` hostnames rather than adding a switch,
+  so there is nothing new to set wrong.
+- **The `Access-Control-Expose-Headers` fix was re-confirmed against the live stack, not assumed from
+  the test.** `curl -X OPTIONS` with `Origin: http://localhost:5173` against the running API returns
+  `Access-Control-Allow-Origin: http://localhost:5173`, `Access-Control-Allow-Credentials: true` and
+  `Access-Control-Expose-Headers: Content-Disposition` — the real preflight a browser performs before
+  it will reveal the filename. That mechanism is identical in production because it is origin-scoped,
+  and CI's stack is genuinely cross-origin. What CI cannot reach is the browser-side half on two real
+  domains, which is why DEPLOYMENT.md §6.4 makes it an explicit post-deploy check rather than an
+  assumption.
+- **Lighthouse was re-run rather than trusted, and the re-run caught two ways to measure the wrong
+  page.** Phase 13 ticked the box but no number survived anywhere in the repository. Auditing
+  `/dashboard` through a Playwright `browser.newPage()` puts Lighthouse's CDP tab in a different
+  browser context with no cookies, so it silently measures `/login` and reports a perfect score for a
+  page nobody asked about; auditing `/` while signed in redirects to the dashboard, because that
+  redirect is the specified behaviour. Both were caught by asserting on `finalDisplayedUrl` rather
+  than the requested URL. Final numbers, now in the README: landing 100 / 100 / 96 / 100, dashboard
+  98 / 100 / 100 / 100, against targets of 90 / 95 / 95 / 95.
+- **Source maps were being published.** `sourcemap: true` in the Vite config puts 43 `.map` files
+  into `client/dist`, which is exactly the directory a static host serves, so the whole readable
+  source sat one predictable `.js.map` fetch away. Turning maps off would lose the thing they are
+  for, so `npm run build:deploy` builds and then strips: 43 maps and 43 `sourceMappingURL` comments
+  removed, zero remaining, verified on a real build.
+- **`npm run stats` was built here rather than left deferred.** Phase 14 skipped it accurately —
+  §16's Phase 14 definition does not list it and neither does the definition of done — but SPEC §14
+  requires it and nothing later would have picked it up. Verified against the live database:
+  1 active user, 0 soft-deleted, 64 applications, 1 signup in the last 7 days.
+- **API latency is now recorded**, which SPEC §10 asked for and no phase had done: sequential p95
+  30.5 ms on `GET /applications` against the 200 ms threshold, so no index was added. The run is
+  capped at 150-180 requests because SPEC §7's limiter allows 200 per 15 minutes, and that limiter is
+  part of the configuration being measured.
+- **Coverage was re-measured, and the number this repository had been carrying was stale.**
+  `server/coverage/coverage-summary.json` on disk dated from 2026-09-04 and does not match the
+  current run — the `--coverageReporters` flag does not forward through the workspace script, so a
+  fresh summary has to come from the lcov HTML report rather than that file. Today's real figures,
+  581 tests across 53 suites: `src/controllers` 100% statements / 93.75% branches,
+  `src/services` 97.03% / 86.85%, whole server 92.33% / 74.27%. Against a 70% statement and 60%
+  branch threshold. The README table now carries these instead of "near 98%".
+- Deferred: nothing. Every SPEC §8 variable now exists; `CONTACT_EMAIL` stays a client build-time
+  constant by decision rather than by omission, recorded in DECISIONS.
+
+### Definition of Done (SPEC §17), item by item
+
+`verified` = checked in this repository, with the evidence named. `pending deploy` = cannot be true
+until the app is actually deployed to a domain, and is listed under manual steps below.
+
+| #   | Item                                                            | State                                      | Evidence                                                                                                                                             |
+| --- | --------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | lint, typecheck, test, build pass, zero warnings                 | verified                                   | `npm run verify` exit 0; `lint` is `eslint . --max-warnings 0 && prettier --check .`                                                                   |
+| 2   | `docker compose up` runs mongo + api + web; app usable           | verified                                   | All three Up, mongo healthy; `web /` 200, `api /health` 200, `api /ready` 200                                                                          |
+| 3   | `npm run seed` populates the demo account, charts have data      | verified                                   | `npm run stats`: 64 applications; Lighthouse audited the dashboard signed in through "Try the demo"                                                     |
+| 4   | Register → … → export → logout in one manual pass                | verified (automated) / **pending deploy**  | All ten steps are covered by the eight Playwright flows; a single continuous human pass on the live site is still yours                                 |
+| 5   | Refresh keeps you logged in; token expiry refreshes silently     | verified locally / **pending deploy**      | E2E flow 8 + `client/tests/api/refreshInterceptor.test.ts`; the cross-site half is the cookie fix, unprovable without two real domains — §6.4           |
+| 6   | User A cannot reach user B's data, proven by a test              | verified                                   | `server/tests/application.ownership.test.ts`, 7 cases across single-record, list, bulk, interviews and export                                           |
+| 7   | No TODO/FIXME/console.log/hardcoded secret/unused file in `src`  | verified                                   | grep over `server/src` and `client/src` is empty; the only `console.log` is in `e2e/audits/*.spec.ts`, the report SPEC §10 asks to print, and not `src` |
+| 8   | Usable at 375, 768, 1440 px, dark and light                      | verified                                   | `e2e/audits/overflow.spec.ts`: 7 routes × 3 widths every CI run; `client/tests/theme/`                                                                  |
+| 9   | Every mutation has loading, success toast, error path            | verified (Phase 9)                         | Not re-audited this phase; unchanged since                                                                                                             |
+| 10  | README complete; `/api/docs` documents every endpoint            | verified                                   | `server/tests/openapi.test.ts` asserts parity both ways — every mounted route documented, and no documented route that no longer exists                 |
+| 11  | Coverage report printed, meets target                            | verified                                   | 581 tests, 53 suites: controllers 100% stmts / 93.75% branches, services 97.03% / 86.85%, server 92.33% / 74.27%, against 70% / 60%                     |
+| 12  | Account lifecycle end to end                                     | verified                                   | E2E flows 1 and 5 + `server/tests/accountLifecycle.tokens.test.ts`                                                                                     |
+| 13  | forgot-password identical for a real and a fake email            | verified                                   | `server/tests/auth.noEnumeration.test.ts` — status, body, headers, order of magnitude of timing, and soft-deleted accounts                              |
+| 14  | Reset/verification tokens single-use, expiring, stored hashed    | verified                                   | `accountLifecycle.tokens.test.ts` — "once", "past its window", "stores only the hash", for both token types                                             |
+| 15  | Six emails render HTML + text; app boots with no SMTP            | verified                                   | `server/tests/mail.templates.test.ts` (prints a rendered email) + `server/tests/mail.noSmtpBoot.test.ts`                                                |
+| 16  | Landing, /terms, /privacy real and linked; terms required        | verified                                   | `client/tests/marketing/legal.test.tsx` asserts substance, not merely that the page rendered                                                            |
+| 17  | "Try the demo" works; destructive actions blocked there          | verified                                   | `server/tests/demoSandbox.test.ts`; also exercised live this phase — the Lighthouse run signed in through the real button                               |
+| 18  | Export returns everything; deletion removes it all               | verified                                   | `server/tests/dataExport.test.ts` (a record from every model, no credentials, scoped to the account) + `auth.softDelete.test.ts`                        |
+| 19  | Lighthouse reported for landing + dashboard, meets targets       | verified                                   | Measured this phase: landing 100/100/96/100, dashboard 98/100/100/100 against 90/95/95/95. README → Performance                                         |
+| 20  | Resource caps, rate limits, upload validation each proven        | verified                                   | `resourceCaps.test.ts`, `auth.rateLimit.test.ts`, `attachment.test.ts`                                                                                  |
+| 21  | `DEPLOYMENT.md` complete; cross-origin cookies explicit          | verified (written) / **pending deploy**    | 17 sections, every production variable, §6 is entirely cross-origin; its accuracy against a real deploy is unproven until you run it                    |
+| 22  | No secret, real email or personal data committed, ever           | verified                                   | gitleaks over every commit: `no leaks found`; the history contains only the two `.env.example` files                                                    |
+| 23  | Uploads survive a restart and a redeploy                         | verified (adapter) / **pending deploy**    | `server/tests/storage.contract.test.ts` runs one contract against both drivers; production is forced to `s3` by the env loader                          |
+| 24  | Dates correct in two distant timezones                           | verified                                   | `analytics.timezone`, `reminderJob.timezone`, `weeklySummaryJob.timezone`, `mail.digestTimezone`, `dates` — Asia/Kuala_Lumpur and America/Los_Angeles    |
+| 25  | Playwright suite and axe pass in CI against a real stack         | verified                                   | 13 tests, `retries: 0`, its own compose project; the CI run for this commit                                                                             |
+| 26  | Bundle sizes within budget; Chart.js not on landing              | verified                                   | `check:bundle`: landing 111.4 KB/150 printing "excludes Chart.js", dashboard 215.4 KB/300                                                                |
+| 27  | Stale edit returns 409, UI handles it; `migrate` runs clean      | verified                                   | `application.concurrency.test.ts`, `client/tests/board/conflictDialogSurvival.test.tsx`, `migrations.test.ts`                                            |
+| 28  | LICENSE, CONTRIBUTING, CoC, SECURITY, CHANGELOG, templates       | verified                                   | All nine files present                                                                                                                                  |
+| 29  | SPF/DKIM/DMARC documented **and** a test email reached Gmail     | verified (documented) / **pending deploy** | Records, syntax and rollout in DEPLOYMENT.md §7.2; inbox placement needs a live domain                                                                   |
+
+Five items carry a `pending deploy` half — 4, 5, 21, 23 and 29 — plus the uptime monitor, Sentry
+receiving live events, and backups being enabled. Every one of them needs infrastructure that does
+not exist yet. **None of them is blocked by code.**
 
 ## Phase 17 — Optional
 - [ ] Google OAuth (only if phases 1–16 are green and nothing regresses)
@@ -729,6 +831,36 @@ _The agent appends anything it cannot do itself here — DNS records, account si
 - [ ] **Re-run `npm run screenshot -w client` after any dashboard redesign.** The landing page
       shows a real capture of the demo account, not a mock-up, so it goes stale when the
       dashboard changes.
+
+### Phase 16 — everything that needs a real deployment
+
+`DEPLOYMENT.md` is the walkthrough for all of this; the pointers below are so nothing is lost.
+
+- [ ] **Create the four accounts.** MongoDB Atlas, Render, Vercel, and an email provider
+      (Resend is the documented default). DEPLOYMENT.md steps 1, 4, 5 and 7.
+- [ ] **Buy a domain.** Optional for the app, required for email: no consumer address can pass
+      DMARC for mail you send, so verification emails from a `@gmail.com` sender land in spam.
+- [ ] **Generate two fresh JWT secrets** with `openssl rand -base64 48` and never reuse the
+      development ones. The env loader refuses to boot in production if you do.
+- [ ] **Publish the SPF, DKIM and DMARC records** your provider shows you, then confirm with
+      `dig` and wait for the dashboard to say Verified. DEPLOYMENT.md §7.2.
+- [ ] **Send a verification email to a real Gmail, Outlook and Yahoo address** and confirm it
+      lands in the Inbox with `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS` under Gmail's Show
+      original. This is Definition-of-Done item 29 and nothing in this repository can prove it.
+- [ ] **Walk DEPLOYMENT.md §6.4 in a browser once the two domains are live.** Confirm the
+      `refresh_token` cookie reads `SameSite=None; Secure`, that a hard reload keeps you signed
+      in, and that Export CSV saves the dated filename. This is the one part of the deployment
+      that fails silently, and it is the half of the cookie fix that CI structurally cannot
+      reach.
+- [ ] **Create the UptimeRobot monitor** on `https://<api>/health` at 5-minute intervals. It is
+      both the availability alert and the keep-warm that stops Render's free tier sleeping.
+- [ ] **Run `npm run seed -w server` against Atlas** so "Try the demo" has an account.
+- [ ] **Run `scripts/backup.sh` once and test a restore.** Atlas M0 has no automated backup —
+      that is a real gap in the free tier, not a setting to find.
+- [ ] **Optional: enable Sentry**, then trigger one deliberate 500 and confirm it arrives. An
+      error tracker nobody has tested is an error tracker that is not working.
+- [ ] **Enable the deploy workflow** by setting the `DEPLOY_ENABLED` repository secret to
+      `true` plus the two deploy-hook URLs. It is inert until you do.
 
 ## Deferred / known issues
 _Anything intentionally postponed, with the reason._

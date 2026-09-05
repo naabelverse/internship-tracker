@@ -34,6 +34,18 @@ const baseSchema = z.object({
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
 
+  /**
+   * Optional `Domain` on the refresh cookie.
+   *
+   * Left unset the cookie is host-only: the API sets it for its own hostname and
+   * no other, which is what the split-host deployment in DEPLOYMENT.md wants —
+   * the client never reads it, only the API does. Set it solely when the API and
+   * the client sit on subdomains of one parent and the cookie has to survive
+   * across them (`.tracker.example.com`). Broadening a credential's scope is a
+   * downgrade, so this stays opt-in.
+   */
+  COOKIE_DOMAIN: z.string().min(1).optional(),
+
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   UPLOAD_DIR: z.string().min(1).default('uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(50).default(5),

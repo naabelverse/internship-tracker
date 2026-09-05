@@ -1763,3 +1763,97 @@ The half deferred when the phase was split. Closes Phase 11.
   and CODE_OF_CONDUCT.md carry the same literal placeholder the two legal markdown documents do,
   fed from `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts`, so filling it in stays the one-line
   change Phase 13 designed it to be.
+
+## Phase 16 - Ship
+
+- **The refresh cookie was `SameSite=Strict`, which cannot work in the deployment SPEC section 15
+  describes, and that is a production bug rather than a documentation gap.** A browser omits a
+  `Strict` cookie from every request a page on another _site_ initiates, and the split-host deploy
+  puts the client on Vercel and the API on Render. `POST /auth/refresh` from one to the other would
+  therefore have carried no cookie at all: the silent refresh 401s, the axios interceptor reads that
+  as a dead session, and the user is bounced to login on every reload and every access-token expiry.
+  Login would have appeared to work and then dropped the user thirty seconds later.
+
+  **Nothing in the project could have caught it.** SPEC section 7 asks for `sameSite=strict` and
+  section 15 asks for `sameSite: 'none'`; the two are describing different topologies and only the
+  second one ships. Every test passes under `Strict` because the whole suite is same-host, and — the
+  part worth recording — **the Phase 15 end-to-end stack cannot catch it either**, despite existing
+  precisely to test a cross-origin boundary. Its web container is `localhost:5174` and its API is
+  `localhost:5001`: different _origins_, which is what surfaced the missing
+  `Access-Control-Expose-Headers`, but the same _site_, because a port is not part of a site. Origin
+  and site are different scopes, and the cookie is governed by the one CI does not vary.
+
+  The fix derives the value from configuration rather than adding a switch to set wrong:
+  `refreshCookieSitePolicy` in `server/src/utils/cookies.ts` compares the `CLIENT_ORIGIN` hostname
+  with the `API_URL` hostname and relaxes to `SameSite=None; Secure` when they differ. The rule is
+  deliberately conservative in one direction only: subdomain siblings get `None` where `Strict` would
+  technically have worked, but it never picks a value that silently drops the cookie. It also refuses
+  to relax over plain HTTP, where `Secure` would drop the cookie instead — a cross-site cookie is
+  impossible there under any setting, so the existing behaviour stands and fails visibly.
+  `server/tests/cookies.crossSite.test.ts` fails on two cases against the old policy and passes
+  against the new one.
+
+  The cost is recorded rather than hidden: `SameSite=None` lets another site cause the browser to
+  fire `POST /auth/refresh` with the cookie attached. CORS still blocks reading the response, so no
+  token leaks; the reachable consequence is a rotation the user did not ask for, which reuse
+  detection may turn into a logout. DEPLOYMENT.md section 6.2 states this and names the alternative
+  (one registrable domain for both halves).
+
+- **`COOKIE_DOMAIN` is optional and unset by default, which makes the cookie host-only.** SPEC
+  section 8 lists it and the README deferred it to this phase. The temptation is to set it to the
+  parent domain "so the cookie is available", but the client never reads this cookie — only the API
+  does — so a host-only cookie is both sufficient and tighter. It exists for the one real case: an
+  API and a client on subdomains of a single parent that need to share it.
+
+- **Lighthouse was re-run rather than trusted.** Phase 13 ticked "scores recorded and meeting
+  targets" but no number survives anywhere in the repository, so the claim was unverifiable. The
+  re-run is now in the README with the method, and it caught two ways to measure the wrong page:
+  auditing `/dashboard` through a Playwright `browser.newPage()` puts Lighthouse's CDP tab in a
+  different browser context with no cookies, so it silently measures `/login` and reports a perfect
+  score for a page nobody asked about; and auditing `/` while signed in redirects to the dashboard,
+  because that redirect is the specified behaviour. Both were caught by asserting on
+  `lhr.finalDisplayedUrl` instead of the requested one. The audit now uses a persistent context per
+  route, signed in for the dashboard and signed out for the landing page.
+
+- **`npm run stats` was built here rather than left deferred.** Phase 14 skipped it on the accurate
+  grounds that section 16's Phase 14 definition does not list it and neither does the definition of
+  done. But SPEC section 14 requires it, CLAUDE.md makes SPEC the source of truth for scope, and this
+  is the last non-optional phase — nothing later would pick it up. It is thirty lines and reuses the
+  existing connect/disconnect helpers. Soft-deleted accounts are counted separately rather than
+  folded into the total: they are still on disk until the purge job reaches them, so a single number
+  would misreport both the live user base and the storage in use.
+
+- **Source maps are generated and then deleted from the deployed output, rather than not generated.**
+  The definition of done asks for maps that are not publicly exposed, and `sourcemap: true` in the
+  Vite config means `client/dist` — the exact directory a static host publishes — contains the whole
+  readable source one predictable `.js.map` fetch away. Turning maps off would satisfy the letter and
+  lose the thing they are for: an error tracker cannot symbolicate a minified stack without them. So
+  `npm run build:deploy` builds, then `client/scripts/stripSourcemaps.mjs` removes every `.map` and
+  every `sourceMappingURL` comment; DEPLOYMENT.md shows where a Sentry upload slots in between the
+  two. Verified on a real build: 43 maps and 43 comments removed, zero remaining.
+
+- **`CONTACT_EMAIL` stays a client build-time constant instead of becoming the server env var SPEC
+  section 8 lists.** Everything that consumes it is client-rendered — the landing footer, the Terms
+  and Privacy contact lines — plus `SECURITY.md` and `CODE_OF_CONDUCT.md`, which are static markdown
+  read on GitHub and never served by the API. A server variable nothing reads is dead configuration
+  that drifts from the value actually displayed. The README now states this exception rather than
+  leaving the SPEC list looking unimplemented.
+
+- **`deploy.yml` consumes CI's verdict through `workflow_run` rather than repeating its steps.** The
+  instruction was to reuse Phase 10's workflow, and `workflow_run` is the only trigger that waits for
+  another workflow's _conclusion_. Two consequences worth stating: the conclusion has to be checked
+  explicitly in an `if:`, because `workflow_run` also fires on failure and cancellation and a red
+  suite would otherwise still deploy; and the `DEPLOY_ENABLED` gate lives in the first _step_, not on
+  the job, because GitHub does not expose secrets to a job-level `if:`. The resting state is a green
+  skip rather than a red failure, so a fork cannot deploy anything and does not look broken either.
+
+- **The load-sanity run is capped at 150-180 requests, and that is a measurement decision.** SPEC
+  section 7 caps the API at 200 requests per 15 minutes, and that limiter is part of the
+  configuration being measured — a longer run would report the latency of 429s. Sequential p95 is
+  30.5 ms against the 200 ms threshold, so no index was added; `Application` already carries compound
+  indexes on `user + status`, `user + deadline` and `user + createdAt`.
+
+- **Atlas M0 has no automated backup, and DEPLOYMENT.md says so instead of inventing a setting.**
+  SPEC section 14 asks for "the free-tier Atlas backup setting to enable"; there is not one below the
+  paid tiers. The honest answer is `scripts/backup.sh` on a cron plus a tested restore, which is what
+  the document prescribes.

@@ -27,6 +27,8 @@ single-tenant per user, and ownership is enforced in every database query rather
 - [API](#api)
 - [Data model](#data-model)
 - [Testing](#testing)
+- [Performance](#performance)
+- [Deployment](#deployment)
 - [Possible extensions](#possible-extensions)
 - [Backups and restore](#backups-and-restore)
 - [Schema migrations](#schema-migrations)
@@ -267,11 +269,14 @@ is a free-tier deployment, so errors are the point.
 | `VITE_API_URL` | `http://localhost:5000` | API base URL, no trailing slash              |
 | `VITE_APP_URL` | `http://localhost:5173` | Public origin of this client, for canonicals |
 
-> **Not yet implemented.** SPEC §8 also lists `MAIL_FROM`, `MAIL_TRANSPORT`, `SMTP_*`, `SENTRY_DSN`,
-> `COOKIE_DOMAIN`, `CONTACT_EMAIL`, `VITE_DEMO_ENABLED`, `VITE_SENTRY_DSN` and `VITE_ANALYTICS_*`.
-> Nothing reads them yet, so by project convention each lands in `.env.example` in the phase that
-> consumes it — mail in phase 12, the demo toggle and analytics in phase 13, Sentry in phase 14,
-> `COOKIE_DOMAIN` in phase 16. The tables above are the complete set that exists today.
+> The tables above are the frequently-edited ones. `server/.env.example` and `client/.env.example`
+> document every variable, and the zod loader in `server/src/config/env.ts` refuses to boot on an
+> invalid one. Every variable SPEC §8 lists now exists, with one deliberate exception: `CONTACT_EMAIL`
+> is a client build-time constant in `client/src/lib/siteMeta.ts` rather than a server variable,
+> because only client-rendered surfaces consume it. [DECISIONS.md](DECISIONS.md) records why.
+>
+> For the production values — and for the cross-origin cookie configuration a split-host deploy
+> needs — see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -293,17 +298,21 @@ Run from the repository root unless noted.
 | `npm run seed`          | Create the demo account and its 64 applications                     |
 | `npm run seed:reset`    | Wipe the demo account's data and reseed                             |
 | `npm run migrate`       | Apply pending schema migrations (see below)                         |
+| `npm run stats`         | User, application and 7-day signup counts against the live database |
 | `npm run e2e:up`        | Build and start the isolated end-to-end stack (5174 / 5001)         |
 | `npm run test:e2e`      | Playwright: the eight SPEC §10 flows, axe, and the responsive sweep |
 | `npm run e2e:down`      | Stop that stack and drop its volume                                 |
 | `npm run e2e:logs`      | Tail the E2E API log, where mail tokens are printed                 |
 | `npm run analyze`       | `vite-bundle-visualizer` treemap of the client bundle               |
+| `npm run check:bundle`  | Route bundle sizes against the SPEC §12 budget                      |
 
 Plus `./scripts/backup.sh`, which is a shell script rather than an npm script on purpose: a backup
 has to run from cron on a host that has never installed this project's dependencies.
 
 Workspace-only extras: `npm run test:watch -w server`, `npm run test:watch -w client`,
-`npm run preview -w client`, and `npm run start -w server` to run the compiled `dist/`.
+`npm run preview -w client`, `npm run start -w server` to run the compiled `dist/`, and
+`npm run build:deploy -w client` — a `build` that then strips the source maps out of `dist/`,
+which is what a public host should be given. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ---
 
@@ -478,7 +487,16 @@ npm run test:coverage   # server coverage report
 
 The server suite runs against `mongodb-memory-server`, so it needs no running database. Coverage is
 enforced rather than merely reported: `server/jest.config.js` fails the run if `src/services` or
-`src/controllers` falls below the 70% statement target from SPEC §10. Both currently sit near 98%.
+`src/controllers` falls below the 70% statement target from SPEC §10.
+
+581 tests across 53 suites, last measured 2026-09-06:
+
+| Scope             | Statements | Branches | Functions | Lines  |
+| ----------------- | ---------- | -------- | --------- | ------ |
+| `src/controllers` | 100%       | 93.75%   | 100%      | 100%   |
+| `src/services`    | 97.03%     | 86.85%   | 96.75%    | 96.98% |
+| Whole server      | 92.33%     | 74.27%   | 88.67%    | 92.76% |
+| SPEC §10 target   | ≥ 70%      | ≥ 60%    | ≥ 70%     | ≥ 70%  |
 
 Guarantees worth knowing are under test: user A cannot read user B's data through any endpoint;
 refresh-token reuse revokes the whole family; a password change invalidates access tokens minted in
@@ -523,6 +541,78 @@ scripts/scan-secrets.sh
 Runs gitleaks over every commit in the history, not just the working tree — a secret that was
 committed and later deleted is still committed. `.gitleaks.toml` records the only exceptions:
 `.env.example` placeholders and the deliberately-wrong passwords the auth tests send.
+
+---
+
+## Performance
+
+Measured on 2026-09-06 against a production build (`npm run build -w client`, served by
+`vite preview` on port 5173 so the API's CORS allowlist applies unchanged) talking to the API in
+Docker Compose with the seeded demo account. Re-measure after
+any change to the dashboard or the bundle; the numbers below are what the current `main` produces,
+not aspirations.
+
+### Lighthouse
+
+Desktop form factor, run through Chromium. The dashboard is audited **signed in** — the run drives
+"Try the demo" first and shares the browser profile with Lighthouse, because auditing `/dashboard`
+without a session silently measures the login page instead.
+
+| Route            | Performance | Accessibility | Best Practices | SEO     |
+| ---------------- | ----------- | ------------- | -------------- | ------- |
+| `/` (landing)    | **100**     | **100**       | **96**         | **100** |
+| `/dashboard`     | **98**      | **100**       | **100**        | **100** |
+| SPEC §12 targets | ≥ 90        | ≥ 95          | ≥ 95           | ≥ 95    |
+
+The landing page's 96 on Best Practices is a single `errors-in-console` deduction: on a cold load
+with no session the app probes `POST /auth/refresh`, which correctly answers `401`, and Lighthouse
+counts any logged network error. It is the session probe working, not a defect — the same audit
+scores 100 once a session exists.
+
+### Bundle sizes
+
+Enforced on every CI run by `npm run check:bundle`, which walks the built manifest's transitive
+static-import closure rather than guessing from file names.
+
+| Route         | Gzipped      | Budget |
+| ------------- | ------------ | ------ |
+| `/` (landing) | **111.4 KB** | 150 KB |
+| `/dashboard`  | **215.4 KB** | 300 KB |
+
+Chart.js, dnd-kit and the markdown pair are provably absent from the landing route's closure — the
+check fails the build if any of them reappears, because a chunk can be under budget and still drag a
+library behind it.
+
+### API latency
+
+`GET /api/v1/applications` with the seeded 64-application account, over 150 requests:
+
+| Concurrency     | p50     | p95         | p99                    |
+| --------------- | ------- | ----------- | ---------------------- |
+| 1               | 14.4 ms | **30.5 ms** | 46.0 ms                |
+| 10 (autocannon) | 147 ms  | —           | 386 ms (p97.5: 341 ms) |
+
+p95 is **30.5 ms** against SPEC §10's 200 ms threshold, so no additional indexes are warranted;
+`Application` already carries compound indexes on `user + status`, `user + deadline` and
+`user + createdAt`, plus a text index for search.
+
+The run is capped at 150–180 requests on purpose: SPEC §7's global rate limit is 200 requests per 15
+minutes, and that limit is part of the configuration being measured. A longer run would measure 429s.
+
+---
+
+## Deployment
+
+[DEPLOYMENT.md](DEPLOYMENT.md) has copy-paste steps for the free-tier stack — MongoDB Atlas, Render
+for the API, Vercel for the client — with every production environment variable, the SPF/DKIM/DMARC
+records for email that reaches an inbox, the cold-start caveat, the SPA rewrite rule, custom domain
+and HSTS, and a pre-launch checklist.
+
+Read its [Step 6](DEPLOYMENT.md#step-6--make-the-two-origins-trust-each-other) before deploying. The
+client and the API land on separate domains, and the cross-origin cookie configuration is the one
+part that fails silently: a `SameSite=Strict` refresh cookie is never sent cross-site, so login
+appears to work and then drops the user on the next page refresh. The code derives the right value
+from `CLIENT_ORIGIN` and `API_URL`, but only if both name the real deployed origins.
 
 ---
 
@@ -623,17 +713,18 @@ version. Selecting on the version is what makes a re-run harmless — the second
 
 ## Repository documents
 
-| File                                     | Contents                                                       |
-| ---------------------------------------- | -------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth |
-| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                    |
-| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons           |
-| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                        |
-| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar       |
-| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                       |
-| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                        |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                       |
-| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                    |
+| File                                     | Contents                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth         |
+| [DEPLOYMENT.md](DEPLOYMENT.md)           | Free-tier deployment, cross-origin config, email DNS, launch checklist |
+| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                            |
+| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons                   |
+| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                                |
+| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar               |
+| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                               |
+| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                                |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                               |
+| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                            |
 
 ## License
 
