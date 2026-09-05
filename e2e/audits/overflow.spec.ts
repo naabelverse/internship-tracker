@@ -1,7 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';
-import { bisectOverflow, measureOverflow, overflowWithout } from '../support/overflow';
+import {
+  bisectOverflow,
+  containmentChain,
+  measureOverflow,
+  overflowWithout,
+} from '../support/overflow';
 import { signIn } from '../support/ui';
 
 const test = testForClient(10);
@@ -57,6 +62,13 @@ async function reportOverflow(page: Page, label: string, width: number): Promise
       ? `         owns the overflow: ${trail.join(' > ')}`
       : '         bisection found no single element; the overflow is on body itself',
   );
+
+  if (trail.length > 0) {
+    const leaf = trail[trail.length - 1] ?? '';
+    for (const row of await containmentChain(page, leaf.split(' [')[0] ?? leaf)) {
+      console.log(`           ${row}`);
+    }
+  }
   for (const node of measured.offenders.slice(0, 12)) {
     console.log(
       `         ${node.path}` +

@@ -239,3 +239,44 @@ export async function bisectOverflow(page: Page): Promise<string[]> {
     return trail;
   });
 }
+
+/**
+ * The containment story for one element and every ancestor above it.
+ *
+ * When bisection names a box inside what looks like a scroll container, the
+ * question is which ancestor was supposed to contain it and did not. This prints
+ * the numbers that answer it — computed overflow on both axes, and the
+ * client/scroll/offset widths — rather than leaving it to be reasoned out from
+ * the markup.
+ */
+export async function containmentChain(page: Page, culpritSuffix: string): Promise<string[]> {
+  return page.evaluate((suffix) => {
+    const describe = (element: Element): string => {
+      const classes = element.className.toString().trim().split(/\s+/).slice(0, 3).join('.');
+      return `${element.tagName.toLowerCase()}${classes ? `.${classes}` : ''}`;
+    };
+
+    const matches = [...document.querySelectorAll('*')].filter((element) =>
+      describe(element).startsWith(suffix),
+    );
+    const start = matches[matches.length - 1];
+    if (!start) return [`no element matching ${suffix}`];
+
+    const rows: string[] = [];
+    let current: Element | null = start;
+
+    while (current) {
+      const style = getComputedStyle(current);
+      const rect = current.getBoundingClientRect();
+      rows.push(
+        `${describe(current).padEnd(46)} ` +
+          `overflow=${style.overflowX}/${style.overflowY} ` +
+          `client=${String(current.clientWidth)} scroll=${String(current.scrollWidth)} ` +
+          `rect=${rect.width.toFixed(1)} display=${style.display}`,
+      );
+      current = current.parentElement;
+    }
+
+    return rows;
+  }, culpritSuffix);
+}
