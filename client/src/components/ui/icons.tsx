@@ -166,6 +166,12 @@ export const UploadIcon = (props: IconProps): JSX.Element => (
   </Icon>
 );
 
+export const DownloadIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M12 4v12M8 12l4 4 4-4M4 18v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+  </Icon>
+);
+
 export const ExternalLinkIcon = (props: IconProps): JSX.Element => (
   <Icon {...props}>
     <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" />
