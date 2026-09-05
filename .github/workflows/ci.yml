@@ -79,3 +79,76 @@ jobs:
       # markdown pair provably absent from its static import closure.
       - name: Check the bundle budget
         run: npm run check:bundle
+
+  e2e:
+    name: playwright end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Only after the unit suites are green. An end-to-end run that fails because
+    # of something `verify` would have caught costs several minutes to tell you
+    # what a few seconds of lint already knew.
+    needs: verify
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only Chromium. SPEC section 10 asks for the flows, not a browser matrix,
+      # and `--with-deps` installs the shared libraries the runner image lacks.
+      - name: Install the Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # The real stack, which is the whole point of this job: a real API, a real
+      # Mongo, and a real cross-origin boundary between the client and the API.
+      # That boundary is what surfaced the missing `Access-Control-Expose-Headers`
+      # in Phase 15 — same-origin development never showed it.
+      - name: Start the end-to-end stack
+        run: npm run e2e:up
+
+      - name: Wait for the stack to answer
+        run: |
+          for attempt in $(seq 1 60); do
+            api=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5001/health || true)
+            web=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5174/ || true)
+            if [ "$api" = "200" ] && [ "$web" = "200" ]; then
+              echo "stack ready after ${attempt}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "stack did not become ready"
+          docker compose -p internship-tracker-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs
+          exit 1
+
+      - name: Run the Playwright suite
+        run: npm run test:e2e
+
+      # The API log carries the console mail transport's output, which is where
+      # the verification and reset tokens come from. On a failure it is usually
+      # the first thing worth reading.
+      - name: Dump the API log on failure
+        if: failure()
+        run: npm run e2e:logs -- --no-log-prefix --tail 400
+
+      - name: Upload the Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Stop the stack
+        if: always()
+        run: npm run e2e:down

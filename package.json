@@ -18,7 +18,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w client",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client && npm run typecheck:e2e",
     "test": "npm run test -w server && npm run test -w client",
     "test:coverage": "npm run test:coverage -w server",
     "migrate": "npm run migrate -w server",
@@ -26,10 +26,18 @@
     "seed:reset": "npm run seed:reset -w server",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run check:bundle",
     "prepare": "husky",
-    "check:bundle": "npm run check:bundle -w client"
+    "check:bundle": "npm run check:bundle -w client",
+    "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json",
+    "e2e:up": "docker compose -p internship-tracker-e2e -f docker-compose.yml -f docker-compose.e2e.yml up -d --build",
+    "e2e:down": "docker compose -p internship-tracker-e2e -f docker-compose.yml -f docker-compose.e2e.yml down -v",
+    "e2e:logs": "docker compose -p internship-tracker-e2e -f docker-compose.yml -f docker-compose.e2e.yml logs api",
+    "test:e2e": "playwright test",
+    "analyze": "npm run analyze -w client"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.63.0",
     "concurrently": "^9.1.2",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
