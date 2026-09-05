@@ -51,6 +51,23 @@ export default defineConfig({
     // equal a slow chunk reports "test timed out" instead of the assertion that
     // really failed.
     testTimeout: 20_000,
+    /*
+      Half the cores, not all of them.
+
+      Every test file mounts its own jsdom and transforms the route modules it
+      touches, and with all sixteen routes lazy the first assertion in a file
+      absorbs its chunk's first transform: measured at 3.4-4.4 s, against every
+      later test in the same file at around 0.7 s. Left uncapped, the suite
+      oversubscribes the machine and inflates that first figure until it crosses
+      the 10 s `asyncUtilTimeout` in tests/setup.ts, which is what four of these
+      files did when they ran alongside a busy machine.
+
+      Capping halves the work without costing wall time — measured on a 12-core
+      box, 44.5 s uncapped against 44.9 s capped, with collection dropping from
+      105 s of CPU to 48 s. The suite is bound by contention, not by parallelism,
+      and a two-core CI runner is the case that needs this most.
+    */
+    maxWorkers: '50%',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],

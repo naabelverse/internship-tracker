@@ -42,9 +42,37 @@ const FORBIDDEN_ON_LANDING = [
   { label: 'DOMPurify', module: /node_modules\/dompurify\//, marker: 'DOMPurify' },
 ];
 
+/**
+ * The two routes SPEC section 12 sets a number for. These fail the build.
+ */
 const BUDGETS = [
   { label: 'landing', entryHint: 'LandingPage', limitKb: 150, enforceIsolation: true },
   { label: 'dashboard', entryHint: 'DashboardPage', limitKb: 300, enforceIsolation: false },
+];
+
+/**
+ * Every other route, reported but not gated.
+ *
+ * SPEC section 12 asks for the final sizes per route, and only landing and
+ * dashboard carry a budget. Printing the rest is what makes a regression
+ * visible: a route that doubles is worth seeing even when nothing fails, and
+ * with all fifteen routes lazy there is now a number for each of them.
+ */
+const REPORTED = [
+  { label: 'applications', entryHint: 'ApplicationsPage' },
+  { label: 'board', entryHint: 'BoardPage' },
+  { label: 'calendar', entryHint: 'CalendarPage' },
+  { label: 'detail', entryHint: 'ApplicationDetailPage' },
+  { label: 'settings', entryHint: 'SettingsPage' },
+  { label: 'terms', entryHint: 'TermsPage' },
+  { label: 'privacy', entryHint: 'PrivacyPage' },
+  { label: 'login', entryHint: 'LoginPage' },
+  { label: 'register', entryHint: 'RegisterPage' },
+  { label: 'forgot-password', entryHint: 'ForgotPasswordPage' },
+  { label: 'reset-password', entryHint: 'ResetPasswordPage' },
+  { label: 'verify-email', entryHint: 'VerifyEmailPage' },
+  { label: 'account-closed', entryHint: 'AccountClosedPage' },
+  { label: 'not-found', entryHint: 'NotFoundPage' },
 ];
 
 function fail(message) {
@@ -169,6 +197,26 @@ async function main() {
         console.log(`       excludes ${forbidden.label}`);
       }
     }
+  }
+
+  console.log('\nPer-route initial JS, gzipped (no budget, reported per SPEC section 12)\n');
+
+  for (const route of REPORTED) {
+    const routeKey = routeChunkKey(manifest, route.entryHint);
+
+    if (!routeKey) {
+      fail(`Could not find a chunk for ${route.entryHint}. Is the route still lazy-loaded?`);
+      continue;
+    }
+
+    const closure = staticClosure(manifest, [entry, routeKey]);
+    const jsFiles = jsFilesIn(closure, manifest);
+    const kb = (await gzippedSize(jsFiles)) / KB;
+
+    console.log(
+      `       ${route.label.padEnd(16)} ${kb.toFixed(1).padStart(6)} KB gzip ` +
+        `(${String(jsFiles.length)} chunks)`,
+    );
   }
 
   const emitted = await readdir(path.join(distDir, 'assets')).catch(() => []);
