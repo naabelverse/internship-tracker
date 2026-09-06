@@ -1973,3 +1973,60 @@ The half deferred when the phase was split. Closes Phase 11.
   serves the hashed production bundle, ships zero `.map` files, binds the injected `PORT`, and still
   returns 403 for an unrelated host. `vite preview` is not a hardened static server and Vite says so;
   DEPLOYMENT.md keeps the Caddy setup as the alternative for anyone who wants one.
+
+## Post-Phase 16 — Railway builder pinned in config-as-code
+
+- **The dashboard build command was not the wrong-package-name bug it looked like.**
+  `npm run build --workspace=@internship-tracker/client` is valid: npm accepts a package name as
+  well as a directory path, and running it locally builds the client and exits 0. It was still the
+  wrong command, for a worse reason — it runs `build` rather than `build:deploy`, so the source maps
+  are left in `dist/` and the protection added in Phase 16 was silently undone. Checking the premise
+  rather than accepting it changed what needed fixing.
+
+- **The real defect was the Builder, not the command.** Railpack ignores `client/Dockerfile`
+  entirely, generating its own build and start commands, so the production stage added for the
+  `allowedHosts` fix was never used and the container ran Vite's development server. `railway.client.json`
+  pins `"builder": "DOCKERFILE"` with `dockerfilePath`, so the correct behaviour is version-controlled
+  rather than a dashboard setting somebody has to remember to set again.
+
+- **Two files, because Railway's config-as-code is per service.** One `railway.json` describes one
+  service, so `railway.client.json` and `railway.server.json` sit at the repository root and each
+  service is pointed at its own. Pointing a service at its file is the one step that cannot itself be
+  version-controlled — it is what tells Railway where the versioned file is.
+
+- **`startCommand` is set in the file precisely because config overrides the dashboard.** A stale
+  `npm run dev -w client` typed into the Start Command box during an earlier attempt would otherwise
+  keep winning over the image's own `CMD`. Setting it in config neutralises the dashboard value
+  without needing to know what it currently says, which matters because the dashboard is not
+  visible from here.
+
+- **The API is pinned to RAILPACK deliberately, not left unpinned.** `server/Dockerfile` has only
+  `deps` and `dev` stages, so a `DOCKERFILE` builder would run `tsx watch` in production — the same
+  failure just fixed on the client. Writing the pin down stops a later tidy-up from "making the two
+  services consistent" and reintroducing it.
+
+- **Stage order is load-bearing and is now asserted by a test.** Railway's schema has no key for a
+  multi-stage `--target`, so a build with no target takes the last stage, and the client's
+  correctness depends on `prod` being last in `client/Dockerfile`. Nothing on the platform enforces
+  that, so `client/tests/config/dockerfileStages.test.ts` does: it fails if a stage is appended after
+  `prod`, if the final `CMD` stops being `preview`, or if `build:deploy` disappears. It also pins
+  `server/Dockerfile`'s last stage as `dev`, which is the documented reason the API stays on Railpack.
+
+- **`import.meta.url` is unusable in this test environment.** The first version resolved a path
+  through it and read `tests/config/undefined`, because the jsdom environment leaves it undefined.
+  The test walks up from `process.cwd()` instead, which also makes it indifferent to whether vitest
+  was invoked from `client/` or the repository root.
+
+- **`railway.json` is deprecated with a hard date, and the document says so.** Railway is moving to
+  Infrastructure as Code (`.railway/railway.ts`, one file per project rather than per service);
+  `railway.json` keeps working until 2026-12-01 and `railway config migrate --apply` converts it.
+  The migration changes how the whole project is provisioned, so it belongs in its own deliberate
+  change rather than folded into a bug fix — but shipping a file with an expiry date without saying
+  so would have been the kind of omission that surprises someone in three months.
+
+- **The `VITE_APP_URL` failure mode is spelled out rather than left as an ordering rule.** "Set this
+  before attaching a domain" does not tell anyone what breaks. The allowlist is built from a
+  `.up.railway.app` suffix plus the hostname parsed out of `VITE_APP_URL`; a custom domain is not
+  covered by the suffix, so attaching one without setting the variable makes the new domain answer
+  `403 Blocked request` for every request while the Railway URL keeps working — which reads as a DNS
+  problem and sends you looking in the wrong place.

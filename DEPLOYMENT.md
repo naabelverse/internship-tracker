@@ -257,6 +257,7 @@ Then, still in that service's **Settings**:
 | Start Command     | `npm run start -w server`                                                  |
 | Watch Paths       | `/server/**`, `/package.json`, `/package-lock.json`, `/tsconfig.base.json` |
 | Healthcheck Path  | `/health`                                                                  |
+| Config as code    | `railway.server.json` — pins the builder and both commands, see 5.2        |
 | Public Networking | **Generate Domain** — you need the hostname in 4.2                         |
 
 **`--include=dev` is not optional.** TypeScript, `tsc-alias` and the type packages are
@@ -292,8 +293,15 @@ If you would rather keep this in the repository than the dashboard, Railway read
 ```
 
 That file is per-service, so two services in one repository means two such files under different
-names with each service pointed at its own. For two services the dashboard is simpler, and the rest
-of this guide assumes it.
+names with each service pointed at its own — which is exactly what `railway.server.json` and
+`railway.client.json` are. Point each service at its own under **Settings → Config as code**.
+
+**The API stays on Railpack, and that is deliberate rather than an oversight.** `server/Dockerfile`
+has only a `deps` and a `dev` stage, so pinning this service to the `DOCKERFILE` builder would hand
+it that last stage and run `tsx watch` in production — the same silent failure
+[5.2](#52-pin-the-builder--the-setting-that-silently-serves-a-dev-server) describes for the client.
+`railway.server.json` therefore pins `"builder": "RAILPACK"` explicitly, so the correct choice
+survives somebody later "making the two services consistent".
 
 ### 4.2 Environment variables
 
@@ -381,7 +389,9 @@ biggest structural difference from the Vercel path, and it is what 5.3 is about.
 | Root Directory    | `/` — same reasoning as 4.0, one lockfile at the root                      |
 | Watch Paths       | `/client/**`, `/package.json`, `/package-lock.json`, `/tsconfig.base.json` |
 | Public Networking | **Generate Domain**                                                        |
-| Dockerfile Path   | `client/Dockerfile` — its final stage is the production server, see 5.3    |
+| Builder           | **Dockerfile**, not Railpack — see 5.2 below, this one matters             |
+| Config as code    | `railway.client.json` — pins the two settings above, see 5.2               |
+| Dockerfile Path   | `client/Dockerfile` — its final stage is the production server, see 5.4    |
 | Build / Start     | supplied by that Dockerfile — leave both blank                             |
 
 **You will use `build:deploy`, not `build`.** The Vite config emits source maps on purpose — an
@@ -392,7 +402,51 @@ request away from any visitor. `build:deploy` runs the build and then
 `//# sourceMappingURL=` comments pointing at them. If you upload maps to Sentry, do it between the
 two steps (see [Step 10](#step-10--uptime-errors-and-backups)).
 
-### 5.2 Environment variables
+### 5.2 Pin the builder — the setting that silently serves a dev server
+
+**Railway defaults the Builder to Railpack, and for this service that default is wrong.** Railpack
+auto-detects the repository and generates its own build and start commands. It does not use
+`client/Dockerfile`, so none of the production behaviour that file provides applies: the client is
+built with `npm run build` rather than `build:deploy`, so **the source maps are never stripped**, and
+the start command it infers runs Vite's _development_ server. The site loads, so nothing looks
+broken — the app is simply served unminified, from source, with your full source available at a
+predictable `.js.map` URL. That is exactly how this deployment failed the first time, and it was only
+noticed because Vite's host check rejected the Railway domain.
+
+So the builder must be **Dockerfile**, and the repository pins it rather than leaving it to a
+dashboard setting somebody has to remember:
+
+```json
+// railway.client.json
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": { "builder": "DOCKERFILE", "dockerfilePath": "client/Dockerfile" },
+  "deploy": { "startCommand": "npm run preview --workspace client" }
+}
+```
+
+Railway's config-as-code is **per service, not per repository** — one file describes one service — so
+there are two of them at the repository root, `railway.client.json` and `railway.server.json`. Point
+each service at its own: **Settings → Config as code** → the file path. This is the one step that
+cannot itself be version-controlled, because it is what tells Railway where the version-controlled
+file lives.
+
+**Configuration in the file overrides the dashboard.** That is the point: `startCommand` here
+neutralises whatever is currently typed into the service's Start Command box, so a stale
+`npm run dev -w client` left over from an earlier attempt stops taking effect.
+
+Two things worth knowing about this mechanism:
+
+- **There is no key for a multi-stage Docker `target`.** A build with no target builds the _last_
+  stage, so `client/Dockerfile` ends with its production stage on purpose. That ordering is load-
+  bearing and nothing in Railway enforces it, so `client/tests/config/dockerfileStages.test.ts`
+  asserts it instead — the suite fails if a stage is ever appended after `prod`.
+- **`railway.json` is deprecated in favour of Infrastructure as Code** (`.railway/railway.ts`, one
+  file per project rather than per service). Existing `railway.json` files keep working until
+  **2026-12-01**, and `railway config migrate --apply` converts them. Migrating changes how the whole
+  project is provisioned, so it is worth doing deliberately rather than as part of a bug fix.
+
+### 5.3 Environment variables
 
 Set these on the **`web` service**, not the `api` service and not "shared across the project".
 Railway scopes variables per service, and a `VITE_*` value sitting on the API service is simply never
@@ -419,7 +473,7 @@ VITE_APP_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}
 | `VITE_SENTRY_DSN`                              | optional                                              |
 | `VITE_ANALYTICS_DOMAIN` / `VITE_ANALYTICS_SRC` | optional, cookieless analytics only                   |
 
-### 5.3 The SPA rewrite — a Dockerfile and a Caddyfile
+### 5.4 The SPA rewrite — a Dockerfile and a Caddyfile
 
 This app uses client-side routing. Without a fallback rule,
 `https://tracker.example.com/applications` works when you navigate to it inside the app and **404s
@@ -526,7 +580,7 @@ the OG tags either way.
 **Test this specifically after deploying.** Open `https://tracker.example.com/applications` in a new
 tab and press reload. A 404 here is the single most common broken SPA deploy, on any platform.
 
-### 5.4 Regenerate the SEO assets
+### 5.5 Regenerate the SEO assets
 
 `robots.txt` and `sitemap.xml` are generated from `VITE_APP_URL` and currently carry
 `http://localhost:5173`. Once the domain is live, run this locally and commit the result:
@@ -903,7 +957,7 @@ on every API response — one year, covering subdomains. This is the app's own h
 platform-independent: it ships from Express, so it is identical on Railway, Render or anywhere else.
 The `web` service serves static files through Caddy and does not add HSTS of its own; if you want it
 on the client host too, add `header Strict-Transport-Security "max-age=31536000; includeSubDomains"`
-inside the site block of the Caddyfile in [5.3](#53-the-spa-rewrite--a-dockerfile-and-a-caddyfile).
+inside the site block of the Caddyfile in [5.3](#54-the-spa-rewrite--a-dockerfile-and-a-caddyfile).
 
 Verify once the domain is live:
 
@@ -1188,7 +1242,7 @@ launch.
 - [ ] `GET /health` → 200 and `GET /ready` → 200 on the live API.
 - [ ] `npm run migrate -w server` has been run against the production database.
 - [ ] Opening `https://tracker.example.com/applications` **directly** and reloading it returns the
-      app, not a 404 — the Caddy `try_files` fallback. (Step 5.3.)
+      app, not a 404 — the Caddy `try_files` fallback. (Step 5.4.)
 - [ ] Source maps are not published: `curl -I https://tracker.example.com/assets/index-*.js.map`
       returns 404, and no `sourceMappingURL` comment appears in the served JavaScript.
 - [ ] HSTS present: `curl -sI https://api.tracker.example.com/health | grep -i strict-transport`.
@@ -1197,6 +1251,17 @@ launch.
 
 - [ ] `CLIENT_ORIGIN`, `APP_URL`, `API_URL`, `VITE_API_URL` and `VITE_APP_URL` all name the real
       deployed origins, with no trailing slashes.
+- [ ] **`VITE_APP_URL` is set on the `web` service _before_ you attach a custom domain, and the
+      service is redeployed afterwards.** This one has a failure mode worth spelling out. Vite
+      refuses any request whose `Host` header is not in `allowedHosts`, and this app builds that
+      list in `client/allowedHosts.ts` from two things: a `.up.railway.app` suffix, and the hostname
+      parsed out of `VITE_APP_URL`. A custom domain is not covered by the suffix, so if you attach
+      `tracker.example.com` while `VITE_APP_URL` is unset or still points at the old
+      `*.up.railway.app` name, **the new domain serves `403 Blocked request` for every request** —
+      the Railway URL keeps working, which makes it look like a DNS problem rather than a
+      configuration one. `VITE_*` values are compiled into the bundle at image build time, so
+      changing it needs a **redeploy**; a restart will not pick it up. `ALLOWED_HOSTS`
+      (comma-separated) is available if you need to serve two domains at once during a migration.
 - [ ] The `refresh_token` cookie shows `SameSite=None`, `Secure`, `HttpOnly`, `Path=/api/v1/auth`.
 - [ ] Signing in and **hard-reloading** leaves you signed in.
 - [ ] Export CSV saves as `applications-YYYY-MM-DD.csv`, not `applications.csv`.
@@ -1298,7 +1363,7 @@ Walk [6.4](#64-verify-it-end-to-end-in-a-browser).
 response lacks it, something in front of the API is stripping it.
 
 **Refreshing a deep link 404s.**
-The Caddy `try_files` fallback is missing or the image is serving the wrong directory. Step 5.3.
+The Caddy `try_files` fallback is missing, or Railpack built the service instead of the Dockerfile. Steps 5.2 and 5.4.
 
 **The build fails with `tsc: not found` or `Cannot find module 'tsc-alias'`.**
 `NODE_ENV=production` made npm skip devDependencies. Use `npm ci --include=dev` in the build command.
