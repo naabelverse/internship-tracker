@@ -23,6 +23,11 @@ function lastStageOf(dockerfile: string): string | undefined {
   return stages.at(-1);
 }
 
+/** The final CMD's argument text, which is the one a targetless build inherits. */
+function lastCmdOf(dockerfile: string): string {
+  return [...dockerfile.matchAll(/^CMD\s+(.+)$/gim)].at(-1)?.[1] ?? '';
+}
+
 /**
  * Walks up from the working directory to find a repository-relative file, so the
  * suite behaves the same whether vitest is invoked from `client/` or the root.
@@ -49,14 +54,82 @@ describe('client/Dockerfile ends at the production stage', () => {
   });
 
   it('serves the built output rather than running the dev server', () => {
-    const lastCmd = [...dockerfile.matchAll(/^CMD\s+(.+)$/gim)].at(-1)?.[1] ?? '';
+    expect(lastCmdOf(dockerfile)).toContain('preview');
+    expect(lastCmdOf(dockerfile)).not.toContain('dev');
+  });
 
-    expect(lastCmd).toContain('preview');
-    expect(lastCmd).not.toContain('dev');
+  /*
+    The port a container listens on is its contract with the platform: Railway
+    ignores EXPOSE, injects PORT, and routes to whatever the process bound. A
+    literal port in the start command is therefore unreachable the moment the
+    platform picks a different one, and the failure is a 502 at the edge rather
+    than anything visible in the build.
+  */
+  it('takes its port from the environment rather than a literal', () => {
+    const lastCmd = lastCmdOf(dockerfile);
+
+    expect(lastCmd).toMatch(/--port\s+\$\{?PORT/);
+    expect(lastCmd).not.toMatch(/--port\s+\d/);
+  });
+
+  /*
+    The trap this guards is specific. An exec-form CMD is handed straight to
+    execve with no shell between, so `["npm", "run", "...", "$PORT"]` passes the
+    four literal characters `$PORT` to Vite, which rejects them as a port. The
+    expansion only happens because the command runs under `sh -c`.
+  */
+  it('runs under a shell, so the port variable is actually expanded', () => {
+    expect(lastCmdOf(dockerfile)).toMatch(/^\[\s*"sh"\s*,\s*"-c"/);
+  });
+
+  /*
+    `--host` with no value is Vite's `host: true`, which binds the dual-stack
+    wildcard and answers on every interface. Spelling it `--host 0.0.0.0` would
+    be narrower, not safer: that is IPv4 only, and Railway's private network
+    resolves to both families.
+  */
+  it('binds every interface rather than loopback', () => {
+    const lastCmd = lastCmdOf(dockerfile);
+
+    expect(lastCmd).toMatch(/--host(?!\s+\S)|--host\s+--/);
+    expect(lastCmd).not.toContain('0.0.0.0');
+  });
+
+  /*
+    EXPOSE is inert on Railway, so it only documents a plain `docker run`. It
+    earns its place by matching the fallback, and drifting from it would
+    document a port nothing listens on.
+  */
+  it('documents the same fallback port it EXPOSEs', () => {
+    const fallback = /--port\s+\$\{PORT:-(\d+)\}/.exec(lastCmdOf(dockerfile))?.[1];
+    const exposed = [...dockerfile.matchAll(/^EXPOSE\s+(\d+)/gim)].at(-1)?.[1];
+
+    expect(fallback).toBeDefined();
+    expect(fallback).toBe(exposed);
   });
 
   it('builds with build:deploy, so source maps are stripped from the image', () => {
     expect(dockerfile).toContain('build:deploy');
+  });
+});
+
+/*
+  Railway's `deploy.startCommand` replaces the image's CMD outright, so the
+  Dockerfile's is dead configuration on Railway whenever this key is set. The
+  two drifting apart is how a correct CMD ends up never running, which is worth
+  a check of its own rather than trust that whoever edits one edits the other.
+*/
+describe('railway.client.json does not override the Dockerfile with a worse command', () => {
+  const config = JSON.parse(readDockerfile('railway.client.json')) as {
+    deploy?: { startCommand?: string };
+  };
+  const startCommand = config.deploy?.startCommand;
+
+  it('either defers to the image CMD or repeats its port and host handling', () => {
+    if (startCommand === undefined) return;
+
+    expect(startCommand).toMatch(/--port\s+\$\{?PORT/);
+    expect(startCommand).toMatch(/--host/);
   });
 });
 

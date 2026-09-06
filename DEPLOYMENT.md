@@ -490,9 +490,55 @@ performs the SPA fallback itself — no extra file to create. Point the service 
 with no target and you are done. The stage order matters: the production stage is last precisely so a
 builder that picks the final stage cannot end up running the development server.
 
-`vite preview` reads `PORT`, so Railway's injected port is used, and Vite's host allowlist is derived
-from `VITE_APP_URL` plus a `.up.railway.app` suffix (`client/allowedHosts.ts`) — which is why
-**`VITE_APP_URL` must be set on the `web` service** before a custom domain will be accepted.
+Vite's host allowlist is derived from `VITE_APP_URL` plus a `.up.railway.app` suffix
+(`client/allowedHosts.ts`) — which is why **`VITE_APP_URL` must be set on the `web` service** before a
+custom domain will be accepted. The allowlist is matched on hostname only, with the port stripped
+before comparison, so it is unaffected by whatever port Railway hands the container.
+
+### The port a container listens on
+
+Railway injects `PORT` and routes to whatever the process actually bound. Two consequences worth
+knowing before debugging a 502:
+
+- **`EXPOSE` does nothing on Railway.** It is not read, and it does not select the target port. The
+  `EXPOSE 4173` in `client/Dockerfile` documents a plain `docker run` and is kept equal to the start
+  command's fallback so the two cannot drift.
+- **`deploy.startCommand` replaces the image's `CMD` outright.** When that key is set in
+  `railway.client.json`, the Dockerfile's `CMD` never runs on Railway. Both are therefore written the
+  same way, and `client/tests/config/dockerfileStages.test.ts` fails if they diverge.
+
+The start command is `npm run preview --workspace client -- --host --port ${PORT:-4173}`, and each
+part is load-bearing:
+
+- **Shell form.** A Docker `CMD` in exec form (`["npm", "run", …, "$PORT"]`) is passed to `execve`
+  with no shell in between, so `$PORT` arrives at Vite as five literal characters and is rejected as
+  a port. The `sh -c` wrapper is what performs the expansion. This is the single most common way a
+  Railway container ends up on the wrong port.
+- **`--host` with no value.** That is Vite's `host: true`, which binds the dual-stack wildcard and
+  serves every interface — `netstat` inside the container shows `:::$PORT`. Writing `--host 0.0.0.0`
+  would be _narrower_, not safer: it is IPv4 only, while Railway's private network resolves to both
+  IPv4 and IPv6 addresses.
+- **`${PORT:-4173}`.** Railway sets `PORT`; a local `docker run` does not, and 4173 is Vite's own
+  default for `preview`.
+
+`client/vite.config.ts` computes the same two values from `process.env.PORT`. The duplication is
+deliberate: the port and interface a container listens on are its contract with the platform, and
+that contract should hold even if the config file fails to load.
+
+To check the image rather than trust it:
+
+```bash
+docker build -f client/Dockerfile --target prod -t tracker-client-prod .
+docker run --rm -e PORT=7777 -p 9091:7777 tracker-client-prod
+curl -o /dev/null -w '%{http_code}
+' http://127.0.0.1:9091/   # expect 200
+```
+
+If that returns 200 and Railway still answers **"Application failed to respond"**, the container is
+not the problem. Railway's own documentation names the remaining cause: the domain's _target port_
+does not match the port the app bound. Check it under the service's **Settings → Networking → Public
+Networking**, on the domain itself, and either correct it or delete and re-add the domain so it is
+detected again.
 
 > **Caddy as an alternative.** Vite's own documentation notes that `vite preview` is meant for
 > previewing a build rather than serving as a hardened production server. For a low-traffic portfolio

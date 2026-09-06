@@ -2030,3 +2030,30 @@ The half deferred when the phase was split. Closes Phase 11.
   covered by the suffix, so attaching one without setting the variable makes the new domain answer
   `403 Blocked request` for every request while the Railway URL keeps working — which reads as a DNS
   problem and sends you looking in the wrong place.
+
+- **The reported "hardcoded port" was not a defect, and the fix was made anyway.** `vite.config.ts`
+  already set `preview.host: true` and `preview.port: Number(process.env.PORT) || 4173`; building the
+  `prod` stage and running it with `PORT=8080` showed `:::8080` in `netstat` and returned 200 through
+  a published port, so `8080` in the Railway log was the injected `PORT` being read correctly and
+  `localhost:8080` was Vite's convenience line printed above its `Network:` line. The start command
+  was still made explicit, because a container's port and interface are its contract with the
+  platform and should not depend on a config file loading.
+
+- **`--host` with no value, not `--host 0.0.0.0`.** Bare `--host` is Vite's `host: true`, which binds
+  the dual-stack wildcard and answers on both address families. `0.0.0.0` is IPv4 only, so it would
+  have narrowed the binding the deployment already had, and Railway's private network resolves to
+  both IPv4 and IPv6.
+
+- **Shell form for the production `CMD`.** Exec form is otherwise preferable, but it has no shell, so
+  `$PORT` would reach Vite as a literal string. `sh -c` is the only reason the expansion happens, and
+  the test asserts the form rather than just the presence of `$PORT` because a correct-looking
+  exec-form `CMD` fails in exactly this way.
+
+- **`railway.client.json` repeats the start command instead of dropping the key.** Railway's
+  `deploy.startCommand` overrides the image `CMD` outright, so the Dockerfile's was dead
+  configuration on Railway. Removing the key would let the `CMD` through, but would also leave any
+  start command already set in the dashboard in force; setting it explicitly keeps config-as-code
+  authoritative. A test fails if the two spellings diverge.
+
+- **`EXPOSE 4173` is kept although Railway ignores it.** It documents a plain `docker run`, and it is
+  tied by test to the start command's fallback so it cannot come to advertise a port nothing binds.
