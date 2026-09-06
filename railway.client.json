@@ -5,7 +5,7 @@
     "dockerfilePath": "client/Dockerfile"
   },
   "deploy": {
-    "startCommand": "npm run preview --workspace client -- --host --port ${PORT:-4173}",
+    "startCommand": "/bin/sh -c \"npm run preview --workspace client -- --host --port ${PORT:-4173}\"",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

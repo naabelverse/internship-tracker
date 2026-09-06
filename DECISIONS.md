@@ -2049,6 +2049,13 @@ The half deferred when the phase was split. Closes Phase 11.
   the test asserts the form rather than just the presence of `$PORT` because a correct-looking
   exec-form `CMD` fails in exactly this way.
 
+- **The `railway.client.json` start command is wrapped in `/bin/sh -c` explicitly.** Railway runs a
+  start command in exec form for a `DOCKERFILE` build and only gives it a shell under Railpack, so
+  the first version of this fix — the same flags, unwrapped — would have shipped `${PORT:-4173}` to
+  Vite as a literal string and broken the deploy outright rather than fixing it. The Dockerfile's own
+  `sh -c` does not cover this, because the start command replaces the `CMD` rather than running
+  inside it. A test asserts the wrapper, since the failure is invisible until deploy.
+
 - **`railway.client.json` repeats the start command instead of dropping the key.** Railway's
   `deploy.startCommand` overrides the image `CMD` outright, so the Dockerfile's was dead
   configuration on Railway. Removing the key would let the `CMD` through, but would also leave any

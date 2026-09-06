@@ -504,11 +504,22 @@ knowing before debugging a 502:
   `EXPOSE 4173` in `client/Dockerfile` documents a plain `docker run` and is kept equal to the start
   command's fallback so the two cannot drift.
 - **`deploy.startCommand` replaces the image's `CMD` outright.** When that key is set in
-  `railway.client.json`, the Dockerfile's `CMD` never runs on Railway. Both are therefore written the
-  same way, and `client/tests/config/dockerfileStages.test.ts` fails if they diverge.
+  `railway.client.json`, the Dockerfile's `CMD` never runs on Railway at all — so a correct `CMD` and
+  a stale start command look identical right up until the deploy 502s. Both are written the same way,
+  and `client/tests/config/dockerfileStages.test.ts` fails if they diverge.
+- **A start command on a `DOCKERFILE` build gets no shell of its own.** Railway runs it in exec form,
+  unlike a Railpack build, which does get a shell. So the start command has to wrap itself:
 
-The start command is `npm run preview --workspace client -- --host --port ${PORT:-4173}`, and each
-part is load-bearing:
+  ```json
+  "startCommand": "/bin/sh -c \"npm run preview --workspace client -- --host --port ${PORT:-4173}\""
+  ```
+
+  Without the `/bin/sh -c`, `${PORT:-4173}` reaches Vite as a literal string and the container exits
+  with `'${PORT:-4173}' is not a valid port number`. The Dockerfile's own `sh -c` does not help here,
+  because the start command replaces that command rather than running inside it.
+
+Both spellings resolve to `npm run preview --workspace client -- --host --port ${PORT:-4173}`, and
+each part is load-bearing:
 
 - **Shell form.** A Docker `CMD` in exec form (`["npm", "run", …, "$PORT"]`) is passed to `execve`
   with no shell in between, so `$PORT` arrives at Vite as five literal characters and is rejected as

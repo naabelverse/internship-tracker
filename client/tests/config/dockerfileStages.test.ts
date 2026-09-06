@@ -131,6 +131,20 @@ describe('railway.client.json does not override the Dockerfile with a worse comm
     expect(startCommand).toMatch(/--port\s+\$\{?PORT/);
     expect(startCommand).toMatch(/--host/);
   });
+
+  /*
+    Railway runs a start command in exec form for a `DOCKERFILE` build -- unlike
+    Railpack, which gets a shell -- so a bare `${PORT:-4173}` here reaches Vite
+    as a literal string and the deploy dies with "not a valid port number". The
+    documented fix is to wrap the command in a shell explicitly. This is the same
+    trap as the CMD's, in the one place where the Dockerfile's own `sh -c` does
+    not apply, because the start command replaces the CMD rather than joining it.
+  */
+  it('wraps the command in a shell, since a Dockerfile build gets no shell', () => {
+    if (startCommand === undefined) return;
+
+    expect(startCommand).toMatch(/^\/bin\/sh\s+-c\s+/);
+  });
 });
 
 describe('server/Dockerfile is development-only, which is why Railpack builds the API', () => {
