@@ -1,6 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readRepoFile } from './repoFile';
 
 /**
  * Railway's config-as-code can pin the builder to a Dockerfile and name its path,
@@ -28,26 +27,8 @@ function lastCmdOf(dockerfile: string): string {
   return [...dockerfile.matchAll(/^CMD\s+(.+)$/gim)].at(-1)?.[1] ?? '';
 }
 
-/**
- * Walks up from the working directory to find a repository-relative file, so the
- * suite behaves the same whether vitest is invoked from `client/` or the root.
- * `import.meta.url` is not usable here: it is undefined under this jsdom
- * environment, which resolves the path to a literal "undefined".
- */
-function readDockerfile(relative: string): string {
-  let dir = process.cwd();
-
-  for (let depth = 0; depth < 5; depth += 1) {
-    const candidate = path.join(dir, relative);
-    if (existsSync(candidate)) return readFileSync(candidate, 'utf8');
-    dir = path.dirname(dir);
-  }
-
-  throw new Error(`Could not find ${relative} above ${process.cwd()}`);
-}
-
 describe('client/Dockerfile ends at the production stage', () => {
-  const dockerfile = readDockerfile('client/Dockerfile');
+  const dockerfile = readRepoFile('client/Dockerfile');
 
   it('builds the production stage when no target is given', () => {
     expect(lastStageOf(dockerfile)).toBe('prod');
@@ -120,7 +101,7 @@ describe('client/Dockerfile ends at the production stage', () => {
   a check of its own rather than trust that whoever edits one edits the other.
 */
 describe('railway.client.json does not override the Dockerfile with a worse command', () => {
-  const config = JSON.parse(readDockerfile('railway.client.json')) as {
+  const config = JSON.parse(readRepoFile('railway.client.json')) as {
     deploy?: { startCommand?: string };
   };
   const startCommand = config.deploy?.startCommand;
@@ -148,7 +129,7 @@ describe('railway.client.json does not override the Dockerfile with a worse comm
 });
 
 describe('server/Dockerfile is development-only, which is why Railpack builds the API', () => {
-  const dockerfile = readDockerfile('server/Dockerfile');
+  const dockerfile = readRepoFile('server/Dockerfile');
 
   /*
     Pinning the API service to `DOCKERFILE` would hand it this file's last stage,

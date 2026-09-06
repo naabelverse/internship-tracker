@@ -27,8 +27,29 @@ CMD ["npm", "run", "dev", "--workspace", "client"]
 FROM deps AS build
 COPY tsconfig.base.json ./
 COPY client ./client
-# `build:deploy` rather than `build`: it strips the source maps out of dist/
-# after building, so the served output cannot be read back as source.
+# Vite inlines `import.meta.env.VITE_*` at build time: the value is substituted
+# into the bundle as a string literal and never read again, so a container's
+# runtime environment cannot influence it. Railway makes every service variable
+# available to the build, but Docker only lets a stage see what it declares, and
+# an undeclared ARG is absent with no warning from either side. Without these the
+# bundle ships the localhost defaults from `src/lib/env.ts`, which surfaces only
+# as a CORS failure in the browser.
+#
+# Declared in *this* stage specifically: ARGs do not cross stage boundaries, so
+# declaring them earlier would leave the build seeing nothing.
+ARG VITE_API_URL
+ARG VITE_APP_URL
+ARG VITE_DEMO_ENABLED
+ARG VITE_SENTRY_DSN
+# Promoted to ENV because an ARG is visible to the Dockerfile's own instructions
+# but is not exported into a RUN's environment, which is where `vite build` looks.
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_APP_URL=$VITE_APP_URL \
+    VITE_DEMO_ENABLED=$VITE_DEMO_ENABLED \
+    VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+# `build:deploy` rather than `build`: it refuses to build without a real API and
+# app URL, then strips the source maps out of dist/ after building, so the served
+# output cannot be read back as source.
 RUN npm run build:deploy --workspace client
 
 FROM deps AS prod

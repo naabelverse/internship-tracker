@@ -2064,3 +2064,31 @@ The half deferred when the phase was split. Closes Phase 11.
 
 - **`EXPOSE 4173` is kept although Railway ignores it.** It documents a plain `docker run`, and it is
   tied by test to the start command's fallback so it cannot come to advertise a port nothing binds.
+
+- **The localhost fallbacks in `client/src/lib/env.ts` stay.** They are what lets a fresh checkout run
+  `npm run dev` with no `.env` at all, which is worth keeping. What was wrong was not the fallback but
+  that a deploy build could reach it silently: Vite inlines `VITE_*` at build time, so the fallback
+  became a permanent string in the shipped bundle and surfaced only as a CORS failure in a visitor's
+  browser. `build:deploy` now runs `scripts/checkDeployEnv.mjs` first and refuses to build when
+  `VITE_API_URL` or `VITE_APP_URL` is unset or points at localhost, which makes the fallback
+  unreachable from a deploy without removing it from development.
+
+- **The check rejects localhost, not just absence.** The failure that actually shipped had the
+  variables set correctly on the Railway service; the Docker build simply could not see them. A check
+  for presence alone would have passed in exactly the case that broke.
+
+- **It is wired into `build:deploy` rather than `build`.** `npm run verify`, CI and a plain local
+  build use `build`, and none of them have or need a deployed API URL. Putting the assertion on the
+  deploy path only keeps the build that must be configured strict and the build that must not be
+  configured quiet.
+
+- **`ARG` is declared in the `build` stage specifically, and promoted to `ENV`.** ARGs do not cross
+  stage boundaries, and an ARG is not exported into a `RUN`'s environment on its own, so either
+  mistake reproduces the original bug exactly. `client/tests/config/dockerfileBuildArgs.test.ts`
+  derives the required list by scanning the client source for `import.meta.env.VITE_*` rather than
+  hardcoding it, so a variable added later is covered without anyone remembering to update the test.
+
+- **DEPLOYMENT.md already documented the `ARG` pattern — for the wrong Dockerfile.** The Caddy
+  alternative in section 5.4 carried it; the Dockerfile actually in use did not, and the surrounding
+  prose said Railway "handles" build-time variables, which is half true and was the misleading half.
+  Corrected in place rather than appended to, since the wrong sentence was the one being read.

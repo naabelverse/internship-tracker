@@ -452,11 +452,60 @@ Set these on the **`web` service**, not the `api` service and not "shared across
 Railway scopes variables per service, and a `VITE_*` value sitting on the API service is simply never
 read by anything.
 
-Vite inlines `VITE_*` values **at build time**, not at runtime. Changing one in the dashboard does
-nothing until you redeploy — and because the build happens inside the Docker image in 5.3, the
-variables must be visible to that build, which Railway handles by passing service variables in as
-build arguments. If a changed value does not appear in the served bundle, redeploy rather than
-restart.
+Vite inlines `VITE_*` values **at build time**, not at runtime. The value is substituted into the
+bundle as a string literal and never read again, so a running container's environment cannot change
+it: if a changed value does not appear in the served bundle, redeploy rather than restart.
+
+**Setting them on the service is necessary but not sufficient, and this has already bitten once.**
+Railway makes every service variable available to the build and passes them to a Docker build as
+build arguments — but Docker is the half that isolates. A build stage sees only the arguments it
+declares, and an undeclared `ARG` is simply absent, with no warning from Railway, from Docker or from
+Vite. The build succeeds, and the bundle carries the localhost fallbacks from `client/src/lib/env.ts`
+instead. The first symptom is the deployed site calling `http://localhost:5000` and failing CORS in
+the visitor's browser.
+
+So `client/Dockerfile`'s `build` stage declares each one and exports it before the build runs:
+
+```dockerfile
+ARG VITE_API_URL
+ARG VITE_APP_URL
+ARG VITE_DEMO_ENABLED
+ARG VITE_SENTRY_DSN
+ENV VITE_API_URL=$VITE_API_URL     VITE_APP_URL=$VITE_APP_URL     VITE_DEMO_ENABLED=$VITE_DEMO_ENABLED     VITE_SENTRY_DSN=$VITE_SENTRY_DSN
+RUN npm run build:deploy --workspace client
+```
+
+Two details that are easy to get wrong:
+
+- **`ARG` does not cross stage boundaries.** Declaring these in an earlier stage leaves the stage that
+  actually builds seeing nothing. They belong in the stage with the build command.
+- **`ARG` alone does not reach the build process.** An `ARG` is visible to the Dockerfile's own
+  instructions but is not exported into a `RUN`'s environment, which is where `vite build` looks. The
+  `ENV` line is what puts them in front of it.
+
+**Nothing extra is needed in the dashboard.** Railway has no separate "build variables" section —
+service variables are available to both build and runtime, so variables already set on the `web`
+service are enough once the Dockerfile declares them.
+
+Two things now fail loudly rather than shipping a broken bundle. `npm run build:deploy` runs
+`client/scripts/checkDeployEnv.mjs` first, which refuses to build when `VITE_API_URL` or
+`VITE_APP_URL` is unset or still points at localhost; and
+`client/tests/config/dockerfileBuildArgs.test.ts` scans the client source for every
+`import.meta.env.VITE_*` it reads and fails if any is not declared and exported in the build stage, so
+a variable added later cannot go missing the same way. `npm run build` is deliberately left alone, so
+a plain local build and CI need no configuration.
+
+To check a change to this before deploying, build with a value you can recognise and look for it in
+the output:
+
+```bash
+docker build -f client/Dockerfile --target prod -t client-check   --build-arg VITE_API_URL=https://api-proof.example.com   --build-arg VITE_APP_URL=https://app-proof.example.com .
+docker run --rm --entrypoint sh client-check   -c "grep -rho 'https://api-proof.example.com' /app/client/dist/assets/ | head -1"
+```
+
+A hit means the value was inlined. `localhost:5000` also still appears once in the bundle after this
+— that is the fallback _argument_ in `src/lib/env.ts`, which is inert whenever the variable is set;
+the inlined value is the first argument beside it.
 
 You can use a reference variable here too, so the client always points at the sibling API:
 
