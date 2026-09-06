@@ -854,6 +854,39 @@ Resend 3,000/month, SendGrid 100/day, Mailgun 100/day.
 
 Port 465 is implicit TLS; 587 starts in the clear and upgrades with STARTTLS. Both are fine.
 
+> **If every SMTP port times out, the host is blocking SMTP — this is observed on Railway.**
+>
+> Symptom: `Connection timeout` on 465, 2465, 587 and 2587 alike, on every redeploy, with a
+> correct host and a valid key. Changing provider does not help and neither does changing port,
+> because nothing is wrong with the provider, the credential or the queue — the queue is retrying
+> correctly and logging the real failure. Blocking outbound SMTP wholesale is a common anti-abuse
+> posture on shared PaaS networks.
+>
+> **The escape hatch is to stop using SMTP.** Set two variables on the API service and redeploy:
+>
+> ```
+> MAIL_TRANSPORT=resend-api
+> RESEND_API_KEY=re_…
+> ```
+>
+> Mail then goes to `https://api.resend.com/emails` over 443, which is not subject to the block.
+> The `SMTP_*` variables are ignored in this mode and can be left unset. Create the key at
+> <https://resend.com/api-keys>.
+>
+> Everything else is identical, by construction rather than by promise: `resend-api` implements the
+> same `MailTransport` contract as SMTP, so the same six templates, the same three-attempt retry with
+> exponential backoff, the same `List-Unsubscribe` headers and the same guarantee that a failed send
+> never fails the HTTP request that triggered it all apply unchanged. The only difference is which
+> socket the message leaves by. `server/tests/mail.resendTransport.test.ts` drives the real queue and
+> the real templates through it to hold that true.
+>
+> **The DNS records in 7.2 are still required.** This changes the transport, not the sender: SPF,
+> DKIM and DMARC are about the domain you send from, and Resend verifies them the same way for its
+> HTTP API as for its SMTP endpoint. An unverified domain fails with `403`, not a timeout.
+>
+> This is not Railway-specific advice. Any host that blocks outbound SMTP has the same symptom and
+> the same fix.
+
 **You must send from a domain you control.** `MAIL_FROM=Internship Tracker <no-reply@gmail.com>` will
 be rejected or spam-filed by essentially every receiver, because Gmail publishes a DMARC policy
 saying nobody else may send as `gmail.com`, and you are not Gmail. The same applies to Outlook, Yahoo
@@ -1250,17 +1283,18 @@ refuses to start on a bad configuration, listing every problem at once.
 
 ### Recommended
 
-| Variable                      | Example                                             | Notes                                                     |
-| ----------------------------- | --------------------------------------------------- | --------------------------------------------------------- |
-| `MAIL_FROM`                   | `Internship Tracker <no-reply@tracker.example.com>` | Real display name, domain you control. See 7.1.           |
-| `MAIL_TRANSPORT`              | `smtp`                                              | Refuses to boot without `SMTP_HOST`, on purpose.          |
-| `SMTP_HOST`                   | `smtp.resend.com`                                   |                                                           |
-| `SMTP_PORT`                   | `587`                                               | 465 for implicit TLS.                                     |
-| `SMTP_USER`                   | `resend`                                            |                                                           |
-| `SMTP_PASS`                   | …                                                   | Secret — the provider API key.                            |
-| `LOG_LEVEL`                   | `info`                                              | `debug` is noisy and can be expensive on a log quota.     |
-| `ENABLE_CRON`                 | `true`                                              | Reminder digests, weekly summaries, purge and demo reset. |
-| `MONGOMS_DISABLE_POSTINSTALL` | `1`                                                 | Build-time only. See 4.2.                                 |
+| Variable                      | Example                                             | Notes                                                                                                  |
+| ----------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `MAIL_FROM`                   | `Internship Tracker <no-reply@tracker.example.com>` | Real display name, domain you control. See 7.1.                                                        |
+| `MAIL_TRANSPORT`              | `smtp`                                              | Or `resend-api` where outbound SMTP is blocked. Refuses to boot without the credential its mode needs. |
+| `SMTP_HOST`                   | `smtp.resend.com`                                   |                                                                                                        |
+| `SMTP_PORT`                   | `587`                                               | 465 for implicit TLS.                                                                                  |
+| `SMTP_USER`                   | `resend`                                            |                                                                                                        |
+| `SMTP_PASS`                   | …                                                   | Secret — the provider API key.                                                                         |
+| `RESEND_API_KEY`              | `re_…`                                              | Secret. Required when `MAIL_TRANSPORT=resend-api`; unused otherwise.                                   |
+| `LOG_LEVEL`                   | `info`                                              | `debug` is noisy and can be expensive on a log quota.                                                  |
+| `ENABLE_CRON`                 | `true`                                              | Reminder digests, weekly summaries, purge and demo reset.                                              |
+| `MONGOMS_DISABLE_POSTINSTALL` | `1`                                                 | Build-time only. See 4.2.                                                                              |
 
 ### Optional
 

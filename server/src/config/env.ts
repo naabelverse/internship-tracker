@@ -74,11 +74,17 @@ const baseSchema = z.object({
    * the app boot and register with zero email configuration, per SPEC section 13.
    */
   MAIL_FROM: z.string().min(1).default('Internship Tracker <no-reply@localhost>'),
-  MAIL_TRANSPORT: z.enum(['smtp', 'console']).optional(),
+  MAIL_TRANSPORT: z.enum(['smtp', 'console', 'resend-api']).optional(),
   SMTP_HOST: z.string().min(1).optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASS: z.string().min(1).optional(),
+  /**
+   * Resend's HTTP API, for hosts that block outbound SMTP on every port —
+   * Railway does, which is why this mode exists. Unrelated to `SMTP_PASS`: this
+   * is a bearer token sent to `api.resend.com` over 443, not a relay credential.
+   */
+  RESEND_API_KEY: z.string().min(1).optional(),
 
   /** Local hour at which a user receives their reminder digest. */
   REMINDER_DIGEST_HOUR: z.coerce.number().int().min(0).max(23).default(8),
@@ -184,11 +190,16 @@ export const envSchemaWithStorage = envSchema.superRefine((value, ctx) => {
 });
 
 /**
- * Asking for SMTP without a host is the one mail misconfiguration worth refusing
- * to boot over. Every other combination has a defensible reading — no host at
- * all means the console transport, which SPEC section 13 requires to work — but
- * `MAIL_TRANSPORT=smtp` with nothing to connect to is someone believing mail is
- * being delivered when none of it can be.
+ * Naming a transport whose credential is missing is the one class of mail
+ * misconfiguration worth refusing to boot over. Every other combination has a
+ * defensible reading — no configuration at all means the console transport,
+ * which SPEC section 13 requires to work — but asking for a delivering transport
+ * that cannot possibly deliver is someone believing mail is going out when none
+ * of it can.
+ *
+ * One rule per transport, so each mode's requirement is stated where it can be
+ * read rather than inferred: `smtp` needs somewhere to connect, `resend-api`
+ * needs a key to authenticate with. `console` needs nothing.
  */
 export const envSchemaWithMail = envSchemaWithStorage.superRefine((value, ctx) => {
   if (value.MAIL_TRANSPORT === 'smtp' && !value.SMTP_HOST) {
@@ -196,6 +207,14 @@ export const envSchemaWithMail = envSchemaWithStorage.superRefine((value, ctx) =
       code: z.ZodIssueCode.custom,
       path: ['SMTP_HOST'],
       message: 'is required when MAIL_TRANSPORT is smtp',
+    });
+  }
+
+  if (value.MAIL_TRANSPORT === 'resend-api' && !value.RESEND_API_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['RESEND_API_KEY'],
+      message: 'is required when MAIL_TRANSPORT is resend-api',
     });
   }
 });

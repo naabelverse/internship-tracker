@@ -20,6 +20,8 @@ const SENSITIVE_KEYS = new Set([
   'secret',
   'jwt_access_secret',
   'jwt_refresh_secret',
+  'resend_api_key',
+  'apikey',
   'html',
   'text',
 ]);

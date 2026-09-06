@@ -1,18 +1,25 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { env, isProduction } from '@/config/env';
 import { logger } from '@/config/logger';
+import { createResendTransport } from '@/mail/resendTransport';
 import type { MailKind } from '@/mail/types';
 
 /**
  * The provider seam. Everything above this line renders messages; everything
- * below it is nodemailer.
+ * below it delivers them.
  *
  * Provider-agnostic by construction: Resend, SendGrid, Mailgun and a plain relay
  * all expose SMTP, so a host, a port and a credential pair reach any of them.
- * There is no provider SDK to swap and no code path per vendor.
+ *
+ * `resend-api` is the exception, and it earns it. Some hosts block outbound SMTP
+ * on every port as an anti-spam measure — Railway does — which leaves a
+ * correctly configured relay timing out with nothing wrong on either end. That
+ * mode sends over HTTPS instead, and lives in its own module so this one stays
+ * the SMTP path. Both satisfy the same `MailTransport` contract, so the queue,
+ * the retry schedule and the templates cannot tell them apart.
  */
 
-export type MailTransportMode = 'smtp' | 'console';
+export type MailTransportMode = 'smtp' | 'console' | 'resend-api';
 
 export interface OutgoingMessage {
   to: string;
@@ -33,17 +40,24 @@ export interface MailTransport {
  * Console unless SMTP is actually configured.
  *
  * An explicit `MAIL_TRANSPORT` wins, and the zod loader has already refused the
- * one incoherent combination (`smtp` with no host). Otherwise the presence of
- * `SMTP_HOST` is the signal, which is what makes zero email configuration a
- * working state rather than a boot failure.
+ * incoherent combinations (`smtp` with no host, `resend-api` with no key).
+ * Otherwise a present credential is the signal, which is what makes zero email
+ * configuration a working state rather than a boot failure.
+ *
+ * `RESEND_API_KEY` is checked before `SMTP_HOST` because someone who has set
+ * both has almost certainly just moved off a blocked SMTP port and left the old
+ * values behind; picking the one that cannot connect would be a peculiar reading
+ * of the same configuration.
  */
 export function resolveTransportMode(): MailTransportMode {
   if (env.MAIL_TRANSPORT) return env.MAIL_TRANSPORT;
+  if (env.RESEND_API_KEY) return 'resend-api';
 
   return env.SMTP_HOST ? 'smtp' : 'console';
 }
 
-function buildTransporter(mode: MailTransportMode): Transporter {
+/** The two modes nodemailer serves. `resend-api` never reaches here. */
+function buildTransporter(mode: Exclude<MailTransportMode, 'resend-api'>): Transporter {
   if (mode === 'console') {
     // `jsonTransport` runs the real MIME build — headers, both alternatives,
     // encoding — and hands back the result instead of opening a socket. So the
@@ -93,6 +107,11 @@ function printToConsole(message: OutgoingMessage): void {
 
 export function createMailTransport(): MailTransport {
   const mode = resolveTransportMode();
+
+  // Delegated whole rather than wrapped: this mode opens no SMTP socket, so
+  // there is no nodemailer transporter for it to build.
+  if (mode === 'resend-api') return createResendTransport();
+
   const transporter = buildTransporter(mode);
 
   return {

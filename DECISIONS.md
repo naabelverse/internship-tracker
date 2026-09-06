@@ -2092,3 +2092,31 @@ The half deferred when the phase was split. Closes Phase 11.
   alternative in section 5.4 carried it; the Dockerfile actually in use did not, and the surrounding
   prose said Railway "handles" build-time variables, which is half true and was the misleading half.
   Corrected in place rather than appended to, since the wrong sentence was the one being read.
+
+- **`resend-api` is a third `MailTransport`, not a mail rewrite.** Phase 12 already had the right
+  seam: `MailTransport` is `{ mode, send(message) }` and the queue owns retrying, so an HTTP sender
+  is a new implementation behind it rather than a parallel system. Nothing above the seam changed —
+  the queue, the three-attempt backoff, the preference gate, the request-isolation guarantee and all
+  six templates are shared code, and the test suite drives the real queue and real templates through
+  the new transport rather than doubling them.
+
+- **Raw `fetch`, not the `resend` npm package.** Node 20 ships `fetch`, the call is one POST, and
+  `transport.ts` states the module's design as "no provider SDK to swap and no code path per vendor".
+  A dependency for a single documented endpoint would cut against that for no gain, and it keeps the
+  provider swappable if Resend is ever replaced.
+
+- **SMTP remains the default and is untouched.** `resolveTransportMode` still falls back to
+  `SMTP_HOST` and then console; `RESEND_API_KEY` is only consulted ahead of `SMTP_HOST` when no
+  explicit `MAIL_TRANSPORT` is set, on the reasoning that someone with both has just moved off a
+  blocked SMTP port and left the old values behind.
+
+- **Permanent errors are retried like transient ones.** `isRetryableStatus` classifies 429 and 5xx
+  as retryable and 401/403/422 as not, but the classification only enriches the log line: the queue
+  retries every rejection three times. Short-circuiting permanent failures would be a
+  transport-specific rule in shared code, and SMTP already retries a bad password the same way.
+  Consistency beat the small saving.
+
+- **No real send was made.** There is no Resend account or API key in this environment, and using a
+  real key or sending to a real address was not something to improvise. The suite stubs `fetch` at
+  the transport boundary and asserts the exact request Resend documents — endpoint, bearer header,
+  content type and body shape — so the first real send is the first thing the credential is used for.
