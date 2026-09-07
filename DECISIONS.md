@@ -2236,3 +2236,20 @@ The half deferred when the phase was split. Closes Phase 11.
   semantic that is conventionally green and independent of the brand colour. Amber and red were
   untouched for the same reason. `chart-1` and both heat ramps were re-derived from the violet,
   because those are primary-derived and would otherwise have been visibly leftover jade.
+
+## Contact address
+
+- **`CONTACT_EMAIL` was filled with a project alias, not a personal inbox.** CLAUDE.md says never
+  to commit a real email address. That rule exists to stop personal addresses leaking into code,
+  fixtures and seeds — but Terms, Privacy, `SECURITY.md` and the footer all need a reachable
+  contact by definition, so a public deployment cannot satisfy both readings at once. The conflict
+  was raised rather than resolved silently, and the operator chose
+  `naabel.workspace@gmail.com`: a real, reachable alias that is not the maintainer's personal
+  address. Recorded here because it is a deliberate exception to a hard rule, not an oversight.
+
+- **Only three files changed, and the markdown keeps its placeholder.** `siteMeta.ts` is the one
+  constant; `LegalPage` substitutes `{{CONTACT_EMAIL}}` into `terms.md` and `privacy.md` at render,
+  so those sources still carry the token and `legal.test.tsx` still asserts it. `SECURITY.md` and
+  `CODE_OF_CONDUCT.md` are read on GitHub rather than through the app, so nothing substitutes for
+  them and they were edited directly. Phase 13's note that the test "will start failing once you
+  replace it" assumed the markdown would be edited too; via the constant, it does not.

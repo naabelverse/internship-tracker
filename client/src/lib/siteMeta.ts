@@ -6,7 +6,7 @@
  * for, kept here as well as in the markdown so the footer's mailto and the legal
  * text are filled in from one place rather than two.
  */
-export const CONTACT_EMAIL = '{{CONTACT_EMAIL}}';
+export const CONTACT_EMAIL = 'naabel.workspace@gmail.com';
 
 export const REPO_URL = 'https://github.com/naabelverse/internship-tracker';
 
