@@ -816,6 +816,27 @@ not exist yet. **None of them is blocked by code.**
 
 ---
 
+## Additional work (not a SPEC phase)
+_Dated notes on work outside the numbered phases. Not a checklist._
+
+- **2026-09-07 — visual identity redesign ("Dispatch"), PR #2.** Replaced the templated
+  slate-and-indigo look across every surface: Archivo Variable as one superfamily using its width
+  axis for headings, a petrol base with a jade primary on the rule that only amber and red mean
+  urgency, and radii that encode hierarchy rather than one value everywhere. Colour and radius
+  needed no per-page work — every component already read the semantic tokens, so both propagated
+  through the theme config. Rationale in `DECISIONS.md`.
+- Two bugs surfaced by that work, both fixed in the same PR:
+  - **Calendar accessibility, pre-existing.** `role="grid"` owned its gridcells with no
+    `role="row"` between them — two critical axe violations across all 42 cells. Phase 15's axe
+    spec never visited `/calendar`, so nothing had looked. Fixed by wrapping weeks in
+    `display: contents`, which changes no layout and no DOM order.
+  - **Token contrast gate too narrow.** It composited each pill tint over `surface` only, the
+    lightest of the three grounds; axe found a 4.48:1 badge on the board, which sits on
+    `surface-muted`. The gate now checks every surface a tint is painted on, and all five light
+    semantics were darkened to clear it.
+
+---
+
 ## Manual steps waiting on me (the human)
 _The agent appends anything it cannot do itself here — DNS records, account signups, secrets to generate._
 
