@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { BrandMark } from '@/components/marketing/MarketingChrome';
 
 interface AuthSplitLayoutProps {
   title: string;
@@ -27,21 +28,23 @@ export function AuthSplitLayout({
   return (
     <div className="grid min-h-screen bg-canvas lg:grid-cols-2">
       <aside className="hidden flex-col justify-between bg-surface p-10 lg:flex">
-        <span className="text-sm font-semibold tracking-tight text-content">
-          Internship Tracker
+        <span className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-content">
+          <BrandMark className="h-4 w-4 text-primary" />
+          <span className="stretch-wide">Internship Tracker</span>
         </span>
 
         <div className="space-y-6">
-          <p className="max-w-sm text-2xl font-semibold leading-snug tracking-tight text-content">
+          <p className="max-w-[16ch] text-display-md stretch-wide text-content">
             Stop guessing where your applications stand.
           </p>
-          <ul className="space-y-3">
+          {/* Ruled rather than bulleted, to match the ledger language the rest
+              of the redesign uses. */}
+          <ul className="max-w-sm divide-y divide-border border-t border-border">
             {HIGHLIGHTS.map((highlight) => (
-              <li key={highlight} className="flex gap-3 text-sm text-content-muted">
-                <span
-                  aria-hidden="true"
-                  className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
-                />
+              <li
+                key={highlight}
+                className="py-3 text-sm leading-relaxed text-content-muted nums-proportional"
+              >
                 {highlight}
               </li>
             ))}
@@ -57,8 +60,8 @@ export function AuthSplitLayout({
         </div>
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-content">{title}</h1>
-          <p className="mt-1.5 text-sm text-content-muted">{subtitle}</p>
+          <h1 className="text-display-sm stretch-wide text-content">{title}</h1>
+          <p className="mt-2 text-sm text-content-muted nums-proportional">{subtitle}</p>
 
           <div className="mt-8">{children}</div>
 

@@ -62,7 +62,7 @@ export function ThemeToggle(): JSX.Element {
               choose(option);
             }}
             className={cn(
-              'rounded-[0.4rem] p-1.5 transition-colors',
+              'rounded-chip p-1.5 transition-colors',
               selected
                 ? 'bg-primary text-primary-fg'
                 : 'text-content-subtle hover:bg-surface-muted hover:text-content',

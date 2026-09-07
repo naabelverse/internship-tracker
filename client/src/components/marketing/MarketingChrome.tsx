@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { APP_TAGLINE, CONTACT_EMAIL, REPO_URL } from '@/lib/siteMeta';
 import { paths } from '@/routes/paths';
 
@@ -53,8 +54,17 @@ export function MarketingHeader(): JSX.Element {
           </span>
         </Link>
 
+        {/*
+          The same `ThemeToggle` the app shell and the auth pages render, so the
+          logged-out surface drives the one theme store rather than a second
+          mechanism: it writes the same storage key the inline boot script in
+          index.html reads, which is what keeps the no-flash behaviour intact
+          here. Signed out there is no account to sync to, and the component
+          already handles that case.
+        */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <Link to={paths.login} className={`${LINK} whitespace-nowrap px-3 py-2`}>
+          <ThemeToggle />
+          <Link to={paths.login} className={`${LINK} whitespace-nowrap px-2 py-2 sm:px-3`}>
             Sign in
           </Link>
           <Link
