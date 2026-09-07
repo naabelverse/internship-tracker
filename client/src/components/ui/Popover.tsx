@@ -66,7 +66,7 @@ export function Popover({ label, trigger, children, align = 'left' }: PopoverPro
           role="group"
           aria-label={label}
           className={cn(
-            'absolute z-30 mt-2 max-h-80 w-60 overflow-y-auto rounded-card border border-border bg-surface p-2 shadow-card',
+            'absolute z-30 mt-2 max-h-80 w-60 overflow-y-auto rounded-card border border-border bg-surface p-2 shadow-float',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >

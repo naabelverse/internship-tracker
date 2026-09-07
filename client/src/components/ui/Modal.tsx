@@ -58,7 +58,7 @@ export function Modal({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'relative flex max-h-[92vh] w-full flex-col rounded-t-card border border-border bg-surface shadow-card',
+          'atmos-lit relative flex max-h-[92vh] w-full flex-col rounded-t-card border border-border bg-surface shadow-float',
           'sm:rounded-card',
           size === 'lg' ? 'sm:max-w-3xl' : 'sm:max-w-lg',
         )}

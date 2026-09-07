@@ -2438,3 +2438,45 @@ The half deferred when the phase was split. Closes Phase 11.
 - **Hero only.** `atmos-field`, `atmos-lit` and `shadow-float` are applied to one surface so the
   treatment could be approved before it spread. Propagating them to the remaining landing
   sections and the app panels is deliberately left as separate work.
+
+## Phase 17c propagation — the two floating overlays
+
+- **Executed 2026-09-08. This is a new decision, not the execution of a previously approved
+  list.** The Phase 17c entry above closed with "Hero only" and deferred propagation to "the
+  remaining landing sections and the app panels". No surface list was ever recorded anywhere in
+  this repo — the deferral is the only text on the subject. This pass deliberately takes neither
+  of the two groups that deferral named; it takes the two shared overlay primitives instead, and
+  the landing sections and the app panels stay deferred exactly as they were.
+
+- **`Modal` gets `shadow-float` and `atmos-lit`. `Popover` gets `shadow-float` only.** Two class
+  changes, both replacing `shadow-card`, and nothing else in the tree was touched.
+
+- **These two were already singled out, which is why they go first.** Phase 17's "flat panels lost
+  their shadow" bullet stripped the shadow from every card and kept one on Modal, Popover and the
+  error boundary, "because those genuinely float above the page". `shadow-float` is the
+  atmosphere-aware form of that same judgement — a lit top edge, a contact shadow, and a coloured
+  cast that reads as a glow on the dark canvas — so on those two surfaces it replaces `shadow-card`
+  rather than introducing a new idea.
+
+- **`Popover` does not get the glaze, and that asymmetry is the point.** `.atmos-lit` fades its
+  glaze out by 38% of the element's height, which on a 20rem panel is a soft top band and on a
+  menu 15rem wide with 0.5rem of padding would tint the first row or two and stop — a gradient
+  artifact sitting behind text, not a lit surface. The lit top edge Popover does get comes from
+  `shadow-float`'s inset highlight, which is a 1px line and therefore height-independent.
+
+- **The contrast gate needed no widening, and that was checked rather than assumed.** The gate's
+  `glazed` case composites `--atmos-glaze` over `--color-surface` at peak alpha and asserts all
+  three body tokens and all five semantics against it. Modal is `bg-surface` plus `atmos-lit` —
+  the identical composition to the hero panel already covered — so the existing assertions cover
+  the new surface as written. Popover changes no background at all and is contrast-neutral.
+  116 assertions pass in both themes.
+
+- **Everything else was left alone on purpose.** ScreenshotSection, FeatureCards, HowItWorks,
+  FaqAccordion, the dashboard, the auth pages, the error boundary, the sidebar drawer, the toasts
+  and every card and table keep what they have. The error boundary is the third surface Phase 17
+  named as genuinely floating and is the most obvious candidate to follow; it is still out of
+  scope here. Spreading a treatment one approved surface at a time is the whole reason the hero
+  entry held it to one.
+
+- **No bundle movement.** The landing closure stays at 113.3 KB gzip, and neither class adds a
+  declaration to the stylesheet — both already exist for the hero.
