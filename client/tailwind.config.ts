@@ -111,6 +111,22 @@ export default {
         card: '0 1px 2px 0 rgb(var(--color-shadow) / 0.06), 0 8px 24px -12px rgb(var(--color-shadow) / 0.28)',
         panel:
           '0 1px 0 0 rgb(var(--color-shadow) / 0.04), 0 24px 60px -32px rgb(var(--color-shadow) / 0.45)',
+        /*
+         * A panel that genuinely floats, built from the atmosphere tokens: a lit
+         * top edge, a tight contact shadow, then a wide *coloured* cast.
+         *
+         * The colour is the load-bearing part. A black shadow on a near-black
+         * canvas is invisible, so a dark theme built on one reads flat however
+         * large the blur gets. `--atmos-cast` is lighter than the dark canvas
+         * rather than darker, which makes the same declaration read as a shadow
+         * in light mode and as a glow in dark mode.
+         */
+        float: [
+          'inset 0 1px 0 0 rgb(var(--atmos-lift) / var(--atmos-lift-peak))',
+          '0 1px 2px 0 rgb(var(--color-shadow) / 0.08)',
+          '0 2px 8px -4px rgb(var(--color-shadow) / 0.12)',
+          '0 40px 80px -32px rgb(var(--atmos-cast) / var(--atmos-cast-peak))',
+        ].join(', '),
       },
       ringColor: {
         DEFAULT: token('color-ring'),

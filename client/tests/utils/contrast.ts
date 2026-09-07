@@ -15,6 +15,14 @@ const BLOCK_RE = /(:root|\[data-theme='dark'\])\s*\{([^}]*)\}/g;
 
 const CHANNELS_RE = /--([a-z0-9-]+):\s*(\d+ \d+ \d+);/g;
 
+/**
+ * The plain-number tokens, which is how the atmosphere layer stores its alphas.
+ * Deliberately a second pattern rather than a looser one: `CHANNELS_RE` above
+ * has to keep rejecting anything that is not three channels, or a stray token
+ * would be read as a colour.
+ */
+const SCALAR_RE = /--([a-z0-9-]+):\s*(\d*\.?\d+);/g;
+
 /** The token values one theme block actually ships, keyed without the `--`. */
 export function readThemeTokens(theme: 'light' | 'dark'): Record<string, Rgb> {
   const css = readFileSync(CSS_PATH, 'utf8');
@@ -30,6 +38,22 @@ export function readThemeTokens(theme: 'light' | 'dark'): Record<string, Rgb> {
   }
 
   return tokens;
+}
+
+/** The scalar token values one theme block ships, keyed without the `--`. */
+export function readThemeNumbers(theme: 'light' | 'dark'): Record<string, number> {
+  const css = readFileSync(CSS_PATH, 'utf8');
+  const selector = theme === 'light' ? ':root' : "[data-theme='dark']";
+  const block = [...css.matchAll(BLOCK_RE)].find((match) => match[1] === selector);
+
+  if (!block) throw new Error(`No ${theme} token block found in src/index.css`);
+
+  const values: Record<string, number> = {};
+  for (const [, name, value] of block[2].matchAll(SCALAR_RE)) {
+    values[name] = Number(value);
+  }
+
+  return values;
 }
 
 function channel(value: number): number {

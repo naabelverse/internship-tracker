@@ -72,6 +72,37 @@
   --color-heat-2: 180 158 230;
   --color-heat-3: 146 107 215;
   --color-heat-4: 110 56 184;
+
+  /*
+   * Atmosphere: one light source, and the texture it reveals. Decorative only.
+   * Every value here is painted on a pseudo-element behind the content or as a
+   * shadow around it - never as a text colour, and never as a translucent
+   * background a text token would have to be measured against. The two layers
+   * that do fall under text, the hero lamp and the panel glaze, are checked at
+   * their peak alpha by `tests/a11y/tokenContrast.test.ts`.
+   *
+   * Light mode is not dark mode with the numbers flipped, and it is not the
+   * same numbers either. Both themes ADD light at the lamp and fall back to
+   * their own canvas away from it - which means the atmosphere can only ever
+   * lift a pale canvas towards white and deepen a near-black one towards black.
+   * Neither theme can push a background past a value the gate above already
+   * checks. That is a property, not a coincidence: a violet lamp that tinted
+   * this canvas *darker* dropped text-subtle to 4.27:1, because text-subtle
+   * clears the plain canvas by only 4.90:1 and has nowhere to go.
+   */
+  --atmos-light: 238 227 255;
+  --atmos-light-peak: 1;
+  --atmos-deep: 255 255 255;
+  --atmos-deep-peak: 0.38;
+  --atmos-grade-axis: to bottom;
+  --atmos-grid: 13 26 28;
+  --atmos-grid-peak: 0.055;
+  --atmos-lift: 255 255 255;
+  --atmos-lift-peak: 0.9;
+  --atmos-glaze: 255 255 255;
+  --atmos-glaze-peak: 0.6;
+  --atmos-cast: 104 46 179;
+  --atmos-cast-peak: 0.2;
 }
 
 [data-theme='dark'] {
@@ -109,6 +140,26 @@
   --color-heat-2: 94 68 140;
   --color-heat-3: 133 97 197;
   --color-heat-4: 175 146 234;
+
+  /*
+   * The cast is deliberately lighter than the canvas rather than darker: a black
+   * shadow on an 11 19 21 ground is invisible, which is the actual reason dark
+   * interfaces read flat. What reads as depth here is a violet glow pooling
+   * under a panel, not a shadow.
+   */
+  --atmos-light: 149 103 224;
+  --atmos-light-peak: 0.2;
+  --atmos-deep: 0 0 0;
+  --atmos-deep-peak: 0.42;
+  --atmos-grade-axis: to top;
+  --atmos-grid: 154 175 178;
+  --atmos-grid-peak: 0.05;
+  --atmos-lift: 227 237 235;
+  --atmos-lift-peak: 0.08;
+  --atmos-glaze: 178 151 234;
+  --atmos-glaze-peak: 0.05;
+  --atmos-cast: 133 85 210;
+  --atmos-cast-peak: 0.45;
 }
 
 @layer base {
@@ -141,6 +192,79 @@
   /* Shared skeleton shimmer so no async surface has to hand-roll one. */
   .skeleton {
     @apply animate-pulse rounded-control bg-surface-muted;
+  }
+
+  /*
+   * The lit field. One lamp, up and to the right, sitting over the panel that
+   * carries the product's own content, with the canvas falling away from it.
+   *
+   * Two pseudo-elements rather than a stack of positioned divs: the treatment
+   * adds no DOM, and a pseudo-element cannot reach the accessibility tree, so
+   * there is no `aria-hidden` here for a later edit to drop. `isolation` keeps
+   * the negative z-index inside this element rather than letting it slide
+   * behind the shell's own canvas.
+   */
+  .atmos-field {
+    --atmos-grid-step: 4.5rem;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .atmos-field::before,
+  .atmos-field::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .atmos-field::before {
+    background-image:
+      radial-gradient(
+        64rem 40rem at 76% 6%,
+        rgb(var(--atmos-light) / var(--atmos-light-peak)),
+        rgb(var(--atmos-light) / 0) 62%
+      ),
+      linear-gradient(
+        var(--atmos-grade-axis),
+        rgb(var(--atmos-deep) / var(--atmos-deep-peak)),
+        rgb(var(--atmos-deep) / 0) 62%
+      );
+  }
+
+  /*
+   * The ruled board underneath, masked to the same shape as the lamp so it is
+   * revealed only where the light falls. A grid tiled edge to edge at one flat
+   * opacity is the tell; a grid you notice only after the light does is not.
+   */
+  .atmos-field::after {
+    background-image:
+      repeating-linear-gradient(
+        to right,
+        rgb(var(--atmos-grid) / var(--atmos-grid-peak)) 0 1px,
+        transparent 1px var(--atmos-grid-step)
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        rgb(var(--atmos-grid) / var(--atmos-grid-peak)) 0 1px,
+        transparent 1px var(--atmos-grid-step)
+      );
+    -webkit-mask-image: radial-gradient(56rem 34rem at 72% 2%, #000 8%, transparent 76%);
+    mask-image: radial-gradient(56rem 34rem at 72% 2%, #000 8%, transparent 76%);
+  }
+
+  /*
+   * A surface lit from above rather than a flat slab. The glaze is painted over
+   * an opaque background colour and fades out by 38%, so every stop stays
+   * opaque and the text on it is measured against a known value.
+   */
+  .atmos-lit {
+    background-image: linear-gradient(
+      to bottom,
+      rgb(var(--atmos-glaze) / var(--atmos-glaze-peak)),
+      rgb(var(--atmos-glaze) / 0) 38%
+    );
   }
 }
 

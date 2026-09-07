@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { composite, contrastRatio, readThemeTokens, type Rgb } from '../utils/contrast';
+import {
+  composite,
+  contrastRatio,
+  readThemeNumbers,
+  readThemeTokens,
+  type Rgb,
+} from '../utils/contrast';
 import { SERIES_TOKENS } from '@/features/dashboard/charts/chartTokens';
 
 /** SPEC section 6 asks for 4.5:1, which is WCAG AA for body text. */
@@ -121,5 +127,67 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
 
   it('separates the ends of the heatmap scale', () => {
     expect(contrastRatio(token('heat-4'), token('heat-0'))).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+});
+
+/*
+ * The atmosphere layer is decorative, but two of its layers are painted *under*
+ * text, so "decorative" is not on its own an argument that they are safe.
+ *
+ * The hero light source lifts the canvas towards violet, which in the dark theme
+ * moves every body token the wrong way. The panel glaze does the same to the
+ * surface. Both are opaque at every stop by construction — nothing in this layer
+ * uses `backdrop-filter`, so the value behind the text is knowable — and this is
+ * where that value gets checked, at each layer's peak alpha rather than at some
+ * average across the gradient.
+ *
+ * The vertical grade is checked too, even though it darkens in both themes and
+ * so can only help today. That assertion exists to catch the inversion: an
+ * `--atmos-deep` edited towards white would wash out the dark theme's text and
+ * nothing else here would notice.
+ */
+describe.each(['light', 'dark'] as const)('%s theme atmosphere', (theme) => {
+  const tokens = readThemeTokens(theme);
+  const alphas = readThemeNumbers(theme);
+
+  const rgb = (name: string): Rgb => {
+    const value = tokens[name];
+    if (!value) throw new Error(`Missing token --${name} in the ${theme} block`);
+    return value;
+  };
+
+  const alpha = (name: string): number => {
+    const value = alphas[name];
+    if (value === undefined) throw new Error(`Missing token --${name} in the ${theme} block`);
+    return value;
+  };
+
+  const token = (name: string): Rgb => rgb(`color-${name}`);
+
+  /** The canvas as it is actually painted at the brightest point of the lamp. */
+  const lit = composite(rgb('atmos-light'), token('canvas'), alpha('atmos-light-peak'));
+
+  /** The canvas at the far end of the vertical grade. */
+  const graded = composite(rgb('atmos-deep'), token('canvas'), alpha('atmos-deep-peak'));
+
+  /** The panel surface under the top of its glaze, where the glaze is strongest. */
+  const glazed = composite(rgb('atmos-glaze'), token('surface'), alpha('atmos-glaze-peak'));
+
+  it.each(BODY_TOKENS)('%s clears AA at the peak of the hero light source', (fg) => {
+    expect(contrastRatio(token(fg), lit)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  it.each(BODY_TOKENS)('%s clears AA at the far end of the vertical grade', (fg) => {
+    expect(contrastRatio(token(fg), graded)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  it.each(BODY_TOKENS)('%s clears AA under the panel glaze', (fg) => {
+    expect(contrastRatio(token(fg), glazed)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  // The panel carries status text, not just body copy: the hero's "in 2 days" is
+  // `text-warning` sitting directly on the glazed surface.
+  it.each(SEMANTIC_TOKENS)('%s clears AA as text on the glazed panel', (name) => {
+    expect(contrastRatio(token(name), glazed)).toBeGreaterThanOrEqual(AA_TEXT);
   });
 });
