@@ -12,7 +12,7 @@ export function NotFoundPage(): JSX.Element {
         </p>
         <Link
           to={paths.dashboard}
-          className="mt-6 inline-flex h-11 items-center rounded-control bg-primary px-4 text-sm font-medium text-primary-fg transition-colors hover:bg-primary-hover"
+          className="mt-6 inline-flex h-11 items-center rounded-control bg-primary-fill px-4 text-sm font-medium text-primary-fill-fg transition-colors hover:bg-primary-fill-hover"
         >
           Back to the dashboard
         </Link>

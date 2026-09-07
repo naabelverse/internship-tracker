@@ -69,7 +69,7 @@ export function MarketingHeader(): JSX.Element {
           </Link>
           <Link
             to={paths.register}
-            className="inline-flex h-9 items-center whitespace-nowrap rounded-control bg-primary px-3.5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover"
+            className="inline-flex h-9 items-center whitespace-nowrap rounded-control bg-primary-fill px-3.5 text-sm font-semibold text-primary-fill-fg transition-colors hover:bg-primary-fill-hover"
           >
             Create account
           </Link>

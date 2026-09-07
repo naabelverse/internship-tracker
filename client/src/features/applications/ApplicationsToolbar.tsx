@@ -141,7 +141,7 @@ export function ApplicationsToolbar({
             <FilterIcon className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
-              <span className="rounded-full bg-primary px-1.5 text-xs text-primary-fg">
+              <span className="rounded-full bg-primary-fill px-1.5 text-xs text-primary-fill-fg">
                 {activeFilterCount}
               </span>
             )}

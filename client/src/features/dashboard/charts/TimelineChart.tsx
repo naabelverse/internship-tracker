@@ -97,7 +97,7 @@ export function TimelineChart({
               className={cn(
                 'rounded-[0.4rem] px-2.5 py-1 text-xs font-medium transition-colors',
                 option === granularity
-                  ? 'bg-primary text-primary-fg'
+                  ? 'bg-primary-fill text-primary-fill-fg'
                   : 'text-content-muted hover:bg-surface-muted',
               )}
             >

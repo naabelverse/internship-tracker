@@ -18,10 +18,15 @@
  * values for exactly that reason.
  *
  * The palette is the "Dispatch" direction recorded in DECISIONS.md: a
- * desaturated petrol base with a jade primary, on the rule that the interface is
- * cool by default and the only warm colours on screen — amber and red — mean
- * something needs the student's attention. Deliberately not a neutral slate with
- * an indigo accent, which is what it replaced.
+ * desaturated petrol base with a deep violet primary, on the rule that the
+ * interface is cool by default and the only warm colours on screen — amber and
+ * red — mean something needs the student's attention. Deliberately not a neutral
+ * slate with a stock indigo accent, which is what it replaced.
+ *
+ * The primary is violet rather than the cobalt first proposed because
+ * `--color-info` already owns hue 264: a blue primary made Applied and
+ * Assessment the same colour. Hue 298 is the widest gap left between info and
+ * the pink of `--color-chart-5`.
  *
  * Keep every declaration in these two blocks a flat `--name: value;`. The test
  * helper matches a block with `[^}]*`, so a nested rule here would truncate it.
@@ -35,15 +40,16 @@
   --color-text: 13 26 28;
   --color-text-muted: 63 85 89;
   --color-text-subtle: 84 105 109;
-  --color-primary: 4 100 90;
-  --color-primary-hover: 6 80 73;
-  --color-primary-fg: 255 255 255;
+  --color-primary: 104 46 179;
+  --color-primary-fill: 104 46 179;
+  --color-primary-fill-hover: 86 32 151;
+  --color-primary-fill-fg: 255 255 255;
   --color-success: 8 102 48;
   --color-warning: 134 72 0;
   --color-danger: 170 30 18;
   --color-danger-fg: 255 255 255;
   --color-info: 25 77 207;
-  --color-ring: 4 100 90;
+  --color-ring: 104 46 179;
   --color-shadow: 13 26 28;
 
   /*
@@ -51,7 +57,7 @@
    * by-source or top-companies chart on their own: those need colours that are
    * distinguishable from each other rather than colours that mean something.
    */
-  --color-chart-1: 4 100 90;
+  --color-chart-1: 104 46 179;
   --color-chart-2: 25 77 207;
   --color-chart-3: 134 72 0;
   --color-chart-4: 8 102 48;
@@ -60,10 +66,10 @@
 
   /* Activity heatmap intensity, level 0 being a day with nothing on it. */
   --color-heat-0: 226 233 231;
-  --color-heat-1: 183 220 213;
-  --color-heat-2: 127 197 186;
-  --color-heat-3: 61 158 144;
-  --color-heat-4: 11 108 98;
+  --color-heat-1: 208 197 236;
+  --color-heat-2: 180 158 230;
+  --color-heat-3: 146 107 215;
+  --color-heat-4: 110 56 184;
 }
 
 [data-theme='dark'] {
@@ -75,18 +81,19 @@
   --color-text: 227 237 235;
   --color-text-muted: 154 175 178;
   --color-text-subtle: 138 160 164;
-  --color-primary: 51 201 182;
-  --color-primary-hover: 92 217 201;
-  --color-primary-fg: 6 32 24;
+  --color-primary: 178 151 234;
+  --color-primary-fill: 133 85 210;
+  --color-primary-fill-hover: 115 63 191;
+  --color-primary-fill-fg: 255 255 255;
   --color-success: 75 214 128;
   --color-warning: 255 186 51;
   --color-danger: 255 131 119;
   --color-danger-fg: 42 10 6;
   --color-info: 127 169 255;
-  --color-ring: 51 201 182;
+  --color-ring: 178 151 234;
   --color-shadow: 0 0 0;
 
-  --color-chart-1: 51 201 182;
+  --color-chart-1: 178 151 234;
   --color-chart-2: 127 169 255;
   --color-chart-3: 255 186 51;
   --color-chart-4: 75 214 128;
@@ -94,10 +101,10 @@
   --color-chart-6: 138 160 164;
 
   --color-heat-0: 25 38 42;
-  --color-heat-1: 30 74 71;
-  --color-heat-2: 34 112 106;
-  --color-heat-3: 42 154 141;
-  --color-heat-4: 63 201 182;
+  --color-heat-1: 59 46 86;
+  --color-heat-2: 94 68 140;
+  --color-heat-3: 133 97 197;
+  --color-heat-4: 175 146 234;
 }
 
 @layer base {

@@ -28,8 +28,13 @@ export default {
         'content-muted': token('color-text-muted'),
         'content-subtle': token('color-text-subtle'),
         primary: token('color-primary'),
-        'primary-hover': token('color-primary-hover'),
-        'primary-fg': token('color-primary-fg'),
+        // The solid-fill pair is a separate token from the accent above. One value
+        // cannot do both jobs in dark mode: a fill dark enough to carry white
+        // text is far too dark to read as text on a card, and the readable
+        // value is too light to read as anything but a pastel button.
+        'primary-fill': token('color-primary-fill'),
+        'primary-fill-hover': token('color-primary-fill-hover'),
+        'primary-fill-fg': token('color-primary-fill-fg'),
         success: token('color-success'),
         warning: token('color-warning'),
         danger: token('color-danger'),

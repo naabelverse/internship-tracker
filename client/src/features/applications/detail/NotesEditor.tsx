@@ -77,7 +77,7 @@ export function NotesEditor({ savedNotes, isSaving, onSave }: NotesEditorProps):
                 }}
                 className={cn(
                   'rounded-[0.4rem] px-2.5 py-1 text-xs font-medium',
-                  tab.active ? 'bg-primary text-primary-fg' : 'text-content-muted',
+                  tab.active ? 'bg-primary-fill text-primary-fill-fg' : 'text-content-muted',
                 )}
               >
                 {tab.label}

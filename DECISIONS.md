@@ -2185,3 +2185,54 @@ The half deferred when the phase was split. Closes Phase 11.
   but `colorScheme` only decides what `system` resolves to and the demo account's stored
   preference wins once the session loads, so the theme it captured depended on account state.
   It now drives the theme control explicitly.
+
+## Phase 17b — the primary colour moved from jade to violet
+
+- **The jade primary was replaced outright, not retuned.** Review found it read neon in dark
+  mode. Measurement showed why, and it was not saturation: at `rgb(51 201 182)` it cleared the
+  dark gate at 8.48:1 where 4.5 is asked, nearly double the floor. Jade was never pushed there
+  by the contrast requirement — a near-grey at chroma 0.02 passes the same gate — so the glare
+  was a tuning choice. Replacing it was cheaper than defending it.
+
+- **The replacement is violet, not the cobalt that was asked for.** The brief was a deep cobalt
+  or blue-violet. Cobalt is unavailable: `--color-info` already sits at OKLCH hue 264, and it is
+  the `applied` status and `chart-2`. A cobalt primary at hue 265 landed 1.2 degrees from it,
+  which would have made Applied and Assessment the same colour in both themes. Mapping the hue
+  occupancy of the tokens that could not move left one wide gap, between info at 264 and
+  `chart-5`'s pink at 352. The primary sits at hue 298, 36 degrees from each.
+
+- **`--color-primary` was split into an accent token and a fill token.** One value cannot do
+  both jobs in dark mode. The pill shape `bg-primary/15 text-primary` forces the token to be
+  readable as text on a near-black card, which pins it to about OKLCH L 0.72 — and a fill that
+  light with dark text is the pastel button the first attempt produced. The fill is now its own
+  token at L 0.565 carrying white text. Light mode does not have this conflict and its two
+  values are deliberately identical; the split exists for dark and is defined in both themes so
+  they cannot drift apart silently. `--color-primary-hover` and `--color-primary-fg` were
+  deleted: after the nine solid-fill sites moved, nothing referenced them.
+
+- **The rule for which sites moved is mechanical.** Wherever `bg-primary` was paired with
+  `text-primary-fg` — nine places — both moved to the fill pair. Every tinted use kept the
+  accent value: the status pills and dots, the `/5` drag-target grounds, the sidebar and topbar
+  chips, the usage bar. The distinction is whether the token is carrying text on top of itself.
+
+- **Hover deepens in both themes rather than lightening in dark.** Lightening the dark fill past
+  `#8858d6` drops white label contrast below 4.5:1, so the only direction that keeps the label
+  readable and the two states distinct was down. "Hover deepens the button" is now one rule for
+  both themes instead of two opposite ones.
+
+- **The fill token is gated separately, and the new gate immediately caught a real miss.** The
+  first dark fill was checked against `canvas` and shipped into the test at 2.75:1 against
+  `surface-muted` — the same audit-one-background error the Phase 17 gate was widened to stop.
+  The assertions added here check the fill's shape contrast against all three grounds, plus the
+  label on both the fill and its hover. The gate is 41 assertions per theme, up from 37.
+
+- **Final values.** Light: primary and fill both `104 46 179` (`oklch(0.458 0.196 298)`), fill
+  hover `86 32 151`, label white. Dark: primary `178 151 234` (`oklch(0.732 0.120 298)`), fill
+  `133 85 210` (`oklch(0.565 0.185 298)`), fill hover `115 63 191`, label white. The dark
+  accent's chroma is 0.121, marginally below the jade it replaces (0.124) — the calmer result
+  came from dropping luminance, not saturation.
+
+- **`--color-success` was deliberately left green.** It is the `offer` status: a positive-outcome
+  semantic that is conventionally green and independent of the brand colour. Amber and red were
+  untouched for the same reason. `chart-1` and both heat ramps were re-derived from the violet,
+  because those are primary-derived and would otherwise have been visibly leftover jade.
