@@ -2344,3 +2344,41 @@ The half deferred when the phase was split. Closes Phase 11.
   redesigns ago replaced, so every generated brand asset ships a colour the app no longer uses.
   That is palette staleness rather than domain staleness, and it is unrelated to this bug, so it
   was raised separately rather than folded in.
+
+## Brand assets are drawn from the tokens, and the committed copies are checked
+
+- **The four brand colours are parsed out of `src/index.css` instead of being hex literals.**
+  `BRAND`, `INK`, `CANVAS` and `MUTED` were hand-copied from the dark theme block, so nothing tied
+  them to the palette. Only `BRAND` had actually gone wrong — it was still `#33c9b6`, the jade two
+  redesigns had removed — but all four carried the same exposure, one palette change away from the
+  identical bug. `brandPalette.mjs` now resolves all four from `--color-primary`, `--color-text`,
+  `--color-canvas` and `--color-text-muted`.
+
+- **`brand` maps to `--color-primary`, not `--color-primary-fill`.** The mark bars, the top rule
+  and the footer line are graphical marks on a dark ground, which is the accent's job; the fill
+  token exists for solid buttons carrying white text.
+
+- **Regex parsing, not a CSS parser.** The same two patterns `tests/utils/contrast.ts` already
+  uses, and `src/index.css` documents the constraint they depend on: every declaration in those
+  blocks is a flat `--name: value;`, because a nested rule would truncate a match bounded by
+  `[^}]*`. The value grammar is three integers, with no `calc()`, `var()` or colour functions in
+  play. A full parser would be more machinery against a file whose shape is already contractual
+  and enforced by the contrast suite.
+
+- **A missing token throws.** No fallback. The silent `??` fallback in the SEO script is what kept
+  `http://localhost:5173` in production for a whole phase, and a brand asset quietly drawn in a
+  default colour would fail the same invisible way.
+
+- **The first version of the drift check was close to worthless, and that is worth recording.**
+  Asserting the generator's resolved colours equal the tokens cannot fail once the generator reads
+  those tokens — both sides read one file and always agree. It looks like a check and tests
+  nothing. The failure that actually happened was different: the palette changed, nobody re-ran
+  `npm run assets`, and the _committed assets_ kept the old colour. So the real assertion reads
+  `public/favicon.svg` — the one committed asset that is text, written by the same run as the PNGs
+  — and fails if it carries a colour the palette no longer contains. Verified by restoring the
+  jade `favicon.svg` from git: it fails with "run `npm run assets -w client` — the committed
+  assets are stale".
+
+- **This commit contains regenerated binaries.** Nine files under `client/public/` — the OG image,
+  both favicon PNGs, the ICO, the SVG, all three app icons and the Apple touch icon. Unlike the
+  last few fixes, the asset change _is_ the fix; the code change only stops it recurring.

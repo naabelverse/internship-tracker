@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { readBrandPalette } from './brandPalette.mjs';
 
 /**
  * Generates the static brand and SEO assets SPEC section 12 asks for: an
@@ -22,14 +23,14 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
 
 /*
-  The "Dispatch" palette, kept in step with the tokens in `src/index.css`: the
-  jade primary and the petrol canvas of the dark theme, which is the theme the
-  app defaults to. Re-run `npm run assets -w client` after changing either.
+  The "Dispatch" palette, read from the dark theme block of `src/index.css`
+  rather than copied here. These were four hex literals, which is how every
+  favicon and the OG image came to ship the jade primary for two redesigns after
+  the app stopped using it: nothing tied the copies to the tokens. Re-run
+  `npm run assets -w client` after changing the palette, and
+  `tests/config/brandPalette.test.ts` fails if the assets fall behind it.
 */
-const BRAND = '#33c9b6';
-const INK = '#e3edeb';
-const CANVAS = '#0b1315';
-const MUTED = '#9aafb2';
+const { brand: BRAND, ink: INK, canvas: CANVAS, muted: MUTED } = readBrandPalette();
 const SITE_NAME = 'Internship Tracker';
 
 /**
