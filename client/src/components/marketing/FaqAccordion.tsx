@@ -54,57 +54,61 @@ export function FaqAccordion(): JSX.Element {
   const baseId = useId();
 
   return (
-    <section aria-labelledby="faq-heading" className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-      <h2
-        id="faq-heading"
-        className="text-center text-2xl font-semibold tracking-tight text-content sm:text-3xl"
-      >
-        Questions people ask
-      </h2>
+    <section aria-labelledby="faq-heading" className="border-t border-border bg-surface">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:gap-10">
+        {/*
+          The heading sits beside the answers rather than centred above them, so
+          the questions read as one continuous ruled column instead of a boxed
+          widget in the middle of the page.
+        */}
+        <h2 id="faq-heading" className="text-display-md stretch-wide text-content lg:col-span-4">
+          Questions people ask
+        </h2>
 
-      <div className="mt-10 divide-y divide-border rounded-xl border border-border bg-surface">
-        {FAQ.map((entry, index) => {
-          const isOpen = openIndex === index;
-          const panelId = `${baseId}-panel-${String(index)}`;
-          const buttonId = `${baseId}-button-${String(index)}`;
+        <div className="divide-y divide-border border-t border-border lg:col-span-8">
+          {FAQ.map((entry, index) => {
+            const isOpen = openIndex === index;
+            const panelId = `${baseId}-panel-${String(index)}`;
+            const buttonId = `${baseId}-button-${String(index)}`;
 
-          return (
-            <div key={entry.question}>
-              <h3>
-                <button
-                  type="button"
-                  id={buttonId}
-                  aria-expanded={isOpen}
-                  aria-controls={panelId}
-                  onClick={() => {
-                    setOpenIndex(isOpen ? null : index);
-                  }}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-sm font-medium text-content transition-colors hover:bg-surface-muted"
-                >
-                  {entry.question}
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    className={`h-4 w-4 shrink-0 text-content-subtle transition-transform ${
-                      isOpen ? 'rotate-180' : ''
-                    }`}
+            return (
+              <div key={entry.question}>
+                <h3>
+                  <button
+                    type="button"
+                    id={buttonId}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() => {
+                      setOpenIndex(isOpen ? null : index);
+                    }}
+                    className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-semibold text-content transition-colors hover:text-primary"
                   >
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </button>
-              </h3>
-              <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!isOpen}>
-                <p className="px-5 pb-5 text-sm leading-relaxed text-content-muted">
-                  {entry.answer}
-                </p>
+                    {entry.question}
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      className={`h-4 w-4 shrink-0 text-content-subtle transition-transform ${
+                        isOpen ? 'rotate-180' : ''
+                      }`}
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                </h3>
+                <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!isOpen}>
+                  <p className="max-w-[68ch] pb-5 text-sm leading-relaxed text-content-muted nums-proportional">
+                    {entry.answer}
+                  </p>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </section>
   );
