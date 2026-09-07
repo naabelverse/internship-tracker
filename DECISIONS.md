@@ -2312,3 +2312,35 @@ The half deferred when the phase was split. Closes Phase 11.
   partial mirror is a worse trap than an unused key — Tailwind emits nothing for classes no one
   writes. That the existing `chart-1`..`chart-6` keys are equally unused is noted, not acted on:
   the charts read the custom properties directly through `getComputedStyle`.
+
+## robots.txt and sitemap.xml are build-generated, not committed
+
+- **The localhost URL in production was a committed artifact, not a broken variable read.** Both
+  files were tracked in `client/public/`, and `generateBrandAssets.mjs` — which reads
+  `process.env.VITE_APP_URL` perfectly correctly — was wired only to the manual `npm run assets`.
+  Someone ran it once with the variable unset, the `?? 'http://localhost:5173'` fallback won
+  silently, and the output was committed. Vite copies `public/` byte-for-byte with no
+  substitution, so setting `VITE_APP_URL` on the host could never change those bytes. The defect
+  was the commit, not the code.
+
+- **They moved to `generateSeoFiles.mjs`, run by both `build` and `build:deploy`, and are now
+  gitignored.** The split is along a real line: an asset that depends on the _brand_ (favicons, the
+  OG image, the manifest) is the same file wherever it is served from and is worth committing, but
+  an asset that embeds the _deployment origin_ cannot be. Keeping both kinds in one script is what
+  let the second inherit the first's "generate once and commit" treatment.
+
+- **The dev fallback now announces itself.** A silent fallback is what made this invisible for a
+  whole phase, so an unset `VITE_APP_URL` prints a warning naming the localhost URL it used.
+  `checkDeployEnv.mjs` still refuses a deploy build outright, so the warning only ever appears on
+  a local build.
+
+- **`Seo.tsx` was never affected.** Its canonical, `og:url` and `og:image` come from
+  `import.meta.env.VITE_APP_URL`, which Vite does substitute at build time. Confirmed by grepping
+  the proof-domain build: the string appears in the emitted JS bundle. `site.webmanifest` is also
+  unaffected — it holds only relative paths.
+
+- **The og-image and favicons have the same _class_ of defect on a different axis, and were left
+  alone deliberately.** `BRAND` in `generateBrandAssets.mjs` is still `#33c9b6`, the jade that two
+  redesigns ago replaced, so every generated brand asset ships a colour the app no longer uses.
+  That is palette staleness rather than domain staleness, and it is unrelated to this bug, so it
+  was raised separately rather than folded in.

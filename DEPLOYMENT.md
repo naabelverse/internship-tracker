@@ -686,14 +686,32 @@ the OG tags either way.
 **Test this specifically after deploying.** Open `https://tracker.example.com/applications` in a new
 tab and press reload. A 404 here is the single most common broken SPA deploy, on any platform.
 
-### 5.5 Regenerate the SEO assets
+### 5.5 The SEO files need no manual step
 
-`robots.txt` and `sitemap.xml` are generated from `VITE_APP_URL` and currently carry
-`http://localhost:5173`. Once the domain is live, run this locally and commit the result:
+`robots.txt` and `sitemap.xml` are generated on **every** client build from `VITE_APP_URL`, by
+`client/scripts/generateSeoFiles.mjs`, which both `build` and `build:deploy` run before Vite. Set
+the variable on the service and the files follow; there is nothing to run by hand and nothing to
+commit.
+
+> **Do not hand-edit these two files, and do not commit them.** They are in `.gitignore` for a
+> reason. They were once committed as static files, generated on a machine where `VITE_APP_URL` was
+> unset so the `http://localhost:5173` fallback won silently — and because Vite copies `public/`
+> byte-for-byte with no substitution, production served that localhost URL no matter how correctly
+> the variable was set on the host. A committed copy cannot pick up the deployment domain. That is
+> the whole reason they are generated.
+
+Verify after deploying, and note this is a real check rather than a formality — it is the one thing
+that catches a wrong `VITE_APP_URL` at build time:
 
 ```bash
-VITE_APP_URL=https://tracker.example.com npm run assets -w client
+curl -s https://tracker.example.com/robots.txt | grep Sitemap:
+curl -s https://tracker.example.com/sitemap.xml | grep -m1 '<loc>'
 ```
+
+Both must show your domain. `localhost` here means the build did not have `VITE_APP_URL`.
+
+The favicons, the OG image and `site.webmanifest` are different: they carry no origin, so they stay
+committed and are regenerated with `npm run assets -w client` only when the **palette** changes.
 
 ---
 

@@ -64,3 +64,10 @@ desktop.ini
 
 # local agent tooling artefacts, not part of the project
 ruvector.db
+
+# Generated on every client build from VITE_APP_URL by
+# client/scripts/generateSeoFiles.mjs. Committing these is what put
+# http://localhost:5173 into production: Vite copies public/ verbatim, so a
+# committed copy can never pick up the deployment domain.
+client/public/robots.txt
+client/public/sitemap.xml

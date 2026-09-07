@@ -5,14 +5,17 @@ import sharp from 'sharp';
 
 /**
  * Generates the static brand and SEO assets SPEC section 12 asks for: an
- * `og-image.png`, favicons at the standard sizes, a web manifest, `robots.txt`
- * and `sitemap.xml`.
+ * `og-image.png`, favicons at the standard sizes and a web manifest.
  *
- * They are generated rather than hand-drawn so the wordmark, the colours and the
- * site URL come from one definition; they are then **committed**, because a
- * favicon that exists only after someone remembers to run a script is a favicon
- * that goes missing. Re-run with `npm run assets -w client` after changing the
- * palette or the site URL.
+ * They are generated rather than hand-drawn so the wordmark and the colours come
+ * from one definition; they are then **committed**, because a favicon that
+ * exists only after someone remembers to run a script is a favicon that goes
+ * missing. Re-run with `npm run assets -w client` after changing the palette.
+ *
+ * `robots.txt` and `sitemap.xml` used to be written here too, and that was a
+ * bug: they embed the deployment origin, so a committed copy shipped
+ * `http://localhost:5173` to production. They belong to
+ * `generateSeoFiles.mjs`, which runs on every build.
  */
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -28,11 +31,6 @@ const INK = '#e3edeb';
 const CANVAS = '#0b1315';
 const MUTED = '#9aafb2';
 const SITE_NAME = 'Internship Tracker';
-
-/** Kept in step with `src/routes/paths.ts`; a test asserts the two still agree. */
-const INDEXABLE_PATHS = ['/', '/login', '/register', '/terms', '/privacy'];
-
-const siteUrl = (process.env.VITE_APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
 
 /**
  * The square mark: three bars narrowing top to bottom.
@@ -90,41 +88,6 @@ const manifest = {
   ],
 };
 
-function robotsTxt() {
-  return [
-    'User-agent: *',
-    'Allow: /$',
-    'Allow: /login',
-    'Allow: /register',
-    'Allow: /terms',
-    'Allow: /privacy',
-    '',
-    '# Only the routes that carry a single-use token in the query string are',
-    '# blocked. The app routes are deliberately *not* listed: they need a session,',
-    '# so a crawler gets an empty shell with nothing to index, and Google is',
-    '# explicit that robots.txt is the wrong tool for keeping a page out of an',
-    '# index anyway. Blocking them would also fail the Lighthouse is-crawlable',
-    '# audit for no protection in return.',
-    'Disallow: /verify-email',
-    'Disallow: /reset-password',
-    '',
-    `Sitemap: ${siteUrl}/sitemap.xml`,
-    '',
-  ].join('\n');
-}
-
-function sitemapXml() {
-  const today = new Date().toISOString().slice(0, 10);
-  const entries = INDEXABLE_PATHS.map((route) => {
-    const location = route === '/' ? siteUrl : `${siteUrl}${route}`;
-    const priority = route === '/' ? '1.0' : '0.5';
-
-    return `  <url>\n    <loc>${location}</loc>\n    <lastmod>${today}</lastmod>\n    <priority>${priority}</priority>\n  </url>`;
-  }).join('\n');
-
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
-}
-
 async function png(svg, size, name) {
   await sharp(Buffer.from(svg))
     .resize(size, size)
@@ -164,10 +127,8 @@ async function main() {
     `${JSON.stringify(manifest, null, 2)}\n`,
     'utf8',
   );
-  await writeFile(path.join(publicDir, 'robots.txt'), robotsTxt(), 'utf8');
-  await writeFile(path.join(publicDir, 'sitemap.xml'), sitemapXml(), 'utf8');
 
-  console.log(`Brand assets written to ${publicDir} (site URL: ${siteUrl})`);
+  console.log(`Brand assets written to ${publicDir}`);
 }
 
 await main();

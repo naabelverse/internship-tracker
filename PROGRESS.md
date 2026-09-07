@@ -868,8 +868,11 @@ _The agent appends anything it cannot do itself here — DNS records, account si
       markdown directly, and in SECURITY.md. A test asserts the placeholder is still present,
       so it will start failing once you replace it — update
       `client/tests/marketing/legal.test.tsx` in the same commit.
-- [ ] **Set `VITE_APP_URL` before deploying.** `sitemap.xml` and `robots.txt` are generated
-      from it (`npm run assets -w client`), and they currently carry `http://localhost:5173`.
+- [x] **Set `VITE_APP_URL` before deploying.** No longer a manual step for the SEO files:
+      `sitemap.xml` and `robots.txt` are generated on every build from `VITE_APP_URL` by
+      `client/scripts/generateSeoFiles.mjs` and are no longer committed. They had been shipping
+      `http://localhost:5173` to production because a committed copy can never pick up the
+      deployment domain. The variable still has to be set on the service.
 - [ ] **Re-run `npm run screenshot -w client` after any dashboard redesign.** The landing page
       shows a real capture of the demo account, not a mock-up, so it goes stale when the
       dashboard changes.
