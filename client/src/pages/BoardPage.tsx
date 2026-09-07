@@ -83,7 +83,7 @@ export function BoardPage(): JSX.Element {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-content">Board</h1>
+        <h1 className="text-display-sm stretch-wide text-content">Board</h1>
         <p className="text-sm text-content-muted">
           Drag a card, or focus one and press space, to move it between columns.
         </p>

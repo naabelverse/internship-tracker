@@ -45,7 +45,7 @@ export function UpcomingPanel({
     .slice(0, UPCOMING_LIMIT);
 
   return (
-    <section className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
+    <section className="rounded-card border border-border bg-surface p-4 sm:p-5">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-content">Upcoming</h2>
         <Link to={paths.calendar} className="text-xs font-medium text-primary hover:underline">

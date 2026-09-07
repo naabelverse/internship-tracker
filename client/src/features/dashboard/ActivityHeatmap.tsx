@@ -76,7 +76,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
   const activeDays = cells.filter((cell) => cell.count > 0).length;
 
   return (
-    <section className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
+    <section className="rounded-card border border-border bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-content">Activity</h2>
         <p className="text-xs text-content-subtle">Last 12 weeks</p>

@@ -52,7 +52,9 @@ export class ErrorBoundary extends Component<Props, State> {
           className="w-full max-w-md rounded-card border border-border bg-surface p-6 shadow-card"
         >
           <AlertIcon className="h-8 w-8 text-danger" />
-          <h1 className="mt-4 text-lg font-semibold text-content">Something broke on this page</h1>
+          <h1 className="mt-4 text-display-sm stretch-wide text-content">
+            Something broke on this page
+          </h1>
           <p className="mt-2 text-sm text-content-muted">
             The rest of the app is fine. Try again, and reload if it keeps happening.
           </p>

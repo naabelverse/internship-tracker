@@ -34,10 +34,7 @@ export function ApplicationCardList({
   return (
     <ul className="space-y-3">
       {applications.map((application) => (
-        <li
-          key={application.id}
-          className="rounded-card border border-border bg-surface p-4 shadow-card"
-        >
+        <li key={application.id} className="rounded-card border border-border bg-surface p-4">
           <div className="flex items-start gap-3">
             <input
               type="checkbox"

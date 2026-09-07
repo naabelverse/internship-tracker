@@ -62,7 +62,7 @@ export function DashboardView(): JSX.Element {
     <div className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-content">Dashboard</h1>
+          <h1 className="text-display-sm stretch-wide text-content">Dashboard</h1>
           <p className="mt-0.5 text-sm text-content-muted">
             {summary.data.currentStreakDays > 0
               ? `${String(summary.data.currentStreakDays)} day streak — keep it going.`

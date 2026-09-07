@@ -93,6 +93,9 @@ export default {
           '1.375rem',
           { lineHeight: '1.18', letterSpacing: '-0.014em', fontWeight: '600' },
         ],
+        // The dashboard's headline numbers. Set wide and heavy, because on this
+        // product the counts are the content.
+        stat: ['1.625rem', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '700' }],
       },
       boxShadow: {
         // Used sparingly, and only where something genuinely floats above the

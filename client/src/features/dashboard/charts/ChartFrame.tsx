@@ -35,10 +35,10 @@ export function ChartFrame({
   children,
 }: ChartFrameProps): JSX.Element {
   return (
-    <section className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
+    <section className="rounded-card border border-border bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-content">{title}</h2>
+          <h2 className="text-sm font-semibold stretch-wide text-content">{title}</h2>
           {description !== undefined && (
             <p className="mt-0.5 text-xs text-content-subtle">{description}</p>
           )}

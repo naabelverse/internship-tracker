@@ -46,7 +46,7 @@ export function SettingsPage(): JSX.Element {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-content">Settings</h1>
+        <h1 className="text-display-sm stretch-wide text-content">Settings</h1>
         <p className="mt-0.5 text-sm text-content-muted">Your profile, security and preferences.</p>
       </header>
 

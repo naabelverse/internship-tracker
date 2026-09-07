@@ -6,9 +6,7 @@ export function NotFoundPage(): JSX.Element {
     <main className="grid min-h-screen place-items-center bg-canvas px-4">
       <div className="text-center">
         <p className="text-sm font-semibold uppercase tracking-widest text-primary">404</p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-content">
-          That page does not exist
-        </h1>
+        <h1 className="mt-3 text-display-sm stretch-wide text-content">That page does not exist</h1>
         <p className="mt-2 text-sm text-content-muted">
           The link may be out of date, or the application may have been deleted.
         </p>
