@@ -16,79 +16,88 @@
  * file, so a palette edit that breaks one fails the build rather than shipping.
  * Phase 9 darkened four light-theme semantics and nudged both `text-subtle`
  * values for exactly that reason.
+ *
+ * The palette is the "Dispatch" direction recorded in DECISIONS.md: a
+ * desaturated petrol base with a jade primary, on the rule that the interface is
+ * cool by default and the only warm colours on screen — amber and red — mean
+ * something needs the student's attention. Deliberately not a neutral slate with
+ * an indigo accent, which is what it replaced.
+ *
+ * Keep every declaration in these two blocks a flat `--name: value;`. The test
+ * helper matches a block with `[^}]*`, so a nested rule here would truncate it.
  */
 :root {
-  --color-canvas: 248 250 252;
-  --color-surface: 255 255 255;
-  --color-surface-muted: 241 245 249;
-  --color-border: 226 232 240;
-  --color-border-strong: 203 213 225;
-  --color-text: 15 23 42;
-  --color-text-muted: 71 85 105;
-  --color-text-subtle: 93 108 130;
-  --color-primary: 79 70 229;
-  --color-primary-hover: 67 56 202;
+  --color-canvas: 232 237 236;
+  --color-surface: 248 250 249;
+  --color-surface-muted: 221 230 228;
+  --color-border: 199 213 210;
+  --color-border-strong: 163 183 180;
+  --color-text: 13 26 28;
+  --color-text-muted: 63 85 89;
+  --color-text-subtle: 84 105 109;
+  --color-primary: 10 106 96;
+  --color-primary-hover: 6 80 73;
   --color-primary-fg: 255 255 255;
-  --color-success: 22 101 52;
-  --color-warning: 146 64 14;
-  --color-danger: 185 28 28;
+  --color-success: 18 112 58;
+  --color-warning: 140 78 6;
+  --color-danger: 176 36 24;
   --color-danger-fg: 255 255 255;
-  --color-info: 3 105 161;
-  --color-ring: 79 70 229;
-  --color-shadow: 15 23 42;
+  --color-info: 27 79 209;
+  --color-ring: 10 106 96;
+  --color-shadow: 13 26 28;
 
   /*
    * Categorical series for the charts. The semantic tokens above cannot carry a
    * by-source or top-companies chart on their own: those need colours that are
    * distinguishable from each other rather than colours that mean something.
    */
-  --color-chart-1: 79 70 229;
-  --color-chart-2: 2 132 199;
-  --color-chart-3: 13 148 136;
-  --color-chart-4: 180 83 9;
-  --color-chart-5: 190 24 93;
-  --color-chart-6: 100 116 139;
+  --color-chart-1: 10 106 96;
+  --color-chart-2: 27 79 209;
+  --color-chart-3: 140 78 6;
+  --color-chart-4: 18 112 58;
+  --color-chart-5: 162 31 98;
+  --color-chart-6: 79 106 110;
 
   /* Activity heatmap intensity, level 0 being a day with nothing on it. */
-  --color-heat-0: 226 232 240;
-  --color-heat-1: 199 210 254;
-  --color-heat-2: 165 180 252;
-  --color-heat-3: 118 116 235;
-  --color-heat-4: 67 56 202;
+  --color-heat-0: 221 230 228;
+  --color-heat-1: 183 220 213;
+  --color-heat-2: 127 197 186;
+  --color-heat-3: 61 158 144;
+  --color-heat-4: 11 108 98;
 }
 
 [data-theme='dark'] {
-  --color-canvas: 11 17 32;
-  --color-surface: 19 28 49;
-  --color-surface-muted: 27 38 62;
-  --color-border: 31 43 69;
-  --color-border-strong: 51 65 96;
-  --color-text: 230 236 247;
-  --color-text-muted: 148 163 184;
-  --color-text-subtle: 138 152 174;
-  --color-primary: 129 140 248;
-  --color-primary-hover: 165 180 252;
-  --color-primary-fg: 15 23 42;
-  --color-success: 52 211 153;
-  --color-warning: 251 191 36;
-  --color-danger: 248 113 113;
-  --color-danger-fg: 15 23 42;
-  --color-info: 56 189 248;
-  --color-ring: 129 140 248;
+  --color-canvas: 11 19 21;
+  --color-surface: 17 27 30;
+  --color-surface-muted: 25 38 42;
+  --color-border: 33 50 55;
+  --color-border-strong: 51 72 78;
+  --color-text: 227 237 235;
+  --color-text-muted: 154 175 178;
+  --color-text-subtle: 138 160 164;
+  --color-primary: 51 201 182;
+  --color-primary-hover: 92 217 201;
+  --color-primary-fg: 6 32 24;
+  --color-success: 75 214 128;
+  --color-warning: 255 186 51;
+  --color-danger: 255 131 119;
+  --color-danger-fg: 42 10 6;
+  --color-info: 127 169 255;
+  --color-ring: 51 201 182;
   --color-shadow: 0 0 0;
 
-  --color-chart-1: 129 140 248;
-  --color-chart-2: 56 189 248;
-  --color-chart-3: 45 212 191;
-  --color-chart-4: 251 191 36;
-  --color-chart-5: 244 114 182;
-  --color-chart-6: 148 163 184;
+  --color-chart-1: 51 201 182;
+  --color-chart-2: 127 169 255;
+  --color-chart-3: 255 186 51;
+  --color-chart-4: 75 214 128;
+  --color-chart-5: 242 116 176;
+  --color-chart-6: 138 160 164;
 
-  --color-heat-0: 27 38 62;
-  --color-heat-1: 49 62 116;
-  --color-heat-2: 76 88 168;
-  --color-heat-3: 108 118 216;
-  --color-heat-4: 147 156 255;
+  --color-heat-0: 25 38 42;
+  --color-heat-1: 30 74 71;
+  --color-heat-2: 34 112 106;
+  --color-heat-3: 42 154 141;
+  --color-heat-4: 63 201 182;
 }
 
 @layer base {
@@ -101,7 +110,15 @@
   }
 
   body {
-    @apply min-h-screen bg-canvas text-content antialiased;
+    @apply min-h-screen bg-canvas font-sans text-content antialiased;
+    /*
+     * Archivo's default figures are proportional, which makes a column of dates
+     * or counts jitter as it updates. This is a tracking tool — nearly every
+     * number in it sits above or below another number — so tabular is the sane
+     * default here, and running prose opts out with `nums-proportional`.
+     */
+    font-variant-numeric: tabular-nums;
+    font-stretch: 100%;
   }
 
   :focus-visible {
@@ -113,5 +130,27 @@
   /* Shared skeleton shimmer so no async surface has to hand-roll one. */
   .skeleton {
     @apply animate-pulse rounded-control bg-surface-muted;
+  }
+}
+
+@layer utilities {
+  /*
+   * The width axis is what gives this design two typographic voices out of one
+   * family: headings are set wide, like the lettering on a departure board, and
+   * body text stays at normal width. Tailwind 3 has no `font-stretch` utility,
+   * so the two settings the design uses are named here rather than repeated as
+   * an arbitrary style on every heading.
+   */
+  .stretch-display {
+    font-stretch: 118%;
+  }
+
+  .stretch-wide {
+    font-stretch: 108%;
+  }
+
+  /* For running prose, where tabular figures look unnaturally gappy. */
+  .nums-proportional {
+    font-variant-numeric: proportional-nums;
   }
 }

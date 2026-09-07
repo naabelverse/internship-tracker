@@ -49,15 +49,58 @@ export default {
         'heat-3': token('color-heat-3'),
         'heat-4': token('color-heat-4'),
       },
+      /*
+       * Radii encode hierarchy rather than being one value used everywhere: a
+       * dense data chip is squarer than a control, a control is squarer than a
+       * panel. One radius on every element regardless of its weight is the
+       * flattest tell of a templated interface, so components reach for one of
+       * these rather than for `rounded-xl`.
+       */
       borderRadius: {
-        card: '0.75rem',
-        control: '0.5rem',
+        chip: '0.25rem',
+        control: '0.375rem',
+        card: '0.625rem',
+        panel: '0.875rem',
       },
       fontFamily: {
-        sans: ['InterVariable', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // One superfamily, two voices. The `wdth` build carries both the weight
+        // and the width axis in a single file, so a heading set wide (the
+        // `stretch-display` utility) costs no request beyond the body text.
+        sans: [
+          'Archivo Variable',
+          'Archivo',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'sans-serif',
+        ],
+      },
+      /*
+       * The display scale, set once so a heading is picked off a scale rather
+       * than reassembled from a size, a tracking and a weight at each call site.
+       * Tracking tightens as the size grows, per Elements of Typographic Style.
+       */
+      fontSize: {
+        'display-lg': [
+          'clamp(2.5rem, 1.4rem + 4.6vw, 4.25rem)',
+          { lineHeight: '0.94', letterSpacing: '-0.032em', fontWeight: '700' },
+        ],
+        'display-md': [
+          'clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem)',
+          { lineHeight: '1.04', letterSpacing: '-0.022em', fontWeight: '650' },
+        ],
+        'display-sm': [
+          '1.375rem',
+          { lineHeight: '1.18', letterSpacing: '-0.014em', fontWeight: '600' },
+        ],
       },
       boxShadow: {
+        // Used sparingly, and only where something genuinely floats above the
+        // page. Grouping elsewhere comes from rules and alignment rather than
+        // from an identical soft shadow under every card.
         card: '0 1px 2px 0 rgb(var(--color-shadow) / 0.06), 0 8px 24px -12px rgb(var(--color-shadow) / 0.28)',
+        panel:
+          '0 1px 0 0 rgb(var(--color-shadow) / 0.04), 0 24px 60px -32px rgb(var(--color-shadow) / 0.45)',
       },
       ringColor: {
         DEFAULT: token('color-ring'),
