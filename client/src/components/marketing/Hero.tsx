@@ -56,7 +56,7 @@ const EXAMPLE_ROWS: ExampleRow[] = [
 function DispatchPanel(): JSX.Element {
   return (
     <figure className="m-0">
-      <div className="overflow-hidden rounded-panel border border-border bg-surface shadow-panel">
+      <div className="atmos-lit overflow-hidden rounded-panel border border-border bg-surface shadow-float">
         <div className="flex items-baseline justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
           <p className="text-sm font-semibold tracking-tight text-content">Next up</p>
           <p className="text-xs text-content-subtle">12 open</p>
@@ -107,7 +107,7 @@ function DispatchPanel(): JSX.Element {
  */
 function PipelineRail(): JSX.Element {
   return (
-    <ul className="mt-14 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-6 sm:mt-16 sm:gap-x-7">
+    <ul className="mt-12 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-7 sm:mt-14 sm:gap-x-7">
       {APPLICATION_STATUSES.map((status) => (
         <li key={status} className="flex items-center gap-2 text-xs text-content-muted">
           <span
@@ -123,8 +123,8 @@ function PipelineRail(): JSX.Element {
 
 export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Element {
   return (
-    <section className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20 lg:py-24">
+    <section className="atmos-field border-b border-border">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:py-28">
         <div className="grid items-start gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-6">
             <h1 className="max-w-[13ch] text-display-lg stretch-display text-content">
@@ -156,7 +156,7 @@ export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Ele
               ) : null}
             </div>
 
-            <p className="mt-4 text-xs text-content-subtle nums-proportional">
+            <p className="mt-3 text-xs text-content-subtle nums-proportional">
               No card, no trial, no paid tier. The demo needs no sign-up at all.
             </p>
           </div>

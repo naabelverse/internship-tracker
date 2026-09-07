@@ -2382,3 +2382,101 @@ The half deferred when the phase was split. Closes Phase 11.
 - **This commit contains regenerated binaries.** Nine files under `client/public/` — the OG image,
   both favicon PNGs, the ICO, the SVG, all three app icons and the Apple touch icon. Unlike the
   last few fixes, the asset change _is_ the fix; the code change only stops it recurring.
+
+## Phase 17c — depth and atmosphere on the landing hero
+
+- **This reverses a Phase 17 decision on purpose, and the earlier entry should be read through
+  this one.** Phase 17 ruled out "technical, like Linear" on the grounds that dark grey with a
+  faint violet accent was what the app already looked like. The objection to the result was that
+  it read flat, and the direction asked for was explicitly Linear's sense of depth. The palette
+  and the typeface are untouched; what changed is that the page now has a light source. The
+  Phase 17 reasoning still holds for colour and type, which is why neither moved.
+
+- **One lamp, anchored on the product's own content.** The glow sits over the "Next up" panel
+  rather than floating somewhere decorative, and everything falls away from it. A gradient wash
+  placed for its own sake is the generic tell; a light source with a position that means
+  something is not. That is also why there is one and not three.
+
+- **The atmosphere can only ever lift a pale canvas towards white or deepen a near-black one
+  towards black.** That is a property, not a set of lucky numbers, and it exists because the
+  first attempt failed. A violet lamp that tinted the light canvas _darker_ dropped
+  `text-subtle` to 4.27:1 — that token clears the plain canvas by only 4.90:1 and has nowhere to
+  go. The mistake was treating light mode as dark mode with the numbers flipped, when the
+  physical rule is that light adds light. Both themes now add light at the lamp and fall back to
+  their own canvas, so no background can be pushed past a value the gate already checks.
+
+- **The contrast gate was widened rather than argued around.** "Decorative" is not on its own a
+  reason a layer under text is safe, so the hero lamp, the vertical grade and the panel glaze are
+  each composited at their _peak_ alpha and re-checked against every body token, plus the five
+  semantics on the glazed panel because the hero's amber "in 2 days" sits there. The alphas are
+  read out of `index.css` by a second parser rather than restated in the test, for the same
+  reason the colours already were.
+
+- **No `backdrop-filter` anywhere in this layer, deliberately.** Nothing on this page scrolls
+  under a translucent surface, so the blur would cost compositing and be indistinguishable from
+  an opaque fill — and a translucent panel puts text on a background whose value depends on
+  whatever is behind it, which is exactly what the gate cannot check. Every atmosphere surface is
+  opaque at every stop. If the marketing header ever becomes sticky, that is where blur earns it.
+
+- **The cast under a floating panel is coloured, not black.** A black shadow on an 11 19 21
+  canvas is invisible, which is the actual reason dark interfaces read flat. `--atmos-cast` is
+  lighter than the dark canvas and darker than the light one, so one declaration reads as a glow
+  in dark mode and a shadow in light mode.
+
+- **The light bloom was strengthened after review, and the fix was the white lift, not the
+  lamp.** `--atmos-deep-peak` at 0.55 brightened the whole top band, so the lamp had nothing but
+  white to read against and the two washed together. Pulled back to 0.38, with the lamp given
+  real chroma at `238 227 255`. Chroma costs luminance — green carries 0.72 of it — so the value
+  is the most saturated lavender that still leaves margin: `text-subtle` lands at 4.72:1 against
+  a 4.5 floor and a 4.91:1 plain-canvas baseline.
+
+- **The bundle claim was measured, not assumed.** `checkBundle.mjs` filters the manifest closure
+  with `.endsWith('.js')`, so CSS is not counted in the landing budget at all and the 113.3 KB
+  figure did not move. The real cost is the stylesheet: 7,170 to 7,613 bytes gzipped, +443 B,
+  measured by stashing the change and rebuilding rather than estimating.
+
+- **Hero only.** `atmos-field`, `atmos-lit` and `shadow-float` are applied to one surface so the
+  treatment could be approved before it spread. Propagating them to the remaining landing
+  sections and the app panels is deliberately left as separate work.
+
+## Phase 17c propagation — the two floating overlays
+
+- **Executed 2026-09-08. This is a new decision, not the execution of a previously approved
+  list.** The Phase 17c entry above closed with "Hero only" and deferred propagation to "the
+  remaining landing sections and the app panels". No surface list was ever recorded anywhere in
+  this repo — the deferral is the only text on the subject. This pass deliberately takes neither
+  of the two groups that deferral named; it takes the two shared overlay primitives instead, and
+  the landing sections and the app panels stay deferred exactly as they were.
+
+- **`Modal` gets `shadow-float` and `atmos-lit`. `Popover` gets `shadow-float` only.** Two class
+  changes, both replacing `shadow-card`, and nothing else in the tree was touched.
+
+- **These two were already singled out, which is why they go first.** Phase 17's "flat panels lost
+  their shadow" bullet stripped the shadow from every card and kept one on Modal, Popover and the
+  error boundary, "because those genuinely float above the page". `shadow-float` is the
+  atmosphere-aware form of that same judgement — a lit top edge, a contact shadow, and a coloured
+  cast that reads as a glow on the dark canvas — so on those two surfaces it replaces `shadow-card`
+  rather than introducing a new idea.
+
+- **`Popover` does not get the glaze, and that asymmetry is the point.** `.atmos-lit` fades its
+  glaze out by 38% of the element's height, which on a 20rem panel is a soft top band and on a
+  menu 15rem wide with 0.5rem of padding would tint the first row or two and stop — a gradient
+  artifact sitting behind text, not a lit surface. The lit top edge Popover does get comes from
+  `shadow-float`'s inset highlight, which is a 1px line and therefore height-independent.
+
+- **The contrast gate needed no widening, and that was checked rather than assumed.** The gate's
+  `glazed` case composites `--atmos-glaze` over `--color-surface` at peak alpha and asserts all
+  three body tokens and all five semantics against it. Modal is `bg-surface` plus `atmos-lit` —
+  the identical composition to the hero panel already covered — so the existing assertions cover
+  the new surface as written. Popover changes no background at all and is contrast-neutral.
+  116 assertions pass in both themes.
+
+- **Everything else was left alone on purpose.** ScreenshotSection, FeatureCards, HowItWorks,
+  FaqAccordion, the dashboard, the auth pages, the error boundary, the sidebar drawer, the toasts
+  and every card and table keep what they have. The error boundary is the third surface Phase 17
+  named as genuinely floating and is the most obvious candidate to follow; it is still out of
+  scope here. Spreading a treatment one approved surface at a time is the whole reason the hero
+  entry held it to one.
+
+- **No bundle movement.** The landing closure stays at 113.3 KB gzip, and neither class adds a
+  declaration to the stylesheet — both already exist for the hero.
