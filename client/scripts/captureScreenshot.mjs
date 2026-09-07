@@ -48,7 +48,7 @@ try {
     explicit. Dark, because that is the theme the app boots into.
   */
   await page.getByRole('radio', { name: 'Dark theme' }).click();
-  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+  await page.waitForSelector("html[data-theme='dark']");
 
   // The charts animate in, so wait for them to settle rather than racing them.
   await page.getByRole('heading', { name: 'Dashboard' }).waitFor();
