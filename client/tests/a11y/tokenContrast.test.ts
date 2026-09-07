@@ -55,10 +55,30 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
     },
   );
 
+  // The solid-fill pair is gated separately from the accent. Splitting them is
+  // what lets the dark theme carry a genuinely deep button instead of a pastel
+  // one, and an ungated second token would just drift back towards the accent.
+  it('keeps the filled primary button readable and visible', () => {
+    expect(contrastRatio(token('primary-fill-fg'), token('primary-fill'))).toBeGreaterThanOrEqual(
+      AA_TEXT,
+    );
+    expect(
+      contrastRatio(token('primary-fill-hover'), token('primary-fill-fg')),
+    ).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  // A deep fill on a near-black canvas can pass its own label check and still
+  // be an invisible slab. The button's shape has to clear AA for a graphical
+  // object against every ground it is painted on.
+  it.each(SURFACES)('primary-fill reads as a shape on %s', (bg) => {
+    expect(contrastRatio(token('primary-fill'), token(bg))).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
   it('keeps button labels readable on their filled backgrounds', () => {
-    expect(contrastRatio(token('primary-fg'), token('primary'))).toBeGreaterThanOrEqual(AA_TEXT);
-    // The danger button used to hardcode white, which is unreadable on the dark
-    // theme's lighter red. It has its own foreground token now, checked here.
+    // The primary button's own pair is checked above, against the fill tokens
+    // that replaced `primary-fg`. The danger button used to hardcode white,
+    // which is unreadable on the dark theme's lighter red. It has its own
+    // foreground token now, checked here.
     expect(contrastRatio(token('danger-fg'), token('danger'))).toBeGreaterThanOrEqual(AA_TEXT);
   });
 

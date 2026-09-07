@@ -834,6 +834,15 @@ _Dated notes on work outside the numbered phases. Not a checklist._
     lightest of the three grounds; axe found a 4.48:1 badge on the board, which sits on
     `surface-muted`. The gate now checks every surface a tint is painted on, and all five light
     semantics were darkened to clear it.
+- **2026-09-07 — the jade primary replaced by a violet, and the primary token split.** Review
+  read jade as neon in dark mode. Measurement showed it cleared the dark gate at 8.48:1 against a
+  4.5 floor, so the glare was tuning, not a contrast requirement. The cobalt asked for was
+  unavailable — `--color-info` already owns that hue and a cobalt primary put Applied and
+  Assessment 1.2 degrees apart — so the primary moved to violet at hue 298, in the one wide gap
+  left in the palette. `--color-primary` was also split into an accent token and a solid-fill
+  token: one value cannot be readable as pill text on a near-black card *and* deep enough to
+  carry white button text, which is what made the first attempt pastel. Amber, red and the green
+  `offer` semantic were left alone. Rationale in `DECISIONS.md`.
 
 ---
 

@@ -67,7 +67,7 @@ export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): 
                     className={cn(
                       'inline-flex h-6 w-6 items-center justify-center rounded-full text-xs',
                       day.isToday
-                        ? 'bg-primary font-semibold text-primary-fg'
+                        ? 'bg-primary-fill font-semibold text-primary-fill-fg'
                         : 'text-content-muted',
                       !day.inMonth && 'text-content-subtle',
                     )}

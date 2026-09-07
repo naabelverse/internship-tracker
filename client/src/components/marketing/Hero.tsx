@@ -140,7 +140,7 @@ export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Ele
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 to={paths.register}
-                className="inline-flex h-11 items-center justify-center rounded-control bg-primary px-6 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover"
+                className="inline-flex h-11 items-center justify-center rounded-control bg-primary-fill px-6 text-sm font-semibold text-primary-fill-fg transition-colors hover:bg-primary-fill-hover"
               >
                 Create a free account
               </Link>
