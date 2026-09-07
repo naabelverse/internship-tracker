@@ -2239,13 +2239,23 @@ The half deferred when the phase was split. Closes Phase 11.
 
 ## Contact address
 
-- **`CONTACT_EMAIL` was filled with a project alias, not a personal inbox.** CLAUDE.md says never
-  to commit a real email address. That rule exists to stop personal addresses leaking into code,
-  fixtures and seeds — but Terms, Privacy, `SECURITY.md` and the footer all need a reachable
-  contact by definition, so a public deployment cannot satisfy both readings at once. The conflict
-  was raised rather than resolved silently, and the operator chose
-  `naabel.workspace@gmail.com`: a real, reachable alias that is not the maintainer's personal
-  address. Recorded here because it is a deliberate exception to a hard rule, not an oversight.
+- **`CONTACT_EMAIL` is `naabel.workspace@gmail.com`, chosen deliberately by the maintainer.**
+  CLAUDE.md says never to commit a real email address. That rule exists to stop personal addresses
+  leaking into code, fixtures and seeds — but Terms, Privacy, `SECURITY.md` and the footer all
+  need a reachable contact by definition, so a public deployment cannot satisfy both readings at
+  once.
+
+  The conflict was surfaced before anything was written, with the alternatives laid out: leave the
+  placeholder, use a GitHub noreply address, supply a dedicated alias, or publish the personal
+  address. The maintainer picked the dedicated alias and **accepted the public-exposure trade-off**
+  that comes with putting any address in a public repository — it will be scraped. This is a
+  considered decision about which address to expose, not an oversight, not a default, and not the
+  agent inferring intent from an ambiguous answer.
+
+  The alias is deliberately separate from the maintainer's personal inbox, which is what keeps the
+  spirit of the CLAUDE.md rule intact while still giving the legal pages a contact that works. Any
+  future change to this value is a decision at the same level: it belongs here, not in a commit
+  message.
 
 - **Only three files changed, and the markdown keeps its placeholder.** `siteMeta.ts` is the one
   constant; `LegalPage` substitutes `{{CONTACT_EMAIL}}` into `terms.md` and `privacy.md` at render,
