@@ -2236,3 +2236,30 @@ The half deferred when the phase was split. Closes Phase 11.
   semantic that is conventionally green and independent of the brand colour. Amber and red were
   untouched for the same reason. `chart-1` and both heat ramps were re-derived from the violet,
   because those are primary-derived and would otherwise have been visibly leftover jade.
+
+## Contact address
+
+- **`CONTACT_EMAIL` is `naabel.workspace@gmail.com`, chosen deliberately by the maintainer.**
+  CLAUDE.md says never to commit a real email address. That rule exists to stop personal addresses
+  leaking into code, fixtures and seeds — but Terms, Privacy, `SECURITY.md` and the footer all
+  need a reachable contact by definition, so a public deployment cannot satisfy both readings at
+  once.
+
+  The conflict was surfaced before anything was written, with the alternatives laid out: leave the
+  placeholder, use a GitHub noreply address, supply a dedicated alias, or publish the personal
+  address. The maintainer picked the dedicated alias and **accepted the public-exposure trade-off**
+  that comes with putting any address in a public repository — it will be scraped. This is a
+  considered decision about which address to expose, not an oversight, not a default, and not the
+  agent inferring intent from an ambiguous answer.
+
+  The alias is deliberately separate from the maintainer's personal inbox, which is what keeps the
+  spirit of the CLAUDE.md rule intact while still giving the legal pages a contact that works. Any
+  future change to this value is a decision at the same level: it belongs here, not in a commit
+  message.
+
+- **Only three files changed, and the markdown keeps its placeholder.** `siteMeta.ts` is the one
+  constant; `LegalPage` substitutes `{{CONTACT_EMAIL}}` into `terms.md` and `privacy.md` at render,
+  so those sources still carry the token and `legal.test.tsx` still asserts it. `SECURITY.md` and
+  `CODE_OF_CONDUCT.md` are read on GitHub rather than through the app, so nothing substitutes for
+  them and they were edited directly. Phase 13's note that the test "will start failing once you
+  replace it" assumed the markdown would be edited too; via the constant, it does not.

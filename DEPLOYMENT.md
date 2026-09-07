@@ -1423,7 +1423,7 @@ launch.
 - [ ] The uptime monitor is live on `/health` at 5-minute intervals and has sent a test alert.
 - [ ] If Sentry is enabled, a deliberately triggered 500 has appeared in the issue stream.
 - [ ] `scripts/backup.sh` has been run once **and a restore from that archive has been tested**.
-- [ ] `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts` is a real address — the `{{CONTACT_EMAIL}}`
+- [x] `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts` is a real address — the `{{CONTACT_EMAIL}}`
       placeholder must not be live on Terms, Privacy, the footer or `SECURITY.md`.
 
 ---

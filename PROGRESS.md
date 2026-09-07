@@ -849,7 +849,10 @@ _Dated notes on work outside the numbered phases. Not a checklist._
 ## Manual steps waiting on me (the human)
 _The agent appends anything it cannot do itself here — DNS records, account signups, secrets to generate._
 
-- [ ] **Fill `{{CONTACT_EMAIL}}`.** It now appears in four places, all fed from one constant:
+- [x] **Fill `{{CONTACT_EMAIL}}`.** Done — `naabel.workspace@gmail.com`, a project alias rather
+      than a personal inbox. Only `siteMeta.ts`, `SECURITY.md` and `CODE_OF_CONDUCT.md` changed:
+      the markdown sources keep the placeholder by design, because `LegalPage` substitutes it at
+      render, so `legal.test.tsx` still passes unchanged. It now appears in four places, all fed from one constant:
       set `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts` and the landing footer's mailto, the
       Terms contact line and the Privacy contact line all follow. The literal placeholder also
       sits in `client/content/terms.md` and `client/content/privacy.md` for anyone reading the

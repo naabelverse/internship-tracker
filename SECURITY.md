@@ -20,7 +20,7 @@ Report privately, by either route:
 - **GitHub Security Advisories** — the "Report a vulnerability" button under the
   repository's Security tab. This is preferred: it gives us a private fork to
   develop the fix in, and credits you on the published advisory.
-- **Email** — `{{CONTACT_EMAIL}}`.
+- **Email** — `naabel.workspace@gmail.com`.
 
 Include whatever you have: the affected route or component, the steps or request
 that trigger it, what an attacker gets out of it, and the commit or deployment
