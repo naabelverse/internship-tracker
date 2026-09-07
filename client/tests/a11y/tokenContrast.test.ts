@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { composite, contrastRatio, readThemeTokens, type Rgb } from '../utils/contrast';
+import { SERIES_TOKENS } from '@/features/dashboard/charts/chartTokens';
 
 /** SPEC section 6 asks for 4.5:1, which is WCAG AA for body text. */
 const AA_TEXT = 4.5;
@@ -17,7 +18,16 @@ const SEMANTIC_TOKENS = ['primary', 'success', 'warning', 'danger', 'info'] as c
 /** `bg-<token>/15 text-<token>`, the shape every status pill and badge uses. */
 const PILL_ALPHA = 0.15;
 
-const CHART_TOKENS = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6'] as const;
+const CHART_TOKENS = [
+  'chart-1',
+  'chart-2',
+  'chart-3',
+  'chart-4',
+  'chart-5',
+  'chart-6',
+  'chart-7',
+  'chart-8',
+] as const;
 
 describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => {
   const tokens = readThemeTokens(theme);
@@ -84,6 +94,29 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
 
   it.each(CHART_TOKENS)('%s is distinguishable from the card it sits on', (name) => {
     expect(contrastRatio(token(name), token('surface'))).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
+  // The bug this catches shipped and reached the dashboard: `SERIES_TOKENS`
+  // ended with `color-info` and `color-success`, which are byte-identical to
+  // `color-chart-2` and `color-chart-4`, so the seven-category "By source"
+  // chart painted two categories the same blue. Every assertion above checks a
+  // token against a *background*; nothing compared the series entries with each
+  // other, and that is precisely the gap that let it through.
+  //
+  // The list is imported rather than restated, so a ninth entry is covered the
+  // day it is added and a local copy cannot drift from the one the app ships.
+  it('paints every categorical series entry a different colour', () => {
+    const seen = new Map<string, string>();
+
+    for (const name of SERIES_TOKENS) {
+      const key = token(name.replace(/^color-/, '')).join(' ');
+      const clash = seen.get(key);
+
+      expect(clash, `${name} duplicates ${clash ?? ''} - both are rgb(${key})`).toBeUndefined();
+      seen.set(key, name);
+    }
+
+    expect(seen.size).toBe(SERIES_TOKENS.length);
   });
 
   it('separates the ends of the heatmap scale', () => {

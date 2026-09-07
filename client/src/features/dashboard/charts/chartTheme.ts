@@ -1,34 +1,7 @@
 import { useMemo } from 'react';
 import { useThemeStore } from '@/store/themeStore';
 import type { ApplicationStatus } from '@/types/application';
-
-/**
- * The token names the charts read. Each holds space-separated RGB channels, the
- * same values Tailwind wraps for `bg-*` utilities, so a chart and a pill painted
- * "primary" are painted the identical colour.
- */
-const TOKENS = [
-  'color-surface',
-  'color-surface-muted',
-  'color-border',
-  'color-border-strong',
-  'color-text',
-  'color-text-muted',
-  'color-text-subtle',
-  'color-primary',
-  'color-success',
-  'color-warning',
-  'color-danger',
-  'color-info',
-  'color-chart-1',
-  'color-chart-2',
-  'color-chart-3',
-  'color-chart-4',
-  'color-chart-5',
-  'color-chart-6',
-] as const;
-
-type TokenName = (typeof TOKENS)[number];
+import { SERIES_TOKENS, STATUS_TOKENS, TOKENS, type TokenName } from './chartTokens';
 
 export interface ChartPalette {
   /** `rgb(r g b)` for a token, or `rgb(r g b / a)` when an alpha is given. */
@@ -38,33 +11,6 @@ export interface ChartPalette {
   /** Matches the status pills used everywhere else in the app. */
   statusColor: (status: ApplicationStatus) => string;
 }
-
-/**
- * Statuses keep the colour their pill has, so a slice and a badge for the same
- * status never disagree. Ghosted and withdrawn share a grey pill but get
- * separate chart tokens, because two identical slices would be unreadable.
- */
-const STATUS_TOKENS: Record<ApplicationStatus, TokenName> = {
-  saved: 'color-text-subtle',
-  applied: 'color-info',
-  assessment: 'color-primary',
-  interview: 'color-warning',
-  offer: 'color-success',
-  rejected: 'color-danger',
-  ghosted: 'color-chart-5',
-  withdrawn: 'color-chart-6',
-};
-
-const SERIES_TOKENS: TokenName[] = [
-  'color-chart-1',
-  'color-chart-2',
-  'color-chart-3',
-  'color-chart-4',
-  'color-chart-5',
-  'color-chart-6',
-  'color-info',
-  'color-success',
-];
 
 /**
  * Fallback channels for a document whose stylesheet has not been applied — a

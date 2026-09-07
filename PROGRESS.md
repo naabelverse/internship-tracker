@@ -844,6 +844,15 @@ _Dated notes on work outside the numbered phases. Not a checklist._
   carry white button text, which is what made the first attempt pastel. Amber, red and the green
   `offer` semantic were left alone. Rationale in `DECISIONS.md`.
 
+- **2026-09-08 - chart series palette repeated colours from position 7 (issue #4).**
+  `SERIES_TOKENS` ended with `color-info` and `color-success`, byte-identical to `color-chart-2`
+  and `color-chart-4`, so the seven-category "By source" chart painted two categories the same
+  blue in both themes. Pre-existing, unrelated to the violet redesign. Fixed by adding real
+  `--color-chart-7` and `--color-chart-8` tokens, chosen against the whole palette's hue
+  occupancy rather than just the two they replace. The gate now asserts every series entry
+  resolves to a distinct colour in both themes - the assertion that was missing is what let the
+  duplication ship. Rationale in `DECISIONS.md`.
+
 ---
 
 ## Manual steps waiting on me (the human)
