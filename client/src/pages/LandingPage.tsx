@@ -1,8 +1,8 @@
 import { Seo } from '@/components/Seo';
 import { FaqAccordion } from '@/components/marketing/FaqAccordion';
+import { Hero } from '@/components/marketing/Hero';
 import {
   FeatureCards,
-  Hero,
   HowItWorks,
   ScreenshotSection,
 } from '@/components/marketing/LandingSections';

@@ -40,16 +40,14 @@ export function StatCard({
   const Arrow = isUp ? ArrowUpIcon : ArrowDownIcon;
 
   return (
-    <div className="rounded-card border border-border bg-surface p-4 shadow-card">
+    <div className="rounded-card border border-border bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium uppercase tracking-wide text-content-subtle">
-            {label}
-          </p>
+          <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
           {isLoading ? (
             <Skeleton className="mt-2 h-8 w-20" label={`Loading ${label}`} />
           ) : (
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-content">{value}</p>
+            <p className="mt-1 text-stat stretch-display tabular-nums text-content">{value}</p>
           )}
         </div>
         {children}

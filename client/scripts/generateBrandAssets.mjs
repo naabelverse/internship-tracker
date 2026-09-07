@@ -18,43 +18,59 @@ import sharp from 'sharp';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(here, '..', 'public');
 
-const BRAND = '#4f46e5';
-const INK = '#111827';
-const CANVAS = '#f8fafc';
+/*
+  The "Dispatch" palette, kept in step with the tokens in `src/index.css`: the
+  jade primary and the petrol canvas of the dark theme, which is the theme the
+  app defaults to. Re-run `npm run assets -w client` after changing either.
+*/
+const BRAND = '#33c9b6';
+const INK = '#e3edeb';
+const CANVAS = '#0b1315';
+const MUTED = '#9aafb2';
 const SITE_NAME = 'Internship Tracker';
-const TAGLINE = 'Never miss an application deadline';
 
 /** Kept in step with `src/routes/paths.ts`; a test asserts the two still agree. */
 const INDEXABLE_PATHS = ['/', '/login', '/register', '/terms', '/privacy'];
 
 const siteUrl = (process.env.VITE_APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
 
-/** The square mark, used for every favicon size and for the og-image badge. */
+/**
+ * The square mark: three bars narrowing top to bottom.
+ *
+ * It is the funnel the product is about - applications, then interviews, then
+ * offers - and it is the same shape `BrandMark` draws in the app, rather than
+ * the app's initials in a box. Drawn on the 16-unit grid the component uses and
+ * scaled by the viewBox, so the two cannot drift.
+ */
 function markSvg(size) {
-  const radius = Math.round(size * 0.22);
-  const fontSize = Math.round(size * 0.42);
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="${size}" height="${size}" rx="${radius}" fill="${BRAND}"/>
-  <text x="50%" y="50%" dy="0.35em" text-anchor="middle"
-        font-family="Helvetica,Arial,sans-serif" font-weight="700"
-        font-size="${fontSize}" fill="#ffffff">IT</text>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 16 16">
+  <rect width="16" height="16" rx="3.6" fill="${CANVAS}"/>
+  <rect x="3" y="3" width="10" height="2.6" rx="0.7" fill="${BRAND}" opacity="0.55"/>
+  <rect x="3" y="6.8" width="6.5" height="2.6" rx="0.7" fill="${BRAND}" opacity="0.78"/>
+  <rect x="3" y="10.6" width="3.5" height="2.6" rx="0.7" fill="${BRAND}"/>
 </svg>`;
 }
 
 function ogImageSvg() {
+  const font = 'Helvetica,Arial,sans-serif';
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <rect width="1200" height="630" fill="${CANVAS}"/>
-  <rect x="0" y="0" width="1200" height="10" fill="${BRAND}"/>
-  <rect x="80" y="150" width="96" height="96" rx="22" fill="${BRAND}"/>
-  <text x="128" y="198" dy="0.35em" text-anchor="middle"
-        font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="42" fill="#ffffff">IT</text>
-  <text x="200" y="198" dy="0.35em"
-        font-family="Helvetica,Arial,sans-serif" font-weight="600" font-size="34" fill="${INK}">${SITE_NAME}</text>
-  <text x="80" y="330" font-family="Helvetica,Arial,sans-serif" font-weight="700" font-size="66" fill="${INK}">${TAGLINE}</text>
-  <text x="80" y="410" font-family="Helvetica,Arial,sans-serif" font-size="30" fill="#4b5563">A Kanban board, a deadline calendar, email reminders</text>
-  <text x="80" y="452" font-family="Helvetica,Arial,sans-serif" font-size="30" fill="#4b5563">and real statistics about your search.</text>
-  <text x="80" y="546" font-family="Helvetica,Arial,sans-serif" font-weight="600" font-size="26" fill="${BRAND}">Free and open source</text>
+  <rect x="0" y="0" width="1200" height="8" fill="${BRAND}"/>
+
+  <rect x="80" y="132" width="64" height="14" rx="4" fill="${BRAND}" opacity="0.55"/>
+  <rect x="80" y="153" width="41" height="14" rx="4" fill="${BRAND}" opacity="0.78"/>
+  <rect x="80" y="174" width="23" height="14" rx="4" fill="${BRAND}"/>
+  <text x="168" y="162" dy="0.35em" font-family="${font}" font-weight="600"
+        font-size="32" fill="${INK}">${SITE_NAME}</text>
+
+  <text x="80" y="300" font-family="${font}" font-weight="700" font-size="64" fill="${INK}">Never miss a deadline</text>
+  <text x="80" y="376" font-family="${font}" font-weight="700" font-size="64" fill="${INK}">you worked this hard for.</text>
+
+  <text x="80" y="452" font-family="${font}" font-size="28" fill="${MUTED}">A board, a deadline calendar, a morning digest,</text>
+  <text x="80" y="492" font-family="${font}" font-size="28" fill="${MUTED}">and real statistics about your search.</text>
+
+  <text x="80" y="558" font-family="${font}" font-weight="600" font-size="24" fill="${BRAND}">Free, open source, and yours to export.</text>
 </svg>`;
 }
 
@@ -66,7 +82,7 @@ const manifest = {
   scope: '/',
   display: 'standalone',
   background_color: CANVAS,
-  theme_color: BRAND,
+  theme_color: CANVAS,
   icons: [
     { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

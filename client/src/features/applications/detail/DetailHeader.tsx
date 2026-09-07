@@ -45,9 +45,7 @@ export function DetailHeader({
         </span>
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold tracking-tight text-content">
-            {application.company}
-          </h1>
+          <h1 className="text-display-sm stretch-wide text-content">{application.company}</h1>
           <p className="text-sm text-content-muted">{application.role}</p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">

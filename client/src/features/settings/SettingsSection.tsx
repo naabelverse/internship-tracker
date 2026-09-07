@@ -27,7 +27,7 @@ export function SettingsSection({
   const body = (
     <>
       <div className="border-b border-border px-4 py-4 sm:px-5">
-        <h2 className="text-sm font-semibold text-content">{title}</h2>
+        <h2 className="text-sm font-semibold stretch-wide text-content">{title}</h2>
         <p className="mt-0.5 text-sm text-content-muted">{description}</p>
       </div>
 
@@ -41,7 +41,7 @@ export function SettingsSection({
     </>
   );
 
-  const className = 'overflow-hidden rounded-card border border-border bg-surface shadow-card';
+  const className = 'overflow-hidden rounded-card border border-border bg-surface';
 
   return onSubmit ? (
     <form noValidate onSubmit={onSubmit} className={className} aria-labelledby={undefined}>

@@ -2120,3 +2120,68 @@ The half deferred when the phase was split. Closes Phase 11.
   real key or sending to a real address was not something to improvise. The suite stubs `fetch` at
   the transport boundary and asserts the exact request Resend documents — endpoint, bearer header,
   content type and body shape — so the first real send is the first thing the credential is used for.
+
+## Phase 17 — the "Dispatch" visual redesign
+
+- **The direction is "Dispatch": an operations board, not a marketing site.** The product is
+  used by a student holding forty to eighty live applications under deadline pressure, and its
+  two jobs are making sure nothing slips and making months of effort visible. That argued for
+  dense and information-forward over warm and friendly. It also ruled out the obvious
+  alternative — "technical, like Linear" — because dark grey with a faint violet accent is
+  what the app already looked like and is now itself the template.
+
+- **Palette: cool by default, heat means it needs you.** A desaturated petrol base with a jade
+  primary, and amber and red as the only warm colours anywhere in the interface. That is a rule
+  rather than a decoration: if something on screen is warm, it wants attention. It also replaced
+  the slate-plus-indigo combination, which is the single most recognisable "generated app" tell.
+
+- **Primary could not be amber, which was the first idea.** `warning` is already amber, and
+  `assessment` and `interview` sit next to each other as slices in the status doughnut, so two
+  ambers would have been two indistinguishable slices. Jade keeps the five semantics spread
+  across the wheel at roughly 2°, 40°, 142°, 176° and 222°.
+
+- **One typeface, two voices, via the width axis.** Archivo Variable, self-hosted, using the
+  build that carries both the weight and the width axes in a single file: headings are set at
+  118% width like lettering on a departure board, body text stays at 100%. Two roles for one
+  request, and no second family to keep in tune. Tabular figures are the default because
+  nearly every number in this app sits in a column. Not Inter — Inter is the default that
+  makes an interface look like every other interface, and the app had in any case been naming a
+  font it never loaded and rendering in the system stack.
+
+- **Radii encode hierarchy rather than being one value.** chip 4px, control 6px, card 10px,
+  panel 14px. A single radius on everything regardless of weight is a tell, and the landing
+  page had `rounded-xl` on every element.
+
+- **Flat panels lost their shadow.** An identical soft shadow under every card is the SaaS-card
+  default; grouping now comes from rules and alignment, which also makes the app agree with the
+  landing page. Modal, Popover and the error boundary keep a shadow, because those genuinely
+  float above the page.
+
+- **The theme control now appears on the logged-out surface.** It was only in the app shell and
+  on the auth pages, so a visitor got dark with no way out. It is the same `ThemeToggle`
+  component driving the same store and the same storage key the inline boot script reads —
+  deliberately not a second mechanism, so Phase 5's no-flash behaviour is untouched.
+
+- **The token contrast gate was widened, and it had to be.** It composited each pill tint over
+  `surface` only — the lightest of the three grounds. axe found a 4.48:1 badge on the board,
+  which is painted on `surface-muted`; checking all three surfaces showed all five light
+  semantics failing over two of them. The gate now checks every surface a tint is painted on,
+  and the light semantics were darkened to clear it. A gate that only checks the easiest case
+  is not a gate.
+
+- **The dark warning amber was resaturated, not brightened.** It read muddy against petrol, but
+  measurement showed it was already at 9.7:1 — higher than the light theme's 6.5:1 — so the
+  problem was saturation, not contrast. It went to 100% saturation and the light amber shifted
+  hue slightly so both themes sit in the same family. They cannot match exactly: an
+  AA-compliant amber on a near-white surface has to be dark enough to read brownish.
+
+- **The calendar's ARIA rows are a fix, not a redesign.** `role="grid"` may not own gridcells
+  directly, and this one did — two critical axe violations on all 42 cells. Pre-existing:
+  Phase 15's axe spec never visited `/calendar`. Weeks are wrapped in `display: contents`, so
+  no box is generated, the seven-column layout is identical and the DOM order is unchanged.
+  Recorded here because it is a DOM change made on a redesign branch.
+
+- **The dashboard screenshot capture was made deterministic.** It asked for a light context,
+  but `colorScheme` only decides what `system` resolves to and the demo account's stored
+  preference wins once the session loads, so the theme it captured depended on account state.
+  It now drives the theme control explicitly.

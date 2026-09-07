@@ -41,7 +41,7 @@ export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): J
       data-card-index={cardIndex}
       style={{ transform: CSS.Translate.toString(transform) }}
       className={cn(
-        'rounded-card border border-border bg-surface p-3 shadow-card',
+        'rounded-card border border-border bg-surface p-3',
         isDragging && 'opacity-60 ring-2 ring-primary',
       )}
     >

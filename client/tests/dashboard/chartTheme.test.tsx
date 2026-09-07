@@ -55,12 +55,19 @@ describe('charts follow the theme', () => {
     await setTheme('light');
 
     expect(readChartPalette().color('color-primary')).toBe(tokenColor('color-primary'));
-    expect(tokenColor('color-primary')).toBe('rgb(79 70 229)');
+    // The literal is not decoration. Without it the assertion above passes when
+    // both sides are equally wrong -- an unresolved custom property makes
+    // `readChartPalette` fall back and `tokenColor` return `rgb()`, and the two
+    // agree on nothing. So one concrete value per theme is pinned, and it has to
+    // be updated by hand whenever `src/index.css` ships a new palette. The
+    // "Dispatch" redesign moved primary from indigo to jade; these are the
+    // values that file now ships.
+    expect(tokenColor('color-primary')).toBe('rgb(4 100 90)');
 
     await setTheme('dark');
 
     expect(readChartPalette().color('color-primary')).toBe(tokenColor('color-primary'));
-    expect(tokenColor('color-primary')).toBe('rgb(129 140 248)');
+    expect(tokenColor('color-primary')).toBe('rgb(51 201 182)');
   });
 
   it('repaints a mounted line chart when the theme is toggled', async () => {

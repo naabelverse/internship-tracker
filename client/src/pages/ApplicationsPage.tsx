@@ -118,7 +118,7 @@ export function ApplicationsPage(): JSX.Element {
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-content">Applications</h1>
+          <h1 className="text-display-sm stretch-wide text-content">Applications</h1>
           <p className="text-sm text-content-muted">
             {query.data ? `${String(query.data.meta.total)} tracked` : 'Loading your applications'}
           </p>

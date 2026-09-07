@@ -9,6 +9,11 @@ import { createQueryClient } from '@/api/queryClient';
 import { ROUTER_FUTURE } from '@/routes/routerFuture';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initSentry } from '@/lib/sentry';
+// Self-hosted so the app owns its typography rather than depending on a
+// third-party font host. The `wdth` build carries the weight *and* width
+// axes in one file, which is what lets headings be set wide without a
+// second family or a second request.
+import '@fontsource-variable/archivo/wdth.css';
 import '@/index.css';
 
 const container = document.getElementById('root');
