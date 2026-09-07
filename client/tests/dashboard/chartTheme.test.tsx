@@ -62,7 +62,7 @@ describe('charts follow the theme', () => {
     // be updated by hand whenever `src/index.css` ships a new palette. The
     // "Dispatch" redesign moved primary from indigo to jade; these are the
     // values that file now ships.
-    expect(tokenColor('color-primary')).toBe('rgb(10 106 96)');
+    expect(tokenColor('color-primary')).toBe('rgb(4 100 90)');
 
     await setTheme('dark');
 

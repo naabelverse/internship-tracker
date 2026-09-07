@@ -41,11 +41,19 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
   // The failure this catches is subtle and was real: a token can pass against
   // the plain surface and still fail inside its own tinted pill, because the
   // tint lifts the background towards the text colour.
-  it.each(SEMANTIC_TOKENS)('%s clears AA against its own 15 percent tint', (name) => {
-    const tint = composite(token(name), token('surface'), PILL_ALPHA);
+  // Compositing only over `surface` checked the most forgiving of the three
+  // grounds. A pill is not always on a card: the board's column-count badge is
+  // painted on `surface-muted`, and that is where a 4.48 badge shipped and axe
+  // caught it in a real browser. Every surface a tint is actually painted on is
+  // checked now, which is what makes this a gate rather than a spot check.
+  it.each(SEMANTIC_TOKENS.flatMap((fg) => SURFACES.map((bg) => [fg, bg] as const)))(
+    '%s clears AA against its own 15 percent tint on %s',
+    (name, surface) => {
+      const tint = composite(token(name), token(surface), PILL_ALPHA);
 
-    expect(contrastRatio(token(name), tint)).toBeGreaterThanOrEqual(AA_TEXT);
-  });
+      expect(contrastRatio(token(name), tint)).toBeGreaterThanOrEqual(AA_TEXT);
+    },
+  );
 
   it('keeps button labels readable on their filled backgrounds', () => {
     expect(contrastRatio(token('primary-fg'), token('primary'))).toBeGreaterThanOrEqual(AA_TEXT);

@@ -29,21 +29,21 @@
 :root {
   --color-canvas: 232 237 236;
   --color-surface: 248 250 249;
-  --color-surface-muted: 221 230 228;
+  --color-surface-muted: 226 233 231;
   --color-border: 199 213 210;
   --color-border-strong: 163 183 180;
   --color-text: 13 26 28;
   --color-text-muted: 63 85 89;
   --color-text-subtle: 84 105 109;
-  --color-primary: 10 106 96;
+  --color-primary: 4 100 90;
   --color-primary-hover: 6 80 73;
   --color-primary-fg: 255 255 255;
-  --color-success: 18 112 58;
-  --color-warning: 140 78 6;
-  --color-danger: 176 36 24;
+  --color-success: 8 102 48;
+  --color-warning: 134 72 0;
+  --color-danger: 170 30 18;
   --color-danger-fg: 255 255 255;
-  --color-info: 27 79 209;
-  --color-ring: 10 106 96;
+  --color-info: 25 77 207;
+  --color-ring: 4 100 90;
   --color-shadow: 13 26 28;
 
   /*
@@ -51,15 +51,15 @@
    * by-source or top-companies chart on their own: those need colours that are
    * distinguishable from each other rather than colours that mean something.
    */
-  --color-chart-1: 10 106 96;
-  --color-chart-2: 27 79 209;
-  --color-chart-3: 140 78 6;
-  --color-chart-4: 18 112 58;
+  --color-chart-1: 4 100 90;
+  --color-chart-2: 25 77 207;
+  --color-chart-3: 134 72 0;
+  --color-chart-4: 8 102 48;
   --color-chart-5: 162 31 98;
   --color-chart-6: 79 106 110;
 
   /* Activity heatmap intensity, level 0 being a day with nothing on it. */
-  --color-heat-0: 221 230 228;
+  --color-heat-0: 226 233 231;
   --color-heat-1: 183 220 213;
   --color-heat-2: 127 197 186;
   --color-heat-3: 61 158 144;
