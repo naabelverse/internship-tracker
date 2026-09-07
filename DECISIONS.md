@@ -2263,3 +2263,52 @@ The half deferred when the phase was split. Closes Phase 11.
   `CODE_OF_CONDUCT.md` are read on GitHub rather than through the app, so nothing substitutes for
   them and they were edited directly. Phase 13's note that the test "will start failing once you
   replace it" assumed the markdown would be edited too; via the constant, it does not.
+
+## Chart series palette — issue #4
+
+- **Positions 7 and 8 became real tokens rather than semantic reuse.** `SERIES_TOKENS` ended with
+  `color-info` and `color-success`, which are byte-identical to `color-chart-2` and
+  `color-chart-4`, so the seven-category "By source" chart painted two categories the same blue in
+  both themes. Option 1 from the issue was taken. The deeper reason to prefer it over capping the
+  series at six: a semantic token's value is owned by what it _means_, so any future change to
+  `info` or `success` would silently re-collide. Categorical colour needs tokens whose only job is
+  to differ from one another.
+
+- **The hues were chosen against the whole palette, not just the two they replace.** Occupancy
+  across both themes, chromatic tokens only: 27/30 danger, 59/79 warning, 151/153
+  success and `chart-4`, 264 info and `chart-2`, 298 primary and `chart-1`, 352/355 `chart-5`.
+  `chart-6` is near-neutral at C 0.03 and holds no hue in practice. That leaves two wide arcs —
+  153→264 (111 degrees) and 79→151 (72 degrees).
+
+- **`chart-7` is hue 239 and `chart-8` is hue 110.** Not the arc midpoints. The midpoint of the
+  larger arc is 209, which is exactly where `chart-6`'s grey sits: a saturated colour there is
+  separated from it only by chroma. Searching hue and lightness together, and scoring by the
+  minimum OKLab distance to every other series colour in both themes, put `chart-7` at 239
+  instead. `chart-8` at 110 sits between warning and success with 31 and 41 degrees of clearance.
+  Distance from the primary at 298 is 59 degrees for `chart-7` and 172 for `chart-8`, so neither
+  is near what the violet redesign introduced.
+
+- **Values.** `chart-7`: light `10 88 129`, dark `131 204 252`. `chart-8`: light `109 110 10`,
+  dark `165 165 14`. Both were constrained to the lightness band the other six already occupy
+  (light L 0.44-0.52, dark L 0.70-0.82) rather than taking the mathematically optimal values,
+  which sat at the edges of the range and would have read as darker and out of family.
+
+- **The result is better separated than what already shipped.** The closest pair among all eight is
+  `chart-1`/`chart-2` in dark at OKLab 0.077 — pre-existing, from the violet redesign. The new
+  tokens' nearest neighbours are 0.096 and 0.108, so neither is the binding constraint.
+
+- **The missing assertion was the real defect.** Every existing assertion compared a token to a
+  _background_; nothing compared series entries with each other, which is how identical values
+  shipped. `tokenContrast.test.ts` now asserts every entry resolves to a distinct colour in both
+  themes, and it imports `SERIES_TOKENS` rather than restating it, so a ninth entry is covered the
+  day it is added. Verified by reintroducing the original list: it fails in both themes with
+  "color-info duplicates color-chart-2".
+
+- **The constants moved to `chartTokens.ts`.** `chartTheme.ts` imports React and the theme store,
+  which a token test reading CSS off disk should not have to load to learn what the series is.
+
+- **`chart-7` and `chart-8` were added to `tailwind.config.ts` even though no `chart-*` utility is
+  used anywhere.** The config is a complete mirror of the token file for every other colour, and a
+  partial mirror is a worse trap than an unused key — Tailwind emits nothing for classes no one
+  writes. That the existing `chart-1`..`chart-6` keys are equally unused is noted, not acted on:
+  the charts read the custom properties directly through `getComputedStyle`.

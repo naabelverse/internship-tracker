@@ -63,6 +63,8 @@
   --color-chart-4: 8 102 48;
   --color-chart-5: 162 31 98;
   --color-chart-6: 79 106 110;
+  --color-chart-7: 10 88 129;
+  --color-chart-8: 109 110 10;
 
   /* Activity heatmap intensity, level 0 being a day with nothing on it. */
   --color-heat-0: 226 233 231;
@@ -99,6 +101,8 @@
   --color-chart-4: 75 214 128;
   --color-chart-5: 242 116 176;
   --color-chart-6: 138 160 164;
+  --color-chart-7: 131 204 252;
+  --color-chart-8: 165 165 14;
 
   --color-heat-0: 25 38 42;
   --color-heat-1: 59 46 86;

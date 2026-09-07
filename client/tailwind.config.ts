@@ -48,6 +48,8 @@ export default {
         'chart-4': token('color-chart-4'),
         'chart-5': token('color-chart-5'),
         'chart-6': token('color-chart-6'),
+        'chart-7': token('color-chart-7'),
+        'chart-8': token('color-chart-8'),
         'heat-0': token('color-heat-0'),
         'heat-1': token('color-heat-1'),
         'heat-2': token('color-heat-2'),
