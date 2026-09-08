@@ -68,7 +68,7 @@ export default tseslint.config(
     // the brand assets, capture the landing screenshot and enforce the bundle
     // budget, and their output is the whole point — `no-console` would be
     // telling a CLI not to say anything.
-    files: ['client/scripts/**/*.mjs', 'scripts/**/*.mjs'],
+    files: ['client/scripts/**/*.mjs', 'server/scripts/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
   },

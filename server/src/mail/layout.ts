@@ -1,4 +1,5 @@
 import { APP_LOGO_MARK, APP_PRODUCT_NAME } from '@/config/app-info';
+import { MAIL_PALETTE } from '@/mail/palette';
 
 /**
  * The shared shell every template renders into: a masthead carrying the app name
@@ -52,12 +53,28 @@ export interface LayoutInput {
   footer: MailFooter;
 }
 
-const BRAND = '#4f46e5';
-const INK = '#111827';
-const MUTED = '#6b7280';
-const BORDER = '#e5e7eb';
-const CANVAS = '#f3f4f6';
-const SURFACE = '#ffffff';
+/*
+  Generated from the light theme block of `client/src/index.css` by
+  `npm run mail:palette -w server`, not written here. These were six hex literals
+  - a templated indigo and five greys - with nothing tying them to the app's
+  tokens, so every transactional email kept rendering `#4f46e5` for two redesigns
+  after the primary moved to violet (issue #10). The same defect
+  `brandPalette.mjs` ended for the favicons, one workspace over.
+
+  `brandFill` rather than `brand` backs the tile and the button because both are
+  solid blocks carrying white text, which is the fill token's stated job; the
+  detail line in a list is an accent on the surface and keeps `brand`.
+*/
+const {
+  brand: BRAND,
+  brandFill: BRAND_FILL,
+  brandFillText: BRAND_FILL_TEXT,
+  ink: INK,
+  muted: MUTED,
+  border: BORDER,
+  canvas: CANVAS,
+  surface: SURFACE,
+} = MAIL_PALETTE;
 
 const FONT =
   "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif,'Apple Color Emoji'";
@@ -80,8 +97,8 @@ function buttonHtml(label: string, url: string): string {
 
   return [
     '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px;">',
-    `<tr><td style="border-radius:8px;background:${BRAND};">`,
-    `<a href="${href}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;line-height:20px;color:#ffffff;text-decoration:none;border-radius:8px;">${escapeHtml(label)}</a>`,
+    `<tr><td style="border-radius:8px;background:${BRAND_FILL};">`,
+    `<a href="${href}" style="display:inline-block;padding:12px 22px;font-size:15px;font-weight:600;line-height:20px;color:${BRAND_FILL_TEXT};text-decoration:none;border-radius:8px;">${escapeHtml(label)}</a>`,
     '</td></tr></table>',
     // The button is a link, and some clients flatten it. The address has to be
     // readable on its own or the message becomes a dead end.
@@ -206,7 +223,7 @@ export function renderHtml(input: LayoutInput): string {
 <table role="presentation" class="shell" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${SURFACE};border-radius:12px;font-family:${FONT};">
 <tr><td class="pad" style="padding:28px 28px 8px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="width:32px;height:32px;border-radius:8px;background:${BRAND};text-align:center;font-size:13px;font-weight:700;color:#ffffff;font-family:${FONT};">${escapeHtml(APP_LOGO_MARK)}</td>
+<td style="width:32px;height:32px;border-radius:8px;background:${BRAND_FILL};text-align:center;font-size:13px;font-weight:700;color:${BRAND_FILL_TEXT};font-family:${FONT};">${escapeHtml(APP_LOGO_MARK)}</td>
 <td style="padding-left:10px;font-size:15px;font-weight:600;color:${INK};font-family:${FONT};">${escapeHtml(APP_PRODUCT_NAME)}</td>
 </tr></table>
 </td></tr>

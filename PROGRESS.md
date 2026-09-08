@@ -865,6 +865,17 @@ _Dated notes on work outside the numbered phases. Not a checklist._
   `icon-192/512/512-maskable`). The app shell was left alone — it has no mark to replace.
   Rationale in `DECISIONS.md`.
 
+- **2026-09-08 — the email palette follows the tokens, closing the last of the drift class
+  (issue #10).** `mail/layout.ts` held six hex literals — a templated indigo and five greys — so
+  every transactional email had rendered `#4f46e5` since the violet redesign. Fixed the way #7 was,
+  one workspace over: `server/scripts/generateMailPalette.mjs` derives them from the light block of
+  `client/src/index.css` into a committed `server/src/mail/palette.ts`, and
+  `server/tests/mail.palette.test.ts` fails if it falls behind. Committing is forced rather than
+  chosen — `server/Dockerfile` never copies `client/src`, so the stylesheet is not in the server's
+  build context. An audit of every hex in `server/src` also caught the unsubscribe confirmation
+  page carrying the same set; it was fixed in the same change. No hex literal remains in
+  `server/src` outside the generated file. Rationale in `DECISIONS.md`.
+
 ---
 
 ## Manual steps waiting on me (the human)
