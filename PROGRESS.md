@@ -853,6 +853,18 @@ _Dated notes on work outside the numbered phases. Not a checklist._
   resolves to a distinct colour in both themes - the assertion that was missing is what let the
   duplication ship. Rationale in `DECISIONS.md`.
 
+- **2026-09-08 — the logo mark replaced by an angular fold, and its geometry given one home.**
+  The three-bar funnel was defined three times over — `BrandMark`, `markSvg`, and inline in the OG
+  masthead — the same unpinned-copies arrangement that shipped jade favicons, in geometry rather
+  than colour. `client/scripts/brandMark.mjs` is now the single definition; the generator imports
+  it and `BrandMark` restates it under `client/tests/config/brandMark.test.tsx`, which renders the
+  component and fails if the copy, or the committed icons, fall behind. No hex was added anywhere:
+  the tiles keep taking their colours from `readBrandPalette()` and the component paints in
+  `currentColor`. Replaced in the marketing header and footer, the auth split panel, the OG
+  masthead, and every generated icon (`favicon.svg/.ico`, `favicon-16/32`, `apple-touch-icon`,
+  `icon-192/512/512-maskable`). The app shell was left alone — it has no mark to replace.
+  Rationale in `DECISIONS.md`.
+
 ---
 
 ## Manual steps waiting on me (the human)

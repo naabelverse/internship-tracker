@@ -16,17 +16,26 @@ import { paths } from '@/routes/paths';
 const LINK = 'rounded-control text-sm text-content-muted transition-colors hover:text-content';
 
 /**
- * The mark: three bars narrowing top to bottom.
+ * The mark: an angular fold.
  *
- * It is the funnel the product is about — applications, then interviews, then
- * offers — rather than an arbitrary glyph or the app's initials in a box.
+ * The path is written out here rather than imported because the one definition
+ * lives in `scripts/brandMark.mjs`, which the icon generator runs from npm
+ * before Vite or tsc exist to resolve it. `tests/config/brandMark.test.tsx`
+ * asserts this `d` is still the one that module exports, so the copy cannot go
+ * quietly stale the way the favicons' colours once did.
+ *
+ * `currentColor` is the entire colour mechanism: every caller sets
+ * `text-primary`, so the mark resolves `--color-primary` for whichever theme is
+ * mounted and no hex appears in the component at all.
+ *
+ * The viewBox frames the glyph's own bounds rather than the padded box the icon
+ * tiles take, so at `h-4 w-4` the mark carries the same weight beside the
+ * wordmark that the three bars it replaced did.
  */
 export function BrandMark({ className = 'h-4 w-4' }: { className?: string }): JSX.Element {
   return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className={className} fill="currentColor">
-      <rect x="1" y="2" width="14" height="2.6" rx="0.7" opacity="0.35" />
-      <rect x="1" y="6.7" width="9" height="2.6" rx="0.7" opacity="0.7" />
-      <rect x="1" y="11.4" width="5" height="2.6" rx="0.7" />
+    <svg aria-hidden="true" viewBox="96 96 320 320" className={className} fill="currentColor">
+      <path d="M176 112H416V280L296 400V200H96V168Z" />
     </svg>
   );
 }
