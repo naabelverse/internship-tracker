@@ -2480,3 +2480,54 @@ The half deferred when the phase was split. Closes Phase 11.
 
 - **No bundle movement.** The landing closure stays at 113.3 KB gzip, and neither class adds a
   declaration to the stylesheet — both already exist for the hero.
+
+---
+
+## The logo mark replaced by an angular fold
+
+- **The geometry now has one definition, `scripts/brandMark.mjs`.** The three-bar funnel was
+  written out three separate times — in `BrandMark`, in `markSvg`, and inline in the OG masthead —
+  which is the identical arrangement that let every favicon keep the jade primary two redesigns
+  after the app dropped it, in geometry rather than colour. It had never gone wrong only because
+  the mark had never changed; replacing it is precisely the event that would have exposed it.
+  `MARK_PATH` is the single source, the generator imports it, and `BrandMark` restates it under a
+  test that fails if the two diverge.
+
+- **`BrandMark` restates the path rather than importing it, and that is a limitation, not a
+  preference.** `brandMark.mjs` runs from npm before Vite or tsc exist to resolve it, the same
+  reason `brandPalette.mjs` is plain `.mjs`. A component importing across that boundary would mean
+  compiling the build scripts first. The copy is tied down by `tests/config/brandMark.test.tsx`,
+  which renders the component and compares the `d` it actually paints against the module — the
+  same tactic the palette test uses, where a second independent reader checks the first.
+
+- **No hex was hand-copied, and none needed to be.** The brief offered the option of a static SVG
+  with the two brand hex values commented as needing to stay in sync. That would have recreated the
+  bug this repo already paid to fix. The generated tiles take `BRAND` and `CANVAS` from
+  `readBrandPalette()`, and `BrandMark` paints in `currentColor` under `text-primary`, so both ends
+  resolve `--color-primary` from `src/index.css` — `#682eb3` in light, `#b297ea` in dark — and the
+  component carries no colour at all. A test asserts no hex appears in its markup.
+
+- **Two viewBoxes off the one path.** The icon tiles take the padded `0 0 512 512`, because an app
+  icon needs air between the glyph and the rounded corners. Everywhere the mark is set beside type
+  it takes `96 96 320 320`, the glyph's own bounds squared off. Rendered at the padded box, a
+  16 px inline mark reads visibly smaller than the wordmark next to it — the glyph fills only 62%
+  of that box — and the tight frame restores the weight the three-bar mark had at the same
+  `h-4 w-4`.
+
+- **The supplied path was shifted 16 units right, and its left arm thickened from 16 to 32.** The
+  shape arrived off-centre, with an 80-unit left margin against 112 on the right; the shift centres
+  it and changes nothing else. The arm is the legibility decision: at 16 units it is half a pixel
+  at favicon size, and rendered as a grey tint rather than a stroke. At 32 it is a whole pixel. The
+  mark was checked at 512, 32, 16, 12, 10 and 8 px in both themes before either change was kept.
+
+- **The authenticated shell was left alone.** The brief asked for the mark in "the navbar/header,
+  both the app shell and the marketing header". The app shell has no mark: `Topbar` renders no
+  brand, and `Sidebar` sets the wordmark as bare text. Adding one there is a lockup change rather
+  than a mark replacement, so it was reported instead of done.
+
+- **The email masthead keeps its two-letter type mark.** `server/src/mail/layout.ts` draws "IT" in
+  a tinted box, deliberately: email clients block remote images and `app-info.ts` records that a
+  broken image is worse than none. An SVG mark cannot go there. Its `BRAND = '#4f46e5'` is a stale
+  indigo of exactly the drift class described above, but the server workspace cannot read
+  `src/index.css`, so fixing it in place would swap one hand-copied literal for another. Filed
+  rather than patched.
