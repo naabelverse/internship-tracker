@@ -2531,3 +2531,59 @@ The half deferred when the phase was split. Closes Phase 11.
   indigo of exactly the drift class described above, but the server workspace cannot read
   `src/index.css`, so fixing it in place would swap one hand-copied literal for another. Filed
   rather than patched.
+
+---
+
+## The email palette is generated from the tokens — issue #10
+
+- **The deployment chose the mechanism, not taste.** The issue offered three options and preferred
+  a generated-and-committed palette. In the code the choice turned out to be forced:
+  `server/Dockerfile` copies `package.json`, `tsconfig.base.json` and `server/`, and never
+  `client/src`. The stylesheet is not in the server's build context at all, so a palette resolved
+  during the server build cannot work — not merely awkwardly, but at all. Generating ahead of time
+  and committing the result is the same answer, for the same reason, that the favicons are
+  committed rather than built.
+
+- **`server/scripts/generateMailPalette.mjs` reuses the client's reader rather than writing a
+  second one.** It imports `readThemeChannels` from `client/scripts/brandPalette.mjs`, which was
+  already parameterised by theme. A cross-workspace relative import is acceptable here precisely
+  because it runs at generation time, by hand, in a checkout that has both workspaces — the same
+  place `npm run assets -w client` runs. Nothing at server build or runtime reaches across.
+
+- **The light block, because email renders one fixed document.** There is no
+  `prefers-color-scheme` worth relying on in a message body, and the shell was already a light
+  design. The server therefore ships one theme rather than guessing at two.
+
+- **All six literals were replaced, not just the broken one.** Only `BRAND` was visibly wrong, but
+  `INK`, `MUTED`, `BORDER`, `CANVAS` and `SURFACE` were the rest of the same slate template and
+  carried the identical exposure — exactly the reasoning that took #7 from one stale colour to
+  four. Contrast is preserved by construction rather than by inspection: text-on-surface,
+  muted-on-surface and white-on-primary-fill are the pairs `tests/a11y/tokenContrast.test.ts`
+  already measures in the light theme, which the hand-picked greys never were.
+
+- **`brand` and `brandFill` are separate entries even though they hold the same value today.** The
+  masthead tile and the button are solid blocks carrying white text, which is what
+  `--color-primary-fill` exists for; the detail line in a list is an accent on the surface, which
+  is `--color-primary`'s job. They are equal in the light theme and different in the dark, so
+  mapping them by role is what keeps this correct if they ever diverge here too. The button's
+  hardcoded `#ffffff` became `--color-primary-fill-fg` for the same reason.
+
+- **The unsubscribe confirmation page was in scope even though the issue did not name it.** An
+  audit of every hex in `server/src` found `email.controller.ts` carrying the same templated set,
+  including `#4f46e5`, on the page a reader lands on immediately after clicking unsubscribe. It
+  imports the same generated palette; leaving it would have meant shipping the fix and the bug one
+  file apart. No hex literal now remains anywhere in `server/src` outside the generated file.
+
+- **The drift test throws rather than asserts, and that is deliberate.** Jest's `expect` takes no
+  message argument, so a bare "expected undefined to be defined" would not say which token moved
+  or what to run. Both failure directions were demonstrated rather than assumed: a stale committed
+  palette reports `palette.ts is stale: brand is #4f46e5, but --color-primary is now #682eb3`, and
+  a token deleted from the stylesheet reports that it is missing rather than resolving to nothing.
+  Both files were restored from checksummed backups, not `git checkout`, which would have destroyed
+  the new untracked work.
+
+- **Verified by rendering, not by reading the constant.** The palette could be correct and the
+  layout still paint a literal, which is the state this started from. The verification email was
+  rendered through `renderMail`, loaded in a real browser, and the masthead tile sampled: computed
+  style and painted pixel both `rgb(104, 46, 179)`. The rendered HTML contains the seven derived
+  colours and none of the five replaced ones.

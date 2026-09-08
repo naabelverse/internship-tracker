@@ -7,6 +7,7 @@ import type { UnsubscribeQuery } from '@/schemas/email.schema';
 import { ApiError } from '@/utils/ApiError';
 import { sendSuccess } from '@/utils/apiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
+import { MAIL_PALETTE } from '@/mail/palette';
 
 /**
  * The unsubscribe link from a reminder digest or a weekly summary.
@@ -56,18 +57,22 @@ async function applyUnsubscribe(token: string): Promise<UnsubscribeClaim> {
  * them into a sign-in form immediately after they asked to stop hearing from us.
  */
 function confirmationPage(message: string): string {
+  // Same generated palette the emails use. This page is the last step of the
+  // unsubscribe flow, so a stale indigo here would undo the fix one click later.
+  const { brand, canvas, ink, muted, surface } = MAIL_PALETTE;
+
   return `<!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Unsubscribed</title>
 </head>
-<body style="margin:0;background:#f3f4f6;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
-<main style="max-width:32rem;margin:4rem auto;padding:2rem;background:#fff;border-radius:12px;">
-<h1 style="margin:0 0 .75rem;font-size:1.25rem;color:#111827;">You are unsubscribed</h1>
-<p style="margin:0 0 1rem;font-size:.9375rem;line-height:1.6;color:#374151;">${escapeHtml(message)}</p>
-<p style="margin:0;font-size:.9375rem;line-height:1.6;color:#374151;">
-<a href="${escapeHtml(preferencesUrl())}" style="color:#4f46e5;">Manage all email preferences</a>
+<body style="margin:0;background:${canvas};font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<main style="max-width:32rem;margin:4rem auto;padding:2rem;background:${surface};border-radius:12px;">
+<h1 style="margin:0 0 .75rem;font-size:1.25rem;color:${ink};">You are unsubscribed</h1>
+<p style="margin:0 0 1rem;font-size:.9375rem;line-height:1.6;color:${muted};">${escapeHtml(message)}</p>
+<p style="margin:0;font-size:.9375rem;line-height:1.6;color:${muted};">
+<a href="${escapeHtml(preferencesUrl())}" style="color:${brand};">Manage all email preferences</a>
 </p>
 </main>
 </body></html>`;
