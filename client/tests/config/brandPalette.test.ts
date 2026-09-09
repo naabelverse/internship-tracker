@@ -7,7 +7,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { readThemeTokens, type Rgb } from '../utils/contrast';
 
-const readBrandPalette = brandPalette.readBrandPalette as (css?: string) => Record<string, string>;
+const readBrandPalette = brandPalette.readBrandPalette as (
+  source?: string,
+) => Record<string, string>;
 const SOURCE_TOKENS = brandPalette.SOURCE_TOKENS as Record<string, string>;
 
 const hex = ([r, g, b]: Rgb): string =>
@@ -22,11 +24,15 @@ const hex = ([r, g, b]: Rgb): string =>
  * silently stale. The generator now derives them; this asserts the derivation
  * agrees with the tokens the app actually ships.
  *
- * The comparison is deliberately against `readThemeTokens` — a second,
- * independently written reader of the same file — rather than against literals
- * restated here. Literals are what caused the bug, and that reader is exercised
- * by every assertion in `tokenContrast.test.ts`, so a parser that quietly
- * mis-read would break those first.
+ * The comparison is deliberately against `readThemeTokens` rather than against
+ * literals restated here — literals are what caused the bug — and the two sides
+ * now read genuinely different files. `readBrandPalette` derives from
+ * `src/theme/tokens.json`, the canonical palette, while `readThemeTokens` reads
+ * `src/index.css`, the stylesheet the browser is actually served. That is the
+ * line DECISIONS draws between a consumer that derives and a gate that verifies
+ * a shipped artifact, and it makes this assertion stronger than it was: until
+ * the palette moved out of the stylesheet, both sides read one file and could
+ * only ever agree.
  */
 describe('brand asset palette', () => {
   const tokens = readThemeTokens('dark');
@@ -52,11 +58,25 @@ describe('brand asset palette', () => {
     expect(palette.brand).not.toBe('#33c9b6');
   });
 
-  // A missing token must be loud. A silent fallback is what kept
-  // `http://localhost:5173` in the sitemap for a whole phase, and a brand asset
-  // drawn in a default colour would fail the same invisible way.
+  /*
+    A missing token must be loud. A silent fallback is what kept
+    `http://localhost:5173` in the sitemap for a whole phase, and a brand asset
+    drawn in a default colour would fail the same invisible way.
+
+    The injected palette used to be a CSS string, because the generator parsed
+    `index.css` with a regex of its own. It reads `src/theme/tokens.json` now, so
+    the injection is the token file's shape instead. This is a deliberate
+    rewrite, not a weakened assertion: the case still drives `readBrandPalette`
+    with a palette that is missing `--color-primary`, and still requires it to
+    throw naming that token rather than defaulting. Only the source format moved.
+  */
   it('throws rather than defaulting when a token is absent', () => {
-    const withoutPrimary = "[data-theme='dark'] { --color-text: 227 237 235; }";
+    const withoutPrimary = JSON.stringify({
+      dark: {
+        selector: "[data-theme='dark']",
+        groups: [{ tokens: { 'color-text': '227 237 235' } }],
+      },
+    });
 
     expect(() => readBrandPalette(withoutPrimary)).toThrow(/--color-primary is missing/);
   });
