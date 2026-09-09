@@ -2587,3 +2587,112 @@ The half deferred when the phase was split. Closes Phase 11.
   rendered through `renderMail`, loaded in a real browser, and the masthead tile sampled: computed
   style and painted pixel both `rgb(104, 46, 179)`. The rendered HTML contains the seven derived
   colours and none of the five replaced ones.
+
+---
+
+## The palette has a home outside the stylesheet — checkpoint 1 of the structural fix
+
+- **This is the first prospective fix in a class that had been fixed three times retrospectively.**
+  Jade favicons (#7), a localhost sitemap, and an indigo email palette (#10) were each found after a
+  stale value had already reached a real consumer. Each fix taught its own consumer to derive rather
+  than copy, and each left the arrangement that produced it in place: the values existed only in
+  `client/src/index.css`, so anything needing a colour had to either parse CSS or hold a copy.
+  `src/theme/tokens.json` is now the source and the stylesheet is written from it, which is the
+  inversion those three fixes each worked around.
+
+- **The premise that a prior entry had diagnosed this was checked and is not correct.** The sentence
+  quoted in the brief — "index.css is the source of truth by convention rather than by construction"
+  — appears nowhere in this file, and neither does any flag that a fourth instance was coming. The
+  most recent entry before this one is #10, which ends on its rendering verification. The nearest
+  real statements are #7's "nothing tied them to the palette" and #10's "the server workspace cannot
+  read `src/index.css`, so fixing it in place would swap one hand-copied literal for another".
+  Recorded because a decision log that cites itself inaccurately is worth less than one that does
+  not.
+
+- **`tokens.json`, not `tokens.ts`, and read by plain `.mjs`.** The constraint is the one already
+  recorded twice: `brandPalette.mjs` and `brandMark.mjs` are plain `.mjs` because they run from npm
+  before Vite or tsc exist, and that boundary is why `BrandMark` restates its path rather than
+  importing it. A TypeScript canonical source would have to be compiled before the brand-asset
+  generator could read it. `readFileSync` + `JSON.parse` works unchanged from a build script, from
+  vitest and from jest.
+
+- **Values are stored as opaque strings, because not all of them are colours.** The same blocks
+  carry bare alphas (`--atmos-light-peak: 1`) and a keyword (`--atmos-grade-axis: to bottom`).
+  `readThemeChannels` filters to three-integer values, preserving the contract the old regex reader
+  had, where the channel pattern rejected anything that was not a colour. A consumer asking for a
+  colour cannot be handed a gradient direction.
+
+- **Comments inside the blocks are stored verbatim, as raw lines.** The stylesheet uses both a
+  single-line form and a multi-line one, and the atmosphere comment is twenty lines of load-bearing
+  reasoning. Re-wrapping prose from structured data would have been a second thing that could drift;
+  storing the lines as written cannot, and it is what makes the output provably byte-identical.
+
+- **The blocks are located by their selector, not by inserted marker comments.** Markers would have
+  been new syntax in the stylesheet for a later edit to break, and — the deciding point — adding
+  them would itself have changed `index.css`, making the byte-identical proof impossible to state
+  cleanly. The selector is the anchor `brandPalette.mjs`, `tests/utils/contrast.ts`,
+  `tests/utils/themeTokens.ts` and `server/tests/mail.palette.test.ts` already match on, and the
+  stylesheet's own header documents the flat-declaration constraint that makes it correct.
+
+- **`index.css` stays committed with a generation check, rather than becoming generated and
+  gitignored.** Both patterns already exist here and the choice was made against them rather than by
+  default. The SEO entry draws the line itself: an asset that depends on the _brand_ is the same
+  file wherever it is served and is worth committing; one that embeds the _deployment origin_ cannot
+  be. `index.css` has no origin in it — it is identical bytes on every machine, so the reason
+  `robots.txt` had to stop being committed does not apply. Two further reasons: it is a source file
+  Vite and Tailwind consume, so gitignoring it would leave a fresh clone unable to run `npm run dev`
+  before a generate step; and roughly 62% of it is hand-written `@layer` CSS that is not derivable
+  from a palette, so generating the whole file would mean moving that CSS into a template. Only the
+  two token blocks are generated.
+
+- **The inversion was proved to change nothing before anything was built on it.** Running the
+  generator against the committed stylesheet left `git diff --exit-code` clean. That proof was then
+  checked for vacuity, because a generator that silently matched nothing would pass it forever: a
+  perturbed token value does reach the CSS, and a light-theme edit leaves the dark block untouched.
+
+- **The gate was demonstrated failing in both directions, not assumed to work.** A colour
+  hand-edited in `index.css`, and a `tokens.json` edit left un-regenerated, both produce the same
+  message naming `npm run generate:theme -w client`. The stylesheet was restored from a checksummed
+  copy rather than with `git checkout`, which would have destroyed the untracked work beside it; the
+  restored file matches its pre-test digest exactly.
+
+- **The chart theme-reactivity mechanism is unaffected, and the reason is structural rather than
+  lucky.** `readChartPalette` reads custom properties off the document element with
+  `getComputedStyle`, so the browser resolves whatever CSS it was served and the provenance of those
+  bytes is invisible to it. What could have broken it is byte-level, in the tests:
+  `tests/utils/themeTokens.ts` injects the raw matched blocks into jsdom, so a change to the
+  selector quoting or the flat-declaration shape would have silently handed the chart suite the
+  wrong palette. The byte-identical requirement is what protects that, which is its real job.
+
+- **A correction to the scope, which matters for whoever picks up the rest.** The brief described
+  three consumers "each independently parsing index.css with its own regex reader". On inspection
+  that is not the arrangement. `brandMark.mjs` holds geometry and no colour at all — its own header
+  says so — and `generateMailPalette.mjs` imports `readThemeChannels` from `brandPalette.mjs` rather
+  than defining a reader, which #10 records deliberately. There was one reader feeding both
+  generators, not three. The real parser count is four, and three of them are test-side:
+  `brandPalette.mjs`, `tests/utils/contrast.ts`, `tests/utils/themeTokens.ts` and
+  `server/tests/mail.palette.test.ts`. Consolidating them is therefore a smaller job than the brief
+  assumed, and migrating `generateMailPalette.mjs` may be a no-op that only needs confirming.
+
+- **Not every parser should collapse onto the token file, and that is deliberate.** #7 records
+  writing a drift check that was "close to worthless" because both sides read one file and always
+  agreed. Pointing the contrast gate at `tokens.json` would recreate exactly that: the gate exists
+  to measure the colours the browser actually paints, which means it has to read the shipped
+  stylesheet. The line drawn here is that parsers which _derive_ values read the token file, and
+  parsers which _verify a shipped artifact_ keep reading the artifact.
+
+- **Found on the way and left in place, deliberately:** `chartTheme.ts` holds
+  `FALLBACK = '148 163 184'`, a slate matching no current token, used when a token resolves to an
+  empty string. It is a "the stylesheet did not load" sentinel rather than a brand colour, and
+  drawing it from the palette would make that failure paint in brand colours and become invisible —
+  the opposite of what it is for. It should be allowlisted as a sentinel, with that reason stated,
+  by the no-raw-colour test in checkpoint 4.
+
+- **Checkpoints 2-4 are deferred as consolidation on top of a working inversion, not as part of the
+  core fix.** What landed is what makes the class structurally closed: the values have a home
+  outside the stylesheet, the CSS is generated from it, and hand-editing a colour in `index.css` now
+  fails the suite with a message naming the fix. What remains is narrower — pointing
+  `brandPalette.mjs` at the token file (its `readBrandPalette(css)` test injects a CSS string, so
+  that one case needs a deliberate rewrite to inject JSON, preserving the assertion and changing
+  only the source format), confirming the mail generator needs no change, and adding the
+  no-raw-colour and Tailwind name-parity tests. None of it is required for the inversion to hold.

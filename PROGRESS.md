@@ -876,6 +876,33 @@ _Dated notes on work outside the numbered phases. Not a checklist._
   page carrying the same set; it was fixed in the same change. No hex literal remains in
   `server/src` outside the generated file. Rationale in `DECISIONS.md`.
 
+- **2026-09-09 — the palette moved out of the stylesheet, closing the drift class prospectively
+  (checkpoint 1 of the structural fix).** The three earlier fixes — brand assets (#7), the SEO
+  files origin, the mail palette (#10) — were each retrospective, and each left the arrangement
+  that caused them in place: the colour values lived only in `client/src/index.css`, so any new
+  consumer had to parse CSS or hold a copy that could go stale. `client/src/theme/tokens.json` is
+  now the canonical source, and `client/scripts/generateThemeCss.mjs` writes both theme blocks from
+  it via one reader, `client/scripts/themeTokens.mjs`. The generated output was proved
+  byte-identical to the committed stylesheet before anything was built on it, and that proof was
+  checked for vacuity rather than trusted. `client/tests/config/themeTokens.test.ts` fails if the
+  two ever disagree, in both directions, so a colour typed straight into the CSS is now rejected by
+  the suite rather than merely discouraged by a comment. `index.css` stays committed with a
+  generation check — the brand-assets pattern — rather than becoming generated and gitignored like
+  the SEO files, because it carries no deployment origin, Vite and Tailwind consume it as a source
+  file, and most of it is hand-written `@layer` CSS that no palette can produce. The Phase 8 chart
+  mechanism is untouched: it reads live custom properties through `getComputedStyle`, so where
+  those bytes came from is invisible to it. Rationale in `DECISIONS.md`.
+- **Checkpoints 2-4 deferred as consolidation work on top of a working inversion, not required for
+  the core fix to hold.** Remaining: point `brandPalette.mjs` at the token file instead of its
+  regex, confirm `generateMailPalette.mjs` needs no change at all, and add the no-raw-colour and
+  Tailwind name-parity tests. **A correction to the scope estimate for whoever picks this up:** the
+  brief assumed three scripts each parsing `index.css` with its own reader. They do not.
+  `brandMark.mjs` holds geometry and no colour, and `generateMailPalette.mjs` already imports the
+  client reader, so there was one parser feeding both generators rather than three. The four real
+  parsers are `brandPalette.mjs` plus three test-side ones, and the settled decision is that only
+  the deriving parser moves to the token file — the verifying ones keep reading the shipped CSS, or
+  the contrast gate stops measuring what the browser actually paints.
+
 ---
 
 ## Manual steps waiting on me (the human)
