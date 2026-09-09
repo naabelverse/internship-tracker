@@ -5,7 +5,11 @@ import type { Config } from 'tailwindcss';
  * the same token works three ways: as a Tailwind utility (`bg-surface`), with an
  * opacity modifier (`bg-surface/60`), and as a raw value Chart.js can read at
  * runtime via `getComputedStyle(document.documentElement)` in Phase 8. The values
- * themselves live in `src/index.css`, swapped by the `data-theme` attribute.
+ * themselves live in `src/theme/tokens.json`, which `src/index.css` is generated
+ * from, and are swapped by the `data-theme` attribute.
+ *
+ * `tests/config/tailwindTokens.test.ts` asserts that every token named here
+ * exists in that file and vice versa, so the two cannot drift apart silently.
  */
 function token(name: string): string {
   return `rgb(var(--${name}) / <alpha-value>)`;

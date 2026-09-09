@@ -2696,3 +2696,134 @@ The half deferred when the phase was split. Closes Phase 11.
   that one case needs a deliberate rewrite to inject JSON, preserving the assertion and changing
   only the source format), confirming the mail generator needs no change, and adding the
   no-raw-colour and Tailwind name-parity tests. None of it is required for the inversion to hold.
+
+---
+
+## The consolidation closes — checkpoints 2-4 of the structural fix
+
+- **`brandPalette.mjs` stopped being a parser and became a mapping.** It read `src/index.css`
+  through a `BLOCK_RE`/`CHANNELS_RE` pair of its own, because the stylesheet was the only place the
+  values existed. It is not any more, so the regexes are gone and `themeTokens.mjs` — documented as
+  "the one reader of the canonical palette" — is what reads. What is left in the file is
+  `SOURCE_TOKENS`, the mapping from a drawn element to the token it takes its colour from, which
+  was always its actual subject. This is the side of the line checkpoint 1 drew: a consumer that
+  _derives_ a value reads `tokens.json`, a gate that _verifies a shipped artifact_ keeps reading
+  the artifact.
+
+- **The `readBrandPalette(css)` test case was rewritten to inject JSON, deliberately and not
+  silently.** Checkpoint 1's entry flagged this as the one case that could not simply be carried
+  over. The assertion is unchanged in every respect that matters — it still drives the reader with
+  a palette missing `--color-primary`, and still requires a throw naming that token rather than a
+  default. Only the injected source format moved, from a CSS block to the token file's shape,
+  because that is what the reader now takes. Recorded here because a test whose input changes
+  during a refactor is exactly where an assertion gets quietly weakened, and the way to stop that
+  is to say what changed.
+
+- **That test got stronger as a side effect, which is worth stating because it was not the goal.**
+  It compares `readBrandPalette` against `readThemeTokens`, the contrast suite's independent CSS
+  parser. Those two now read genuinely different files — the token file and the shipped stylesheet
+  — where before they both read `index.css`. #7 records writing a drift check that was "close to
+  worthless" because both sides read one file and always agreed; this comparison has stopped being
+  that.
+
+- **`generateMailPalette.mjs` did need an edit, and the honest answer is narrower than either "yes"
+  or "no".** Checkpoint 1 recorded that it already imports the client's reader rather than defining
+  one, and that is correct — confirmed by reading the file, not by trusting the note. Its _logic_
+  therefore needed nothing: it already derived rather than copied. But it imported
+  `readThemeChannels` **from `brandPalette.mjs`**, and checkpoint 2 moved that reader out, so the
+  import had to be retargeted at `themeTokens.mjs`. Its documentation also claimed it generates
+  from "the light theme block of `client/src/index.css`", which stopped being true.
+
+- **A re-export shim was considered and rejected.** Leaving `brandPalette.mjs` re-exporting
+  `readThemeChannels` would have made "the mail generator needs no change" literally true, at the
+  cost of a module about brand assets exporting a reader it no longer owns, and a docstring in the
+  server workspace describing a mechanism that no longer exists. That is optimising the report
+  rather than the code. One import line moved instead.
+
+- **The third copy of `toHex` went with it.** `themeTokens.mjs`, `brandPalette.mjs` and
+  `generateMailPalette.mjs` each held the same six-line channels-to-hex function. Checkpoint 2
+  removed the second by construction; leaving the third would have been the same unpinned-copies
+  arrangement in code that this whole sequence exists to remove from colours. It is imported from
+  the one reader now.
+
+- **The nine committed brand assets are byte-identical, and `palette.ts` changed by three comment
+  lines.** Both generators were re-run against the rewritten readers and checked with
+  `sha256sum -c` against digests taken before any edit: `og-image.png`, `favicon.svg`,
+  `favicon.ico`, `favicon-16`, `favicon-32`, `apple-touch-icon`, `icon-192`, `icon-512`,
+  `icon-512-maskable`, plus `site.webmanifest` and `index.css`, all unchanged. `palette.ts` differs
+  only in its generated header, which now names `tokens.json` as its source rather than
+  `index.css`; every non-comment line — which is to say every colour — is identical. Leaving the
+  header saying `index.css` would have preserved a clean byte-for-byte claim at the cost of the
+  file documenting a mechanism it no longer uses, which is the trade the previous entry refused.
+
+- **The no-raw-colour gate scans `index.css` rather than skipping it, and that is the deciding
+  detail.** "Outside the token file and its generated output" could have meant excluding the
+  stylesheet as an output. Only its two theme blocks are generated, though; roughly 62% of the file
+  is hand-written `@layer` CSS that no palette can produce, and that is precisely where someone
+  would type a colour by hand. The two blocks are blanked — keeping their length and their
+  newlines, so reported line numbers stay true — and the rest is scanned.
+
+- **Comments are stripped by a character walk, not a regex, and the file is not exempted.** The
+  requirement was that the historical `#4f46e5` documented in `server/src/mail/layout.ts` stay
+  readable while a _real_ hex in that same file still fails. A regex for `//` would eat the tail of
+  any line holding an `https://` URL and could hide a colour after one, so the walk tracks string
+  state instead. Demonstrated rather than assumed: a hex appended to `layout.ts` as code is
+  reported at its line, while the one in the comment at line 60 is not.
+
+- **The triplet pattern requires the literal to hold nothing but three integers.** A first attempt
+  matched any three space-separated numbers in range and returned 26 false positives from
+  `icons.tsx` alone — SVG path data and `viewBox="0 0 24 24"` are full of three-number runs.
+  `tokens.json` stores colours as exactly three channels and nothing else, so that is the shape a
+  hand-copy takes, and requiring the whole string to be it separates the two cleanly.
+
+- **Two allowlist entries, both exact `(file, literal)` pairs, and the list must be fully
+  consumed.** `chartTheme.ts`'s `FALLBACK = '148 163 184'` is allowlisted for the reason checkpoint
+  1 logged: it is a "the stylesheet did not load" sentinel, and drawing it from the palette would
+  make that failure paint in brand colours and become invisible. `index.css`'s `#000` is a second
+  entry the scan itself surfaced — the opaque stop of a `mask-image` gradient, where only the alpha
+  channel is read. Entries are pairs rather than whole-file exclusions, and a stale entry fails the
+  suite, because an allowlist that can silently grow is the one way a gate like this dies.
+
+- **The gate caught a real violation on its first run, which is the strongest evidence it works.**
+  `main.tsx` set the toast icon glyph to `#fff` twice, four lines under a comment reading "Tokens
+  rather than literals, so toasts follow the theme toggle". It was also a latent contrast bug
+  rather than merely a style violation: `secondary` is the glyph punched out of the icon disc, and
+  the dark theme's success and danger are a light green and a light red, on which a white tick is
+  close to unreadable. `--color-surface` is used for both now — the card the disc sits on, so the
+  glyph reads as a hole through it and follows the theme. Adding a `--color-success-fg` token to
+  match the existing `--color-danger-fg` was considered and rejected as a palette change well
+  outside this work.
+
+- **The Tailwind parity check walks the whole config, not `theme.extend.colors`.** Three of the
+  colour tokens are not in that block: `--color-ring` is surfaced through `ringColor`, and
+  `--color-shadow` and the `--atmos-*` values appear inside `boxShadow` strings. A check scoped to
+  `colors` would have reported all of them as unreferenced and been wrong about every one. It reads
+  the imported config object rather than the file's text, so a token named only in a comment cannot
+  count as a reference.
+
+- **Its second direction is scoped to `color-*` deliberately.** Every colour token must be
+  reachable from a class name, because a colour in the palette that no utility exposes is what
+  invites the hand-written literal the other new gate rejects. The `--atmos-*` layer is not held to
+  that: it is consumed by hand-written `@layer` CSS in `index.css` rather than by utilities, so
+  requiring a Tailwind key for each would assert something that was never meant to be true.
+
+- **Light/dark name parity is asserted here because nothing else asserted it.**
+  `themeTokens.test.ts` checks that every token a theme declares reaches the stylesheet, which does
+  not catch a token present in light and absent from dark. That is a utility that works until the
+  user hits the theme toggle.
+
+- **Both gates were shown failing on real breakage before either was trusted.** A hex and a channel
+  triplet appended to `NotFoundPage.tsx` and a hex appended to `layout.ts` are reported together
+  with file, line and literal; a `ghost: token('color-ghost')` key added to the Tailwind config
+  fails both themes naming `--color-ghost`; a `color-ghost` token added to `tokens.json` with no
+  Tailwind key fails the other direction. The comment stripper is separately unit-tested in both
+  directions, because it decides what the scan can see and an over-reaching stripper would make
+  every future run pass. All four files were restored from checksummed copies rather than with
+  `git checkout`, which would have destroyed the untracked work beside them, and the digests match.
+
+- **Four client tests fail under machine load and are not a regression.** A full `npm run verify`
+  taken before any edit reported 16 failures; the same suite on a quieter machine reported 4, and
+  each of those four passes in isolation — `deleteAccountFriction` runs in 6.9 s alone against the
+  10 s async budget it exceeded under contention. Phase 15 already records this failure mode and
+  the `maxWorkers` cap that addressed it. Recorded so the next session does not mistake a loaded
+  machine for broken code, and does not "fix" it by widening a timeout.

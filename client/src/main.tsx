@@ -46,8 +46,26 @@ createRoot(container).render(
                 color: 'rgb(var(--color-text))',
                 border: '1px solid rgb(var(--color-border))',
               },
-              success: { iconTheme: { primary: 'rgb(var(--color-success))', secondary: '#fff' } },
-              error: { iconTheme: { primary: 'rgb(var(--color-danger))', secondary: '#fff' } },
+              /*
+                `secondary` is the glyph punched out of the icon disc, so it has
+                to contrast with `primary` in both themes. It was `#fff`, which
+                only works in one: the dark theme's success and danger are a
+                light green and a light red, and a white tick on either is close
+                to unreadable. The surface token is the card the disc sits on, so
+                the glyph reads as a hole through it and follows the theme.
+              */
+              success: {
+                iconTheme: {
+                  primary: 'rgb(var(--color-success))',
+                  secondary: 'rgb(var(--color-surface))',
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: 'rgb(var(--color-danger))',
+                  secondary: 'rgb(var(--color-surface))',
+                },
+              },
             }}
           />
         </QueryClientProvider>

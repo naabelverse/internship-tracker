@@ -893,7 +893,8 @@ _Dated notes on work outside the numbered phases. Not a checklist._
   mechanism is untouched: it reads live custom properties through `getComputedStyle`, so where
   those bytes came from is invisible to it. Rationale in `DECISIONS.md`.
 - **Checkpoints 2-4 deferred as consolidation work on top of a working inversion, not required for
-  the core fix to hold.** Remaining: point `brandPalette.mjs` at the token file instead of its
+  the core fix to hold.** _Closed 2026-09-10 — see the entry below._ Remaining at the time: point
+  `brandPalette.mjs` at the token file instead of its
   regex, confirm `generateMailPalette.mjs` needs no change at all, and add the no-raw-colour and
   Tailwind name-parity tests. **A correction to the scope estimate for whoever picks this up:** the
   brief assumed three scripts each parsing `index.css` with its own reader. They do not.
@@ -984,3 +985,24 @@ _Anything intentionally postponed, with the reason._
   `onOverwrite` then silently does nothing. Reproduces locally about twice in six runs and makes CI
   intermittently red. A partial fix (`placeholderData` on the board query) was tried and reverted for
   only reducing it. **Fix this before starting Phase 11 feature work.**
+
+- **2026-09-10 — the token consolidation finished, and a hand-copied colour anywhere in `src` now
+  fails CI (checkpoints 2-4).** `client/scripts/brandPalette.mjs` no longer parses `index.css`: its
+  two regexes are gone and it reads `src/theme/tokens.json` through `themeTokens.mjs`, leaving only
+  the mapping from a drawn element to its token. `server/scripts/generateMailPalette.mjs` needed no
+  logic change — it already derived rather than copied, as checkpoint 1 recorded — but its import
+  was retargeted at the reader's new home and its docstring corrected, in preference to leaving a
+  re-export shim behind purely to keep "no change" literally true. All nine committed brand assets
+  are byte-identical, verified with `sha256sum -c` against digests taken before any edit;
+  `server/src/mail/palette.ts` changed only in its three-line generated header, with every colour
+  identical. Two new gates close the class in general rather than one consumer at a time:
+  `client/tests/config/noRawColour.test.ts` scans both `src` trees for hex and channel-triplet
+  literals outside the canonical palette and its generated output, comment-stripped by a character
+  walk so the historical `#4f46e5` documented in `mail/layout.ts` stays readable while a real hex
+  in that same file still fails; and `client/tests/config/tailwindTokens.test.ts` asserts name
+  parity in both directions between `tailwind.config.ts` and `tokens.json`. Both were demonstrated
+  failing on injected violations before being trusted, and the files restored from checksummed
+  copies. The scan caught one real pre-existing violation on its first run — `main.tsx` set the
+  toast icon glyph to `#fff`, which was also a dark-mode contrast bug — now `--color-surface`.
+  `chartTheme.ts`'s `FALLBACK` sentinel is allowlisted with its reason, per checkpoint 1's own
+  finding. Rationale in `DECISIONS.md`.
