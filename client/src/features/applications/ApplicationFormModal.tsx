@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { TextArea } from '@/components/ui/TextArea';
@@ -147,14 +148,7 @@ export function ApplicationFormModal({
         }
       >
         <form id="application-form" onSubmit={onSubmit} noValidate className="space-y-4">
-          {errors.root && (
-            <p
-              role="alert"
-              className="rounded-control border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
-            >
-              {errors.root.message}
-            </p>
-          )}
+          <FormError message={errors.root?.message} />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label="Company" error={errors.company?.message} {...register('company')} />

@@ -290,6 +290,26 @@
   }
 }
 
+/*
+   * The heading of a panel inside a page — one step below the page's own `h1`.
+   * Six panels spelled `text-sm font-semibold text-content` out in full, so the
+   * next panel had a string to copy rather than a name to reach for.
+   */
+.panel-title {
+  @apply text-sm font-semibold text-content;
+}
+
+/*
+   * The marketing measure and its gutter. `max-w-6xl` is the landing pages'
+   * line length and appears nowhere in the app, which runs at `max-w-7xl` —
+   * two deliberately different measures, and only the app's was written down.
+   * The vertical padding stays at the call site: a hero, a section and a footer
+   * genuinely want different amounts of it.
+   */
+.marketing-shell {
+  @apply mx-auto max-w-6xl px-4 sm:px-6;
+}
+
 @layer utilities {
   /*
    * The width axis is what gives this design two typographic voices out of one

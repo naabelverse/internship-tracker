@@ -168,6 +168,17 @@ export default {
          */
         DEFAULT: 'cubic-bezier(0.2, 0, 0, 1)',
       },
+      /*
+       * The native checkbox tick. Seven call sites reached for
+       * `accent-[rgb(var(--color-primary))]`, which resolves the right colour
+       * but does it as an arbitrary value — outside the theme, and so outside
+       * the name parity `tests/config/tailwindTokens.test.ts` enforces. A token
+       * spelled by hand at seven call sites is the shape of drift the palette
+       * work already spent four fixes closing.
+       */
+      accentColor: {
+        primary: token('color-primary'),
+      },
       ringColor: {
         DEFAULT: token('color-ring'),
       },

@@ -45,7 +45,7 @@ export function MarketingHeader(): JSX.Element {
     <header className="border-b border-border bg-canvas">
       <nav
         aria-label="Main"
-        className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6"
+        className="marketing-shell flex h-16 items-center justify-between gap-4"
       >
         <Link
           to={paths.landing}
@@ -105,7 +105,7 @@ function FooterColumn({ title, children }: FooterColumnProps): JSX.Element {
 export function MarketingFooter(): JSX.Element {
   return (
     <footer className="border-t border-border bg-canvas">
-      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      <div className="marketing-shell py-14">
         {/*
           Asymmetric on purpose: the wordmark block is the widest thing here and
           the three link groups cluster to the right of it, rather than four

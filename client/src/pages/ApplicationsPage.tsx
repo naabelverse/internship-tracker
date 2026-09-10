@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ApplicationCardList } from '@/features/applications/ApplicationCardList';
 import { ApplicationFormModal } from '@/features/applications/ApplicationFormModal';
@@ -116,14 +117,12 @@ export function ApplicationsPage(): JSX.Element {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-display-sm stretch-wide text-content">Applications</h1>
-          <p className="text-sm text-content-muted">
-            {query.data ? `${String(query.data.meta.total)} tracked` : 'Loading your applications'}
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        title="Applications"
+        description={
+          query.data ? `${String(query.data.meta.total)} tracked` : 'Loading your applications'
+        }
+      />
 
       <ApplicationsToolbar
         filters={filters}

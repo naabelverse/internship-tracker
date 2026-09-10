@@ -79,7 +79,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
   return (
     <Card as="section">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-content">Activity</h2>
+        <h2 className="panel-title">Activity</h2>
         <p className="text-xs text-content-subtle">Last 12 weeks</p>
       </div>
 

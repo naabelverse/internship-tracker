@@ -63,7 +63,7 @@ const FEATURES: Feature[] = [
 
 export function FeatureCards(): JSX.Element {
   return (
-    <section aria-labelledby="features-heading" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section aria-labelledby="features-heading" className="marketing-shell py-16">
       <h2
         id="features-heading"
         className="max-w-[18ch] text-display-md stretch-wide text-content sm:max-w-none"
@@ -111,7 +111,7 @@ export function FeatureCards(): JSX.Element {
 export function ScreenshotSection(): JSX.Element {
   return (
     <section aria-labelledby="screenshot-heading" className="border-y border-border bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <div className="marketing-shell py-16">
         <div className="grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
           <h2
             id="screenshot-heading"
@@ -158,7 +158,7 @@ const STEPS = [
 
 export function HowItWorks(): JSX.Element {
   return (
-    <section aria-labelledby="how-heading" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <section aria-labelledby="how-heading" className="marketing-shell py-16">
       <h2 id="how-heading" className="text-display-md stretch-wide text-content">
         How it works
       </h2>

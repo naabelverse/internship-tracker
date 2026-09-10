@@ -715,18 +715,19 @@ version. Selecting on the version is what makes a re-run harmless — the second
 
 ## Repository documents
 
-| File                                     | Contents                                                             |
-| ---------------------------------------- | -------------------------------------------------------------------- |
-| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth       |
-| [DEPLOYMENT.md](DEPLOYMENT.md)           | Railway deployment, cross-origin config, email DNS, launch checklist |
-| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                          |
-| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons                 |
-| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                              |
-| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar             |
-| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                             |
-| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                              |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                             |
-| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                          |
+| File                                     | Contents                                                                           |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                       | Full product and technical specification — the source of truth                     |
+| [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)     | How the interface is built: tokens, type, components, and the gates that hold them |
+| [DEPLOYMENT.md](DEPLOYMENT.md)           | Railway deployment, cross-origin config, email DNS, launch checklist               |
+| [PROGRESS.md](PROGRESS.md)               | Phase-by-phase build status                                                        |
+| [DECISIONS.md](DECISIONS.md)             | Every assumption made during the build, with reasons                               |
+| [CLAUDE.md](CLAUDE.md)                   | Working conventions for this repository                                            |
+| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to set up, the verification gate, and the review bar                           |
+| [CHANGELOG.md](CHANGELOG.md)             | Release history, Keep a Changelog format                                           |
+| [SECURITY.md](SECURITY.md)               | How to report a vulnerability privately                                            |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1                                                           |
+| [e2e/README.md](e2e/README.md)           | How the end-to-end suite and its stack work                                        |
 
 ## License
 

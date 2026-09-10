@@ -49,7 +49,7 @@ export function NotesEditor({ savedNotes, isSaving, onSave }: NotesEditorProps):
   return (
     <section aria-labelledby="notes-heading" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="notes-heading" className="text-sm font-semibold text-content">
+        <h2 id="notes-heading" className="panel-title">
           Notes
         </h2>
 

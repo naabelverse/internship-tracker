@@ -68,7 +68,7 @@ export function AttachmentsPanel({ application }: { application: Application }):
 
   return (
     <section aria-labelledby="attachments-heading" className="space-y-3">
-      <h2 id="attachments-heading" className="text-sm font-semibold text-content">
+      <h2 id="attachments-heading" className="panel-title">
         Attachments
       </h2>
 

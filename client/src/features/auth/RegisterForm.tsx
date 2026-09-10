@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
@@ -69,14 +70,7 @@ export function RegisterForm(): JSX.Element {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      {errors.root && (
-        <p
-          role="alert"
-          className="rounded-control border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
-        >
-          {errors.root.message}
-        </p>
-      )}
+      <FormError message={errors.root?.message} />
 
       {/*
         Not registered with react-hook-form, and not in the zod schema: it is not

@@ -36,7 +36,7 @@ export function DayEventsPanel({
 }: DayEventsPanelProps): JSX.Element {
   return (
     <Card as="section" aria-labelledby="day-events-heading">
-      <h2 id="day-events-heading" className="text-sm font-semibold text-content">
+      <h2 id="day-events-heading" className="panel-title">
         {date === null ? 'Pick a day' : format(date, 'EEEE d MMMM')}
       </h2>
 
