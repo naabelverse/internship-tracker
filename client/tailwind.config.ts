@@ -43,6 +43,9 @@ export default {
         warning: token('color-warning'),
         danger: token('color-danger'),
         'danger-fg': token('color-danger-fg'),
+        // The danger button's hover, so it swaps a colour like the other three
+        // variants rather than dimming the whole element with opacity.
+        'danger-hover': token('color-danger-hover'),
         info: token('color-info'),
         // Chart series and heatmap levels, so a chart colour is a token like
         // every other colour in the app rather than a literal in a JS object.

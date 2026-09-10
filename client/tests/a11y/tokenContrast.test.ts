@@ -98,6 +98,26 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
     expect(contrastRatio(token('danger-fg'), token('danger'))).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
+  /*
+    The hover state is a second filled background carrying the same label, so it
+    needs its own measurement rather than an assumption that darkening a fill
+    can only help. In the dark theme it cannot be assumed at all: `danger` there
+    is a light red carrying near-black text, so the step that deepens the light
+    theme's fill moves the dark theme's *toward* its own foreground.
+
+    Measured at the values this ships: 9.88:1 in light, 6.08:1 in dark.
+  */
+  it('keeps the danger button readable while hovered', () => {
+    expect(contrastRatio(token('danger-fg'), token('danger-hover'))).toBeGreaterThanOrEqual(
+      AA_TEXT,
+    );
+  });
+
+  /* And it has to stay visible as a shape on the page while hovered. */
+  it.each(SURFACES)('danger-hover reads as a shape on %s', (bg) => {
+    expect(contrastRatio(token('danger-hover'), token(bg))).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
   it.each(CHART_TOKENS)('%s is distinguishable from the card it sits on', (name) => {
     expect(contrastRatio(token(name), token('surface'))).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
