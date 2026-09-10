@@ -55,7 +55,7 @@ export function FaqAccordion(): JSX.Element {
 
   return (
     <section aria-labelledby="faq-heading" className="border-t border-border bg-surface">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-12 lg:gap-10">
+      <div className="marketing-shell grid gap-8 py-16 lg:grid-cols-12 lg:gap-10">
         {/*
           The heading sits beside the answers rather than centred above them, so
           the questions read as one continuous ruled column instead of a boxed

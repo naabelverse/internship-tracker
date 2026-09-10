@@ -54,7 +54,7 @@ function CheckboxFilter<T extends string>({
                   : [...selected, value],
               );
             }}
-            className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
+            className="h-4 w-4 rounded-chip border-border-strong accent-primary"
           />
           {labelOf(value)}
         </label>
@@ -184,7 +184,7 @@ export function ApplicationsToolbar({
                 onChange={(event) => {
                   onFiltersChange({ archived: event.target.checked });
                 }}
-                className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
+                className="h-4 w-4 rounded-chip border-border-strong accent-primary"
               />
               Show archived
             </label>
@@ -219,7 +219,7 @@ export function ApplicationsToolbar({
                       : [...hiddenColumns, column.id],
                   );
                 }}
-                className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))] disabled:opacity-50"
+                className="h-4 w-4 rounded-chip border-border-strong accent-primary disabled:opacity-50"
               />
               {column.label}
             </label>

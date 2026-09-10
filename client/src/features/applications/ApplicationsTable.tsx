@@ -107,7 +107,7 @@ export function ApplicationsTable({
                 checked={allSelected}
                 onChange={onToggleAll}
                 aria-label="Select all applications on this page"
-                className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
+                className="h-4 w-4 rounded-chip border-border-strong accent-primary"
               />
             </th>
 
@@ -153,7 +153,7 @@ export function ApplicationsTable({
                     onToggle(application.id);
                   }}
                   aria-label={`Select ${application.company}`}
-                  className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
+                  className="h-4 w-4 rounded-chip border-border-strong accent-primary"
                 />
               </td>
 

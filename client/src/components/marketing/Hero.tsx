@@ -124,7 +124,7 @@ function PipelineRail(): JSX.Element {
 export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Element {
   return (
     <section className="atmos-field border-b border-border">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:py-28">
+      <div className="marketing-shell py-16 sm:py-24 lg:py-28">
         <div className="grid items-start gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-6">
             <h1 className="max-w-[13ch] text-display-lg stretch-display text-content">

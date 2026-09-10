@@ -44,7 +44,7 @@ export function ApplicationCardList({
                 onToggle(application.id);
               }}
               aria-label={`Select ${application.company}`}
-              className="mt-1 h-4 w-4 shrink-0 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
+              className="mt-1 h-4 w-4 shrink-0 rounded-chip border-border-strong accent-primary"
             />
 
             <span

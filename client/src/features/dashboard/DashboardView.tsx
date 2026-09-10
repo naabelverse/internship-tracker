@@ -19,6 +19,7 @@ import {
   useUpcomingQuery,
 } from '@/features/dashboard/useDashboardQueries';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 import type { TimelineGranularity } from '@/types/analytics';
 
@@ -60,20 +61,20 @@ export function DashboardView(): JSX.Element {
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-display-sm stretch-wide text-content">Dashboard</h1>
-          <p className="mt-0.5 text-sm text-content-muted">
-            {summary.data.currentStreakDays > 0
-              ? `${String(summary.data.currentStreakDays)} day streak — keep it going.`
-              : 'Your search at a glance.'}
-          </p>
-        </div>
-        <Button onClick={openCreate}>
-          <PlusIcon className="h-4 w-4" aria-hidden="true" />
-          New application
-        </Button>
-      </header>
+      <PageHeader
+        title="Dashboard"
+        description={
+          summary.data.currentStreakDays > 0
+            ? `${String(summary.data.currentStreakDays)} day streak — keep it going.`
+            : 'Your search at a glance.'
+        }
+        actions={
+          <Button onClick={openCreate}>
+            <PlusIcon className="h-4 w-4" aria-hidden="true" />
+            New application
+          </Button>
+        }
+      />
 
       {isEmptyAccount ? (
         <DashboardEmptyState onCreate={openCreate} />

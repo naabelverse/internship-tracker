@@ -1,4 +1,5 @@
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { DangerZoneSection } from '@/features/settings/DangerZoneSection';
 import { DataSection } from '@/features/settings/DataSection';
@@ -45,10 +46,7 @@ export function SettingsPage(): JSX.Element {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-display-sm stretch-wide text-content">Settings</h1>
-        <p className="mt-0.5 text-sm text-content-muted">Your profile, security and preferences.</p>
-      </header>
+      <PageHeader title="Settings" description="Your profile, security and preferences." />
 
       <div className="max-w-3xl space-y-4">
         <ProfileSection user={user} />

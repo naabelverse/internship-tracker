@@ -2999,3 +2999,68 @@ border border-border bg-surface` was written out at fifteen call sites carrying 
   was made worse by Playwright running concurrently with it, which was avoidable. A shifting failure
   set is the signature of contention; a regression from a class change would fail the same tests
   every time.
+
+## The composition layer gets the treatment the palette already had
+
+The request was a full redesign, driven by hallmark and the UI-UX Pro Max skill. It was not
+taken, and the reason is measurement rather than reluctance. The tells that would justify a
+redesign were counted first, and the colour layer does not have them: one hand-written hex in
+`client/src` and it sits inside a comment explaining its own removal, no `console.log`, five
+arbitrary values all in `rem` and all legitimate sizing, three inline styles all genuinely
+dynamic, a three-size body scale, and five tests already refusing drift. What the count did
+find was a different layer entirely, so that is what was fixed.
+
+- **The page header was the real finding.** Nine call sites used the page-title type, and the
+  five that were genuinely page headers assembled it five different ways. The lede carried
+  `mt-0.5` on Dashboard and Settings and no top margin on Applications, Board and Calendar —
+  one role at two spacings, settled by whichever file was opened last. Applications also
+  carried `flex flex-wrap items-center justify-between gap-3` around a single child, copied
+  from a page that has an action button, where `justify-between` has nothing to distribute.
+
+- **`mt-0.5` is the resolved value, not the majority value.** It was on two of the five. It
+  wins because `display-sm` sets a 1.18 line height, which is tight enough that the lede needs
+  the optical gap, and because the two pages carrying it were the two most recently worked on.
+
+- **`PageHeader` covers five pages and deliberately leaves four alone.** `ErrorBoundary`,
+  `NotFoundPage`, `AuthSplitLayout` and `DetailHeader` all use the page-title type without
+  being routed-page headers: two are centred crash screens with their own top margins, one is
+  an auth panel title, one is a record title followed by a role rather than a lede. Pulling
+  them in would be the false consolidation `Card` already declined to make for its own three
+  exceptions — a tidier count that describes them wrongly.
+
+- **Two composites became CSS, not components.** `.panel-title` (six `h2` sites) and
+  `.marketing-shell` (seven container sites) are pure compositions of utilities with no
+  behaviour and no structure, so they follow `.skeleton` into `@layer components` rather than
+  becoming wrappers. `PageHeader` and `FormError` are components because they own structure
+  and a conditional.
+
+- **`accentColor.primary` went into the Tailwind theme.** Seven checkboxes spelled
+  `accent-[rgb(var(--color-primary))]` by hand. That resolves the right colour, which is why
+  `noRawColour` never saw it, but as an arbitrary value it sat outside the theme and therefore
+  outside the name parity `tailwindTokens.test.ts` enforces. A token spelled by hand at seven
+  sites is the same shape of drift the palette work spent four fixes closing.
+
+- **`FormError` takes a message, not a react-hook-form error.** Four forms rendered
+  `errors.root` through an identical `role="alert"` element behind an identical
+  `{errors.root && ...}` guard, so the guard and the markup drifted as a pair. Taking a string
+  and returning `null` on an absent one moves the guard inside the component and keeps it
+  usable by anything with a message. `VerificationBanner` shares two of the same utilities for
+  its expired state and was left alone: it is a banner in `text-content`, not a form error.
+
+- **Two high-count patterns were deliberately not named.** `text-sm text-content-muted` (13
+  sites) and `text-xs text-content-subtle` (12) were the two most repeated strings in the
+  client, which is what made them look like the finding. Reading the call sites showed they
+  are not one role: four of the muted ones are the page lede, now owned by `PageHeader`, and
+  the rest are ordinary secondary copy in dialogs, panels and empty states. Naming the
+  remainder would be abstraction with no role behind it.
+
+- **`DESIGN_SYSTEM.md` is new, and every value in it was transcribed from source.** The colour
+  tables come from `tokens.json`, the scales from `tailwind.config.ts`, and the gate thresholds
+  from `tokenContrast.test.ts` rather than from the SPEC, so the document describes what the
+  code does rather than what was once intended.
+
+- **One of the four over-length files fixed itself.** `ApplicationFormModal` dropped under the
+  250-line convention as a side effect of `FormError`. `ApplicationsToolbar` (261),
+  `ApplicationsPage` (257) and `useApplicationMutations` (254) are still over it. All three are
+  in the applications feature, which is the actual signal, and splitting them is a refactor
+  with its own risk rather than something to attach to a styling pass.

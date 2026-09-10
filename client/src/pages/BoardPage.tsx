@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { VersionConflictDialog } from '@/features/applications/VersionConflictDialog';
 import { useUpdateApplication } from '@/features/applications/useApplicationMutations';
@@ -82,12 +83,10 @@ export function BoardPage(): JSX.Element {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-display-sm stretch-wide text-content">Board</h1>
-        <p className="text-sm text-content-muted">
-          Drag a card, or focus one and press space, to move it between columns.
-        </p>
-      </header>
+      <PageHeader
+        title="Board"
+        description="Drag a card, or focus one and press space, to move it between columns."
+      />
 
       {query.isPending && <BoardSkeleton />}
 

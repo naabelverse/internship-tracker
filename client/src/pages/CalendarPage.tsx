@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { DayEventsPanel } from '@/features/calendar/DayEventsPanel';
@@ -55,43 +56,42 @@ export function CalendarPage(): JSX.Element {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-display-sm stretch-wide text-content">Calendar</h1>
-          <p className="text-sm text-content-muted">Deadlines in red, interviews in blue.</p>
-        </div>
+      <PageHeader
+        title="Calendar"
+        description="Deadlines in red, interviews in blue."
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label="Previous month"
+              onClick={() => {
+                goToMonth(-1);
+              }}
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </Button>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-label="Previous month"
-            onClick={() => {
-              goToMonth(-1);
-            }}
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
+            <p
+              aria-live="polite"
+              className="min-w-[9rem] text-center text-sm font-medium text-content"
+            >
+              {format(month, 'MMMM yyyy')}
+            </p>
 
-          <p
-            aria-live="polite"
-            className="min-w-[9rem] text-center text-sm font-medium text-content"
-          >
-            {format(month, 'MMMM yyyy')}
-          </p>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-label="Next month"
-            onClick={() => {
-              goToMonth(1);
-            }}
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label="Next month"
+              onClick={() => {
+                goToMonth(1);
+              }}
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </Button>
+          </div>
+        }
+      />
 
       {query.isPending && <CalendarSkeleton />}
 

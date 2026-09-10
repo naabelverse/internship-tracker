@@ -48,7 +48,7 @@ export function UpcomingPanel({
   return (
     <Card as="section">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-content">Upcoming</h2>
+        <h2 className="panel-title">Upcoming</h2>
         <Link to={paths.calendar} className="text-xs font-medium text-primary hover:underline">
           Open calendar
         </Link>

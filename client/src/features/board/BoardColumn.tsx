@@ -31,7 +31,7 @@ export function BoardColumn({ column, onOpen }: BoardColumnProps): JSX.Element {
           aria-hidden="true"
           className={cn('h-2 w-2 rounded-full', STATUS_CONFIG[column.status].dot)}
         />
-        <h2 className="text-sm font-semibold text-content">{column.label}</h2>
+        <h2 className="panel-title">{column.label}</h2>
         <span
           className={cn(
             'ml-auto rounded-full px-2 py-0.5 text-xs font-medium',

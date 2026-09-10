@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
 import { loginSchema, type LoginValues } from '@/features/auth/authSchemas';
@@ -35,14 +36,7 @@ export function LoginForm(): JSX.Element {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      {errors.root && (
-        <p
-          role="alert"
-          className="rounded-control border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
-        >
-          {errors.root.message}
-        </p>
-      )}
+      <FormError message={errors.root?.message} />
 
       <TextField
         label="Email"

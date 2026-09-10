@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { AuthSplitLayout } from '@/features/auth/AuthSplitLayout';
 import { resetPasswordSchema, type ResetPasswordValues } from '@/features/auth/authSchemas';
@@ -70,14 +71,7 @@ export function ResetPasswordPage(): JSX.Element {
       footer={askAgain}
     >
       <form onSubmit={onSubmit} noValidate className="space-y-4">
-        {form.formState.errors.root && (
-          <p
-            role="alert"
-            className="rounded-control border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
-          >
-            {form.formState.errors.root.message}
-          </p>
-        )}
+        <FormError message={form.formState.errors.root?.message} />
 
         <PasswordField
           label="New password"
