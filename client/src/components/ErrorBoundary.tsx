@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { AlertIcon } from '@/components/ui/icons';
 import { logger } from '@/lib/logger';
 import { reportError } from '@/lib/sentry';
+import { Card } from '@/components/ui/Card';
 
 interface Props {
   children: ReactNode;
@@ -47,10 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="grid min-h-screen place-items-center bg-canvas p-6">
-        <div
-          role="alert"
-          className="w-full max-w-md rounded-card border border-border bg-surface p-6 shadow-card"
-        >
+        <Card role="alert" className="w-full max-w-md shadow-card">
           <AlertIcon className="h-8 w-8 text-danger" />
           <h1 className="mt-4 text-display-sm stretch-wide text-content">
             Something broke on this page
@@ -68,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Reload page
             </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }

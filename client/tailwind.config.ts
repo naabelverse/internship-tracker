@@ -132,6 +132,39 @@ export default {
           '0 40px 80px -32px rgb(var(--atmos-cast) / var(--atmos-cast-peak))',
         ].join(', '),
       },
+      /*
+       * Motion, given a scale for the same reason the radii have one.
+       *
+       * Every transition in the app was reaching for Tailwind's built-in
+       * defaults, so the timing was consistent only by accident: 26 call sites
+       * inherited 150ms and `cubic-bezier(0.4, 0, 0.2, 1)` without naming
+       * either, while the two that wanted something else wrote `duration-200`
+       * and `duration-700` as bare numbers. Nothing recorded what those
+       * numbers meant, so the next component had nothing to copy from.
+       *
+       * `DEFAULT` is set rather than left implicit: in Tailwind v3 the
+       * `transition-*` utilities read `transitionDuration.DEFAULT` and
+       * `transitionTimingFunction.DEFAULT`, so naming them here tokenises every
+       * existing call site without touching one of them.
+       */
+      transitionDuration: {
+        /** A control changing state under the cursor. */
+        DEFAULT: '150ms',
+        /** A panel or drawer moving across the screen — further to travel. */
+        panel: '200ms',
+        /** A value animating into place, where the motion is the message. */
+        data: '700ms',
+      },
+      transitionTimingFunction: {
+        /*
+         * Ease-out, replacing Tailwind's symmetric ease-in-out default. A state
+         * change should leave immediately and settle at the end; easing into
+         * the start delays the feedback the user is waiting for, which is why
+         * both Material and the HIG specify decelerate for entering and for
+         * state transitions.
+         */
+        DEFAULT: 'cubic-bezier(0.2, 0, 0, 1)',
+      },
       ringColor: {
         DEFAULT: token('color-ring'),
       },

@@ -6,6 +6,7 @@ import { companyInitials } from '@/lib/formatters';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
 import { cn } from '@/lib/cn';
 import type { Application, ApplicationStatus } from '@/types/application';
+import { cardSurface } from '@/components/ui/Card';
 
 /** What `onDragEnd` reads back off the card that was picked up. */
 export interface CardDragData {
@@ -40,10 +41,7 @@ export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): J
       data-card-id={application.id}
       data-card-index={cardIndex}
       style={{ transform: CSS.Translate.toString(transform) }}
-      className={cn(
-        'rounded-card border border-border bg-surface p-3',
-        isDragging && 'opacity-60 ring-2 ring-primary',
-      )}
+      className={cn(cardSurface, 'p-3', isDragging && 'opacity-60 ring-2 ring-primary')}
     >
       <div className="flex items-start gap-2.5">
         <span
@@ -59,7 +57,7 @@ export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): J
             onClick={() => {
               onOpen(application.id);
             }}
-            className="block w-full truncate text-left text-sm font-medium text-content hover:text-primary"
+            className="block w-full truncate text-left text-sm font-medium text-content transition-colors hover:text-primary"
           >
             {application.company}
           </button>

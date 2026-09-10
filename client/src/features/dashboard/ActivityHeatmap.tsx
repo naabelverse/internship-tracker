@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
@@ -76,7 +77,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
   const activeDays = cells.filter((cell) => cell.count > 0).length;
 
   return (
-    <section className="rounded-card border border-border bg-surface p-4 sm:p-5">
+    <Card as="section">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-content">Activity</h2>
         <p className="text-xs text-content-subtle">Last 12 weeks</p>
@@ -110,7 +111,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
                   data-count={cell.count}
                   title={`${formatDate(cell.date.toISOString())}: ${String(cell.count)} added`}
                   className={cn(
-                    'h-3 w-3 rounded-[3px] ring-1 ring-inset ring-border/60',
+                    'h-3 w-3 rounded-chip ring-1 ring-inset ring-border/60',
                     LEVEL_CLASSES[levelFor(cell.count, busiest)],
                   )}
                 />
@@ -121,12 +122,12 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
           <div className="mt-3 flex items-center gap-1.5 text-[0.625rem] text-content-subtle">
             <span>Less</span>
             {LEVEL_CLASSES.map((level) => (
-              <span key={level} className={cn('h-2.5 w-2.5 rounded-[3px]', level)} />
+              <span key={level} className={cn('h-2.5 w-2.5 rounded-chip', level)} />
             ))}
             <span>More</span>
           </div>
         </>
       )}
-    </section>
+    </Card>
   );
 }

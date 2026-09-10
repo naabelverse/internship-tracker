@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { paths } from '@/routes/paths';
 import type { Application, ApplicationStatus } from '@/types/application';
 import { DeadlineChip } from '@/features/applications/DeadlineChip';
+import { Card } from '@/components/ui/Card';
 
 interface ApplicationsTableProps {
   applications: Application[];
@@ -96,7 +97,7 @@ export function ApplicationsTable({
     too, so they are equally not in the chain.
   */
   return (
-    <div className="relative overflow-x-auto rounded-card border border-border bg-surface">
+    <Card padding="none" className="relative overflow-x-auto">
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border">
@@ -106,7 +107,7 @@ export function ApplicationsTable({
                 checked={allSelected}
                 onChange={onToggleAll}
                 aria-label="Select all applications on this page"
-                className="h-4 w-4 rounded border-border-strong accent-[rgb(var(--color-primary))]"
+                className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
               />
             </th>
 
@@ -119,7 +120,7 @@ export function ApplicationsTable({
                       onSort(column.sortBy ?? 'createdAt');
                     }}
                     aria-label={`Sort by ${column.label}`}
-                    className="inline-flex items-center gap-1 hover:text-content"
+                    className="inline-flex items-center gap-1 transition-colors hover:text-content"
                   >
                     {column.label}
                     {sortField === column.sortBy &&
@@ -152,7 +153,7 @@ export function ApplicationsTable({
                     onToggle(application.id);
                   }}
                   aria-label={`Select ${application.company}`}
-                  className="h-4 w-4 rounded border-border-strong accent-[rgb(var(--color-primary))]"
+                  className="h-4 w-4 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
                 />
               </td>
 
@@ -161,7 +162,7 @@ export function ApplicationsTable({
                   {column.id === 'company' ? (
                     <Link
                       to={paths.applicationDetail(application.id)}
-                      className="inline-flex items-center gap-2.5 font-medium hover:text-primary"
+                      className="inline-flex items-center gap-2.5 font-medium transition-colors hover:text-primary"
                     >
                       <span
                         aria-hidden="true"
@@ -202,6 +203,6 @@ export function ApplicationsTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }

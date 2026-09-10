@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { cardSurface } from '@/components/ui/Card';
 
 interface PopoverProps {
   label: string;
@@ -66,7 +67,8 @@ export function Popover({ label, trigger, children, align = 'left' }: PopoverPro
           role="group"
           aria-label={label}
           className={cn(
-            'absolute z-30 mt-2 max-h-80 w-60 overflow-y-auto rounded-card border border-border bg-surface p-2 shadow-float',
+            cardSurface,
+            'absolute z-30 mt-2 max-h-80 w-60 overflow-y-auto p-2 shadow-float',
             align === 'right' ? 'right-0' : 'left-0',
           )}
         >

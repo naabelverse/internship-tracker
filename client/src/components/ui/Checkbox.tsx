@@ -23,7 +23,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
           type="checkbox"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="mt-0.5 h-4 w-4 rounded border-border-strong text-primary accent-[rgb(var(--color-primary))]"
+          className="mt-0.5 h-4 w-4 rounded-chip border-border-strong text-primary accent-[rgb(var(--color-primary))]"
         />
         <label htmlFor={inputId} className="text-sm leading-5 text-content-muted">
           {label}

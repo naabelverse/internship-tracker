@@ -31,7 +31,7 @@ export function Topbar({ isNavOpen, onOpenNav }: TopbarProps): JSX.Element {
         aria-label="Open navigation"
         aria-expanded={isNavOpen}
         aria-controls="app-navigation"
-        className="rounded-control p-2 text-content-muted hover:bg-surface-muted hover:text-content lg:hidden"
+        className="rounded-control p-2 text-content-muted transition-colors hover:bg-surface-muted hover:text-content lg:hidden"
       >
         <MenuIcon className="h-5 w-5" />
       </button>

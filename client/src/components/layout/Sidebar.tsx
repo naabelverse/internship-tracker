@@ -52,7 +52,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
         aria-label="Main navigation"
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-64 max-w-[85vw] flex-col border-r border-border bg-surface',
-          'transition-transform duration-200 lg:visible lg:translate-x-0',
+          'transition-transform duration-panel lg:visible lg:translate-x-0',
           isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full',
         )}
       >
@@ -64,7 +64,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
             type="button"
             onClick={onClose}
             aria-label="Close navigation"
-            className="rounded-control p-1.5 text-content-subtle hover:bg-surface-muted hover:text-content lg:hidden"
+            className="rounded-control p-1.5 text-content-subtle transition-colors hover:bg-surface-muted hover:text-content lg:hidden"
           >
             <CloseIcon className="h-5 w-5" />
           </button>

@@ -76,7 +76,7 @@ export function NotesEditor({ savedNotes, isSaving, onSave }: NotesEditorProps):
                   setShowPreview(tab.id === 'preview');
                 }}
                 className={cn(
-                  'rounded-[0.4rem] px-2.5 py-1 text-xs font-medium',
+                  'rounded-control px-2.5 py-1 text-xs font-medium',
                   tab.active ? 'bg-primary-fill text-primary-fill-fg' : 'text-content-muted',
                 )}
               >
@@ -90,7 +90,7 @@ export function NotesEditor({ savedNotes, isSaving, onSave }: NotesEditorProps):
       {showPreview ? (
         <div
           data-testid="notes-preview"
-          className="prose-sm min-h-[10rem] rounded-control border border-border bg-surface px-3 py-2 text-sm text-content [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-surface-muted [&_code]:px-1 [&_li]:ml-4 [&_li]:list-disc"
+          className="prose-sm min-h-[10rem] rounded-control border border-border bg-surface px-3 py-2 text-sm text-content [&_a]:text-primary [&_a]:underline [&_code]:rounded-chip [&_code]:bg-surface-muted [&_code]:px-1 [&_li]:ml-4 [&_li]:list-disc"
           dangerouslySetInnerHTML={{ __html: preview }}
         />
       ) : (

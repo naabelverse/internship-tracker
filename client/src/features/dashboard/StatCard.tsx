@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ArrowDownIcon, ArrowUpIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
@@ -40,7 +41,7 @@ export function StatCard({
   const Arrow = isUp ? ArrowUpIcon : ArrowDownIcon;
 
   return (
-    <div className="rounded-card border border-border bg-surface p-4">
+    <Card>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
@@ -72,6 +73,6 @@ export function StatCard({
           <span className="text-content-subtle">{periodLabel}</span>
         </p>
       )}
-    </div>
+    </Card>
   );
 }
