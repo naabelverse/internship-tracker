@@ -3064,3 +3064,64 @@ find was a different layer entirely, so that is what was fixed.
   `ApplicationsPage` (257) and `useApplicationMutations` (254) are still over it. All three are
   in the applications feature, which is the actual signal, and splitting them is a refactor
   with its own risk rather than something to attach to a styling pass.
+
+## Blue-ground redesign (11 Sep 2026)
+
+A supplied shadcn-style reference — `#a6c4e8` light background, `#141d2b` dark, neutral
+near-black primary — replaced the violet "Dispatch" direction. What follows is what the
+measurement changed about it, since almost none of the reference shipped verbatim.
+
+- **The reference's page background is not the canvas.** This is the whole decision. A pill
+  is `bg-<token>/15 text-<token>`, and the gate checks every semantic against its own 15%
+  tint on `canvas`, `surface` and `surface-muted`. On `#a6c4e8` the tint sits so close to
+  the token that clearing 4.5:1 forces `success` to `#004d00`, `warning` to `#6c3000`,
+  `danger` to `#830003` and `info` to `#00399a` — 1.86:1 to 1.95:1 from body text, which
+  stops the status system reading as colour on a product where status is the content.
+  Sweeping canvas lightness showed vivid semantics only survive again at L≈0.94. So
+  `--color-canvas` is `#d5edff` and the reference's blue became `--color-wash`.
+
+- **`--color-wash` is painted on the auth split screen and nowhere else.** It is gated for
+  body text but deliberately excluded from the pill-tint assertions, and that exclusion is
+  structural rather than an exemption: neither call site renders a status pill.
+
+- **The marketing hero was tried on the wash and reverted.** In dark mode the lamp at 0.2
+  over a wash blue enough to read apart from the canvas lifts the ground to `rgb(36 60 102)`,
+  where `text-subtle` measures 3.83:1. Clearing 4.5 there needs `text-subtle` lighter than
+  `text-muted` — inverting the hierarchy — or lightening all dark secondary text on every
+  screen to suit one decorative section. The hero kept its canvas-based atmosphere.
+
+- **The reference is not a blue theme.** Its `--primary` is `#101723` light and `#d7dfe5`
+  dark: neutral. The only saturated blue is the page ground and one `--sidebar-primary`.
+  That is why it clears the hue-collision constraint the violet direction was built around —
+  a neutral accent occupies no hue, so blue never competes with `info`/_Applied_.
+
+- **The chart series was rebuilt, not adopted.** The reference supplies five entries at
+  OKLCH hues 252–266 — a 14° sequential ramp with adjacent pairs at 1.31–1.37:1, and its
+  lightest fails the gate at 1.75:1 on a card. The app needs eight mutually distinguishable
+  categorical colours. The replacement spreads eight hues with the eighth a low-chroma
+  slate, closest pair 64 rgb-units in light and 63 in dark.
+
+- **Both CSS blocks supplied were byte-identical.** The "night version" and the "light
+  theme" were the same file, each containing `:root` and `.dark`. Nothing was lost; there
+  was simply only ever one theme to reconcile.
+
+- **The reference's own light screenshot did not match its light CSS**, showing periwinkle
+  inputs and secondary buttons where the CSS gives `#e7edf6` and `#d8dfe9`, both near-white,
+  and `--accent` at alpha 0. The CSS was treated as authoritative.
+
+- **`primary` and `primary-fill` now hold the same value per theme.** The split existed
+  because a violet fill dark enough for white text was unreadable as text. A neutral accent
+  has no such conflict. The tokens are kept apart because the gate measures `primary-fill`
+  separately, and collapsing them would delete those assertions.
+
+- **A comment inside a generated token block broke the mail palette.** `readToken` in the
+  server suite splits a block on `;` then `:`, so an explanatory comment containing `1.9:1`,
+  placed before the first declaration, hid `--color-canvas` from it. The comment moved to
+  the hand-written section above `:root`, and `index.css` now records the trap. The parser
+  was left alone: it fails loudly, which is how this was caught in the first place.
+
+- **One pinned test literal was updated by hand, deliberately.** `chartTheme.test.ts` pins a
+  concrete `color-primary` per theme so its "reads from the shipped tokens" assertion cannot
+  pass with both sides equally wrong. Its own comment says it must be updated whenever the
+  palette changes; it now pins `rgb(16 23 35)` and `rgb(215 223 229)`. No assertion was
+  relaxed anywhere in this work — `tokenContrast.test.ts` gained six.

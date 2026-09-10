@@ -50,6 +50,20 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
     },
   );
 
+  // `wash` is the one saturated ground in the palette: the auth split screen and
+  // the marketing hero. It is deliberately not in SURFACES, and that difference
+  // is the whole reason the canvas is pale rather than the reference's #a6c4e8.
+  //
+  // A ground that saturated cannot carry a status pill. `bg-<token>/15` over it
+  // lands so close to the token that clearing 4.5:1 forces every semantic to
+  // near-black - measured at ~1.9:1 from body text, which stops Offer-green and
+  // Rejected-red reading as colour at all. So the wash carries body copy only,
+  // and that is what is gated here. The exclusion is structural rather than an
+  // exemption: the two call sites, AuthSplitLayout and Hero, render no pill.
+  it.each(BODY_TOKENS)('%s clears AA for text on the wash', (fg) => {
+    expect(contrastRatio(token(fg), token('wash'))).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
   it.each(SEMANTIC_TOKENS)('%s clears AA as text on a card', (name) => {
     expect(contrastRatio(token(name), token('surface'))).toBeGreaterThanOrEqual(AA_TEXT);
   });
@@ -193,6 +207,18 @@ describe.each(['light', 'dark'] as const)('%s theme atmosphere', (theme) => {
   /** The panel surface under the top of its glaze, where the glaze is strongest. */
   const glazed = composite(rgb('atmos-glaze'), token('surface'), alpha('atmos-glaze-peak'));
 
+  /*
+   * There is deliberately no lamp-over-wash composite here. The wash is a flat
+   * ground on the auth split screen, and no atmosphere layer is painted on it.
+   *
+   * The hero was the one candidate. Measured, it does not work in dark mode: the
+   * lamp at 0.2 over a wash blue enough to read apart from the canvas lifts the
+   * ground to rgb(36 60 102), where `text-subtle` lands at 3.83:1. Clearing 4.5
+   * there needs `text-subtle` lighter than `text-muted` - inverting the
+   * hierarchy - or lightening all dark secondary text on every screen to suit
+   * one decorative section. So the hero keeps its canvas-based atmosphere and
+   * the wash stays flat.
+   */
   it.each(BODY_TOKENS)('%s clears AA at the peak of the hero light source', (fg) => {
     expect(contrastRatio(token(fg), lit)).toBeGreaterThanOrEqual(AA_TEXT);
   });

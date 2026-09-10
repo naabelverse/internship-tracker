@@ -37,62 +37,68 @@
  * Phase 9 darkened four light-theme semantics and nudged both `text-subtle`
  * values for exactly that reason.
  *
- * The palette is the "Dispatch" direction recorded in DECISIONS.md: a
- * desaturated petrol base with a deep violet primary, on the rule that the
- * interface is cool by default and the only warm colours on screen — amber and
- * red — mean something needs the student's attention. Deliberately not a neutral
- * slate with a stock indigo accent, which is what it replaced.
+ * The palette is the blue-ground direction recorded in DECISIONS.md, adapted
+ * from a supplied shadcn-style reference. Its shape is a neutral near-black
+ * primary on a pale blue canvas with white cards — the accent carries no hue of
+ * its own, so colour on screen belongs to the status system rather than to the
+ * brand. It replaced the violet "Dispatch" direction.
  *
- * The primary is violet rather than the cobalt first proposed because
- * `--color-info` already owns hue 264: a blue primary made Applied and
- * Assessment the same colour. Hue 298 is the widest gap left between info and
- * the pink of `--color-chart-5`.
+ * The reference's own `#a6c4e8` page background is `--color-wash`, not the
+ * canvas, and it is painted only on the auth split screen. A ground that
+ * saturated cannot carry a status pill — `bg-<token>/15` over it lands so close
+ * to the token that clearing 4.5 forces every semantic to near-black, measured
+ * at roughly 1.9 against body text, which stops Offer-green and Rejected-red
+ * reading as colour at all. The canvas is pale for that reason.
  *
  * Keep every declaration in these two blocks a flat `--name: value;`. The test
  * helper matches a block with `[^}]*`, so a nested rule here would truncate it.
+ * Keep comments out of the blocks entirely: `readToken` in the server's mail
+ * palette suite splits on `;` then on `:`, so a comment carrying a colon before
+ * the first declaration hides that declaration from it.
  */
 :root {
-  --color-canvas: 232 237 236;
-  --color-surface: 248 250 249;
-  --color-surface-muted: 226 233 231;
-  --color-border: 199 213 210;
-  --color-border-strong: 163 183 180;
-  --color-text: 13 26 28;
-  --color-text-muted: 63 85 89;
-  --color-text-subtle: 84 105 109;
-  --color-primary: 104 46 179;
-  --color-primary-fill: 104 46 179;
-  --color-primary-fill-hover: 86 32 151;
-  --color-primary-fill-fg: 255 255 255;
+  --color-canvas: 213 237 255;
+  --color-surface: 249 252 255;
+  --color-surface-muted: 231 237 246;
+  --color-wash: 166 196 232;
+  --color-border: 216 223 233;
+  --color-border-strong: 159 176 198;
+  --color-text: 6 10 18;
+  --color-text-muted: 53 62 72;
+  --color-text-subtle: 68 78 89;
+  --color-primary: 16 23 35;
+  --color-primary-fill: 16 23 35;
+  --color-primary-fill-hover: 38 50 67;
+  --color-primary-fill-fg: 250 250 250;
   --color-success: 8 102 48;
   --color-warning: 134 72 0;
   --color-danger: 170 30 18;
   --color-danger-fg: 255 255 255;
   --color-danger-hover: 133 23 14;
   --color-info: 25 77 207;
-  --color-ring: 104 46 179;
-  --color-shadow: 13 26 28;
+  --color-ring: 16 23 35;
+  --color-shadow: 6 10 18;
 
   /*
    * Categorical series for the charts. The semantic tokens above cannot carry a
    * by-source or top-companies chart on their own: those need colours that are
    * distinguishable from each other rather than colours that mean something.
    */
-  --color-chart-1: 104 46 179;
-  --color-chart-2: 25 77 207;
-  --color-chart-3: 134 72 0;
-  --color-chart-4: 8 102 48;
-  --color-chart-5: 162 31 98;
-  --color-chart-6: 79 106 110;
-  --color-chart-7: 10 88 129;
-  --color-chart-8: 109 110 10;
+  --color-chart-1: 53 104 178;
+  --color-chart-2: 113 76 166;
+  --color-chart-3: 165 65 127;
+  --color-chart-4: 185 70 66;
+  --color-chart-5: 154 101 0;
+  --color-chart-6: 59 122 44;
+  --color-chart-7: 1 141 135;
+  --color-chart-8: 54 68 82;
 
   /* Activity heatmap intensity, level 0 being a day with nothing on it. */
-  --color-heat-0: 226 233 231;
-  --color-heat-1: 208 197 236;
-  --color-heat-2: 180 158 230;
-  --color-heat-3: 146 107 215;
-  --color-heat-4: 110 56 184;
+  --color-heat-0: 231 237 246;
+  --color-heat-1: 189 211 242;
+  --color-heat-2: 138 176 231;
+  --color-heat-3: 85 137 215;
+  --color-heat-4: 36 96 183;
 
   /*
    * Atmosphere: one light source, and the texture it reveals. Decorative only.
@@ -104,64 +110,65 @@
    *
    * Light mode is not dark mode with the numbers flipped, and it is not the
    * same numbers either. Both themes ADD light at the lamp and fall back to
-   * their own canvas away from it - which means the atmosphere can only ever
+   * their own ground away from it - which means the atmosphere can only ever
    * lift a pale canvas towards white and deepen a near-black one towards black.
    * Neither theme can push a background past a value the gate above already
-   * checks. That is a property, not a coincidence: a violet lamp that tinted
-   * this canvas *darker* dropped text-subtle to 4.27:1, because text-subtle
-   * clears the plain canvas by only 4.90:1 and has nowhere to go.
+   * checks. That is a property, not a coincidence: a lamp that tinted this
+   * canvas *darker* would drop text-subtle, which clears the plain canvas with
+   * limited headroom and has nowhere to go.
    */
-  --atmos-light: 238 227 255;
+  --atmos-light: 233 244 255;
   --atmos-light-peak: 1;
   --atmos-deep: 255 255 255;
   --atmos-deep-peak: 0.38;
   --atmos-grade-axis: to bottom;
-  --atmos-grid: 13 26 28;
+  --atmos-grid: 6 10 18;
   --atmos-grid-peak: 0.055;
   --atmos-lift: 255 255 255;
   --atmos-lift-peak: 0.9;
   --atmos-glaze: 255 255 255;
   --atmos-glaze-peak: 0.6;
-  --atmos-cast: 104 46 179;
+  --atmos-cast: 45 90 180;
   --atmos-cast-peak: 0.2;
 }
 
 [data-theme='dark'] {
-  --color-canvas: 11 19 21;
-  --color-surface: 17 27 30;
-  --color-surface-muted: 25 38 42;
-  --color-border: 33 50 55;
-  --color-border-strong: 51 72 78;
-  --color-text: 227 237 235;
-  --color-text-muted: 154 175 178;
-  --color-text-subtle: 138 160 164;
-  --color-primary: 178 151 234;
-  --color-primary-fill: 133 85 210;
-  --color-primary-fill-hover: 115 63 191;
-  --color-primary-fill-fg: 255 255 255;
+  --color-canvas: 20 29 43;
+  --color-surface: 26 37 51;
+  --color-surface-muted: 35 45 60;
+  --color-wash: 26 44 74;
+  --color-border: 43 54 70;
+  --color-border-strong: 58 74 96;
+  --color-text: 229 236 241;
+  --color-text-muted: 155 166 177;
+  --color-text-subtle: 143 154 164;
+  --color-primary: 215 223 229;
+  --color-primary-fill: 215 223 229;
+  --color-primary-fill-hover: 190 201 210;
+  --color-primary-fill-fg: 24 34 48;
   --color-success: 75 214 128;
   --color-warning: 255 186 51;
   --color-danger: 255 131 119;
   --color-danger-fg: 42 10 6;
   --color-danger-hover: 255 94 78;
-  --color-info: 127 169 255;
-  --color-ring: 178 151 234;
+  --color-info: 139 178 255;
+  --color-ring: 215 223 229;
   --color-shadow: 0 0 0;
 
-  --color-chart-1: 178 151 234;
-  --color-chart-2: 127 169 255;
-  --color-chart-3: 255 186 51;
-  --color-chart-4: 75 214 128;
-  --color-chart-5: 242 116 176;
-  --color-chart-6: 138 160 164;
-  --color-chart-7: 131 204 252;
-  --color-chart-8: 165 165 14;
+  --color-chart-1: 135 185 255;
+  --color-chart-2: 188 152 249;
+  --color-chart-3: 239 139 197;
+  --color-chart-4: 255 135 133;
+  --color-chart-5: 238 192 91;
+  --color-chart-6: 139 212 123;
+  --color-chart-7: 147 235 215;
+  --color-chart-8: 121 136 152;
 
-  --color-heat-0: 25 38 42;
-  --color-heat-1: 59 46 86;
-  --color-heat-2: 94 68 140;
-  --color-heat-3: 133 97 197;
-  --color-heat-4: 175 146 234;
+  --color-heat-0: 35 45 60;
+  --color-heat-1: 47 72 109;
+  --color-heat-2: 63 105 167;
+  --color-heat-3: 91 144 221;
+  --color-heat-4: 141 191 255;
 
   /*
    * The cast is deliberately lighter than the canvas rather than darker: a black
@@ -169,18 +176,18 @@
    * interfaces read flat. What reads as depth here is a violet glow pooling
    * under a panel, not a shadow.
    */
-  --atmos-light: 149 103 224;
+  --atmos-light: 74 122 214;
   --atmos-light-peak: 0.2;
   --atmos-deep: 0 0 0;
   --atmos-deep-peak: 0.42;
   --atmos-grade-axis: to top;
-  --atmos-grid: 154 175 178;
+  --atmos-grid: 155 166 177;
   --atmos-grid-peak: 0.05;
-  --atmos-lift: 227 237 235;
+  --atmos-lift: 229 236 241;
   --atmos-lift-peak: 0.08;
-  --atmos-glaze: 178 151 234;
+  --atmos-glaze: 155 185 235;
   --atmos-glaze-peak: 0.05;
-  --atmos-cast: 133 85 210;
+  --atmos-cast: 45 90 180;
   --atmos-cast-peak: 0.45;
 }
 

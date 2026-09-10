@@ -13,14 +13,14 @@
 
 /** The colours every email and the unsubscribe page are drawn in. */
 export const MAIL_PALETTE = {
-  brand: '#682eb3',
-  brandFill: '#682eb3',
-  brandFillText: '#ffffff',
-  ink: '#0d1a1c',
-  muted: '#3f5559',
-  border: '#c7d5d2',
-  canvas: '#e8edec',
-  surface: '#f8faf9',
+  brand: '#101723',
+  brandFill: '#101723',
+  brandFillText: '#fafafa',
+  ink: '#060a12',
+  muted: '#353e48',
+  border: '#d8dfe9',
+  canvas: '#d5edff',
+  surface: '#f9fcff',
 } as const;
 
 /**

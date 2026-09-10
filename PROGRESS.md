@@ -2,7 +2,7 @@
 
 Update this after every phase. A phase is only done when `npm run verify` passes and every box below it is ticked.
 
-**Status:** Phase 14 complete
+**Status:** Phase 14 complete; blue-ground redesign applied 11 Sep 2026 (see DECISIONS.md)
 **Current phase:** 15
 **Last updated:** 2026-09-05
 
@@ -924,9 +924,11 @@ _The agent appends anything it cannot do itself here — DNS records, account si
       `client/scripts/generateSeoFiles.mjs` and are no longer committed. They had been shipping
       `http://localhost:5173` to production because a committed copy can never pick up the
       deployment domain. The variable still has to be set on the service.
-- [ ] **Re-run `npm run screenshot -w client` after any dashboard redesign.** The landing page
+- [x] **Re-run `npm run screenshot -w client` after any dashboard redesign.** The landing page
       shows a real capture of the demo account, not a mock-up, so it goes stale when the
-      dashboard changes.
+      dashboard changes. Regenerated 11 Sep 2026 for the blue-ground redesign. Docker was not
+      running, so the stack came up on `mongodb-memory-server` (port 27019) plus the API on
+      5000 and `vite preview` on 4173 rather than compose - the capture itself is unchanged.
 
 ### Phase 16 — everything that needs a real deployment
 

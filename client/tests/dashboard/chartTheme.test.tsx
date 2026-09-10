@@ -61,13 +61,15 @@ describe('charts follow the theme', () => {
     // agree on nothing. So one concrete value per theme is pinned, and it has to
     // be updated by hand whenever `src/index.css` ships a new palette. The
     // "Dispatch" redesign moved primary from indigo to jade, then jade to a deep
-    // violet; these are the values that file now ships.
-    expect(tokenColor('color-primary')).toBe('rgb(104 46 179)');
+    // violet; the blue-ground redesign then made it neutral, because that
+    // direction carries no brand hue at all. These are the values that file
+    // now ships.
+    expect(tokenColor('color-primary')).toBe('rgb(16 23 35)');
 
     await setTheme('dark');
 
     expect(readChartPalette().color('color-primary')).toBe(tokenColor('color-primary'));
-    expect(tokenColor('color-primary')).toBe('rgb(178 151 234)');
+    expect(tokenColor('color-primary')).toBe('rgb(215 223 229)');
   });
 
   it('repaints a mounted line chart when the theme is toggled', async () => {
