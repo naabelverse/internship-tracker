@@ -11,6 +11,7 @@ import { StatusSelect } from '@/features/applications/StatusSelect';
 import { companyInitials } from '@/lib/formatters';
 import { EMPLOYMENT_TYPE_LABELS, WORK_MODE_LABELS } from '@/lib/statusConfig';
 import type { Application, ApplicationStatus } from '@/types/application';
+import { Card } from '@/components/ui/Card';
 
 interface DetailHeaderProps {
   application: Application;
@@ -35,7 +36,7 @@ export function DetailHeader({
   onDelete,
 }: DetailHeaderProps): JSX.Element {
   return (
-    <header className="rounded-card border border-border bg-surface p-5">
+    <Card as="header">
       <div className="flex flex-wrap items-start gap-4">
         <span
           aria-hidden="true"
@@ -106,6 +107,6 @@ export function DetailHeader({
           </Button>
         </div>
       </div>
-    </header>
+    </Card>
   );
 }

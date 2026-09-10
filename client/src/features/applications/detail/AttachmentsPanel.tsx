@@ -143,7 +143,7 @@ export function AttachmentsPanel({ application }: { application: Application }):
                   href={attachment.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="block truncate text-sm font-medium text-content hover:text-primary"
+                  className="block truncate text-sm font-medium text-content transition-colors hover:text-primary"
                 >
                   {attachment.originalName}
                 </a>

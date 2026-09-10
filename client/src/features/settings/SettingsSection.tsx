@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { cardSurface } from '@/components/ui/Card';
+import { cn } from '@/lib/cn';
 
 interface SettingsSectionProps {
   title: string;
@@ -41,7 +43,7 @@ export function SettingsSection({
     </>
   );
 
-  const className = 'overflow-hidden rounded-card border border-border bg-surface';
+  const className = cn('overflow-hidden', cardSurface);
 
   return onSubmit ? (
     <form noValidate onSubmit={onSubmit} className={className} aria-labelledby={undefined}>

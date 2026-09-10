@@ -50,7 +50,7 @@ export function WeeklyGoalRing({
         stroke={palette.color(percentage >= 100 ? 'color-success' : 'color-primary')}
         strokeDasharray={CIRCUMFERENCE}
         strokeDashoffset={CIRCUMFERENCE * (1 - filled)}
-        className="transition-[stroke-dashoffset] duration-700"
+        className="transition-[stroke-dashoffset] duration-data"
       />
     </svg>
   );

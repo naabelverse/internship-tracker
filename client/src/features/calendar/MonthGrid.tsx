@@ -1,6 +1,7 @@
 import { format, isSameDay } from 'date-fns';
 import { cn } from '@/lib/cn';
 import { EVENT_TONE, type CalendarDay } from '@/features/calendar/monthModel';
+import { Card } from '@/components/ui/Card';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -21,7 +22,7 @@ export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): 
   const weeks = toWeeks(days);
 
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-surface">
+    <Card padding="none" className="overflow-hidden">
       <div className="grid grid-cols-7 border-b border-border">
         {WEEKDAYS.map((weekday) => (
           <div
@@ -80,7 +81,7 @@ export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): 
                       <span
                         key={event.id}
                         className={cn(
-                          'block truncate rounded px-1.5 py-0.5 text-[0.7rem]',
+                          'block truncate rounded-chip px-1.5 py-0.5 text-[0.7rem]',
                           EVENT_TONE[event.kind],
                         )}
                       >
@@ -100,6 +101,6 @@ export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): 
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -8,6 +8,7 @@ import { PRIORITY_CONFIG } from '@/lib/statusConfig';
 import { cn } from '@/lib/cn';
 import { paths } from '@/routes/paths';
 import type { Application, ApplicationStatus } from '@/types/application';
+import { Card } from '@/components/ui/Card';
 
 interface ApplicationCardListProps {
   applications: Application[];
@@ -34,7 +35,7 @@ export function ApplicationCardList({
   return (
     <ul className="space-y-3">
       {applications.map((application) => (
-        <li key={application.id} className="rounded-card border border-border bg-surface p-4">
+        <Card as="li" padding="compact" key={application.id}>
           <div className="flex items-start gap-3">
             <input
               type="checkbox"
@@ -43,7 +44,7 @@ export function ApplicationCardList({
                 onToggle(application.id);
               }}
               aria-label={`Select ${application.company}`}
-              className="mt-1 h-4 w-4 shrink-0 rounded border-border-strong accent-[rgb(var(--color-primary))]"
+              className="mt-1 h-4 w-4 shrink-0 rounded-chip border-border-strong accent-[rgb(var(--color-primary))]"
             />
 
             <span
@@ -56,7 +57,7 @@ export function ApplicationCardList({
             <div className="min-w-0 flex-1">
               <Link
                 to={paths.applicationDetail(application.id)}
-                className="block truncate font-medium text-content hover:text-primary"
+                className="block truncate font-medium text-content transition-colors hover:text-primary"
               >
                 {application.company}
               </Link>
@@ -96,7 +97,7 @@ export function ApplicationCardList({
               <EditIcon className="h-4 w-4" />
             </button>
           </div>
-        </li>
+        </Card>
       ))}
     </ul>
   );

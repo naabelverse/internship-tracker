@@ -83,7 +83,7 @@ export function TargetRolesField({ value, onChange, error }: TargetRolesFieldPro
                 onClick={() => {
                   onChange(value.filter((existing) => existing !== role));
                 }}
-                className="rounded p-0.5 text-content-subtle transition-colors hover:bg-border hover:text-content"
+                className="rounded-chip p-0.5 text-content-subtle transition-colors hover:bg-border hover:text-content"
               >
                 <CloseIcon className="h-3.5 w-3.5" />
               </button>

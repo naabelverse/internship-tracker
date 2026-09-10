@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Card } from '@/components/ui/Card';
 
 interface ChartFrameProps {
   title: string;
@@ -35,7 +36,7 @@ export function ChartFrame({
   children,
 }: ChartFrameProps): JSX.Element {
   return (
-    <section className="rounded-card border border-border bg-surface p-4 sm:p-5">
+    <Card as="section">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold stretch-wide text-content">{title}</h2>
@@ -59,6 +60,6 @@ export function ChartFrame({
           children
         )}
       </div>
-    </section>
+    </Card>
   );
 }

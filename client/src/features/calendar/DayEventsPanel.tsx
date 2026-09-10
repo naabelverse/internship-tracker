@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/cn';
 import type { CalendarEvent } from '@/types/calendar';
 import type { InterviewMode, InterviewType } from '@/types/application';
+import { Card } from '@/components/ui/Card';
 
 interface DayEventsPanelProps {
   date: Date | null;
@@ -34,10 +35,7 @@ export function DayEventsPanel({
   onOpenApplication,
 }: DayEventsPanelProps): JSX.Element {
   return (
-    <section
-      aria-labelledby="day-events-heading"
-      className="rounded-card border border-border bg-surface p-4"
-    >
+    <Card as="section" aria-labelledby="day-events-heading">
       <h2 id="day-events-heading" className="text-sm font-semibold text-content">
         {date === null ? 'Pick a day' : format(date, 'EEEE d MMMM')}
       </h2>
@@ -81,6 +79,6 @@ export function DayEventsPanel({
           ))}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

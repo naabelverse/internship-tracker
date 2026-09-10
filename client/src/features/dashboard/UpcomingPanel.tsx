@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CalendarIcon } from '@/components/ui/icons';
@@ -45,7 +46,7 @@ export function UpcomingPanel({
     .slice(0, UPCOMING_LIMIT);
 
   return (
-    <section className="rounded-card border border-border bg-surface p-4 sm:p-5">
+    <Card as="section">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-content">Upcoming</h2>
         <Link to={paths.calendar} className="text-xs font-medium text-primary hover:underline">
@@ -108,6 +109,6 @@ export function UpcomingPanel({
           ))}
         </ul>
       )}
-    </section>
+    </Card>
   );
 }

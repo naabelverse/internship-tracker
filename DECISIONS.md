@@ -2827,3 +2827,102 @@ The half deferred when the phase was split. Closes Phase 11.
   10 s async budget it exceeded under contention. Phase 15 already records this failure mode and
   the `maxWorkers` cap that addressed it. Recorded so the next session does not mistake a loaded
   machine for broken code, and does not "fix" it by widening a timeout.
+
+---
+
+## A structural polish pass, from the UI-UX Pro Max audit — category A
+
+- **The audit existed because two redesigns had already been reverted without one.** Both prior
+  attempts were explored and rolled back at real cost, and neither had a specific complaint to work
+  from. This pass started from an itemised list with a file and a line against every item, split
+  into what is safe (spacing, radius, motion), what touches colour, and what would need a new
+  dependency. Only the first was implemented.
+
+- **Category B was deliberately not touched, and that is the point of having categorised.** Two
+  items would have changed a colour or a contrast ratio: `Button`'s `disabled:opacity-60`, which
+  sits outside the 0.38-0.5 band the guidelines specify, and its `danger` variant dimming by
+  `hover:opacity-90` where the other three swap a token. Both are real. Neither is worth
+  re-opening a palette that went through several rounds of WCAG verification for a "looks nicer"
+  argument. `tests/a11y/tokenContrast.test.ts` ran green — 116 assertions — after every one of the
+  six changes, and nothing in this pass reads or writes a token value.
+
+- **Category C was empty, and reporting it empty was the useful result.** The audit was run partly
+  to decide whether 21st MCP was needed. It is not connected, it needs a paid membership and an
+  API key, and no finding required it. The one thing that looked like a component dependency —
+  a shared card — is ten lines wrapping classes the repo already had. Importing a third-party card
+  to replace fifteen copies of one Tailwind string would have added a dependency to solve a
+  problem a local component solves better.
+
+- **The audit undercounted three of its own findings, and the corrections are recorded because the
+  method that produced them is the point.** The card recipe was reported at 4 call sites and is 15.
+  The missing-transition list was reported at 17 and is 10. The bare-`rounded` count was reported
+  at 18 and is 10. The first came from generalising off six hand-picked files; the second from a
+  line-based scan that could not see a `transition-colors` sitting in a `cn()` base string beside
+  the `hover:` fragment it flagged; the third from a tabulation script that counted some lines
+  twice. Every candidate was verified against the source before being touched, which is what
+  turned up eight false positives — `Button`, `Sidebar:18`, `ThemeToggle:68`, `MonthGrid:64`,
+  `TimelineChart:101` among them — that would otherwise have been "fixed" by adding a duplicate
+  class.
+
+- **Fifteen copies of the card surface, six padding values, one definition now.** `rounded-card
+border border-border bg-surface` was written out at fifteen call sites carrying `p-2`, `p-3`,
+  `p-4`, `p-4 sm:p-5`, `p-5`, `p-6` and, twice, nothing. This is the unpinned-copies arrangement
+  the palette work spent four fixes closing, in surface styling rather than in colour: a change to
+  one copy left the rest behind, and a new card started from whichever copy its author opened.
+
+- **Twelve went onto `Card`; three kept the surface as a string, for structural reasons rather
+  than stylistic ones.** `SettingsSection` applies it to a `<form>` it owns for submit handling,
+  which a wrapper cannot take over without owning the form. `Popover` is a floating overlay with
+  its own stacking context and `shadow-float`. `BoardCard` is draggable and swaps to a `ring-2`
+  treatment mid-drag, so its surface is state-dependent in a way the padding scale does not
+  describe. Forcing those three into `Card` would have made the count tidier while describing them
+  wrongly — a false consolidation. Sharing `cardSurface` keeps one definition of the part that was
+  actually drifting.
+
+- **`p-4 sm:p-5` is the standard because three components had already converged on it
+  independently.** `UpcomingPanel`, `ActivityHeatmap` and `ChartFrame` all used it without
+  reference to each other, which is better evidence of the intended value than picking one.
+  `StatCard` moved up to it, which was the original finding: on the same dashboard grid its cards
+  sat at 16px while the panels beside them sat at 20px. `DetailHeader` moved down from a flat
+  `p-5`, and `ErrorBoundary` from `p-6` — both joined the scale rather than sitting one step off
+  it. `ApplicationCardList` keeps `p-4` as `compact`, because a repeated list row reads loose at
+  the panel step-up, and the table and month grid take `none` so their rules meet both borders.
+
+- **The missing transitions were not a pattern, which is why the guess about them was wrong.** The
+  audit proposed that icon-buttons had been given `transition-colors` and text links missed. The
+  verification pass disproved it: `Sidebar:67` and `Topbar:34` are icon-buttons without one. There
+  was no rule, only ten places where it had not been typed. All ten now have it.
+
+- **Bare `rounded` is byte-identical to `rounded-chip`, so ten call sites changed name and nothing
+  else.** Tailwind's default `rounded` is `0.25rem` and the scale's `chip` tier is `0.25rem`. The
+  scale had four tiers and `chip` was used by name zero times, while ten elements reached past the
+  scale for a value identical to it. Nothing renders differently; the tier is no longer dead, and
+  the config comment that says components "reach for one of these" is now true.
+
+- **The two arbitrary radii were within half a pixel of a tier they could have named.**
+  `rounded-[0.4rem]` against `rounded-control`'s `0.375rem` is a 0.4px difference — invisible, and
+  therefore off-scale for nothing. The heatmap's `rounded-[3px]` moves 1px to `chip` on a 12px
+  cell. No arbitrary radius remains anywhere in `client/src`.
+
+- **Motion got a scale for the same reason the radii have one, and setting `DEFAULT` is what made
+  it free.** Every transition was inheriting Tailwind's built-ins, so the timing was consistent by
+  accident rather than by decision: 26 call sites took 150ms and `cubic-bezier(0.4, 0, 0.2, 1)`
+  without naming either, while the two that wanted something else wrote bare numbers that recorded
+  nothing about what they meant. In Tailwind v3 the `transition-*` utilities read
+  `transitionDuration.DEFAULT` and `transitionTimingFunction.DEFAULT`, so naming those tokenised
+  every existing call site without editing one of them.
+
+- **The easing default changed, and it is the one change in this pass with a feel to it.** The
+  default moved from Tailwind's symmetric `cubic-bezier(0.4, 0, 0.2, 1)` to
+  `cubic-bezier(0.2, 0, 0, 1)`. A state change should leave immediately and settle at the end;
+  easing into the start delays the feedback the user is waiting for, which is why both Material and
+  the HIG specify decelerate for state transitions. It is one line rather than thirty-six, and it
+  is timing rather than colour, so it stayed inside the safe category — but it was flagged before
+  it was made rather than slipped in with the renames.
+
+- **The tool that produced the audit is scoped to app UI, and most of its checklist did not
+  apply.** UI-UX Pro Max states its stack as React Native and marks its own rules as "App UI, not
+  desktop-web interaction patterns". Its safe-area, haptics, bottom-navigation and 44pt
+  touch-target sections describe a platform this product is not on. What transferred was the
+  general material: spacing rhythm, state clarity, motion timing and easing, icon and radius
+  consistency. Recorded so the next person does not take the unfiltered checklist as a to-do list.

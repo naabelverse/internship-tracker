@@ -20,6 +20,7 @@ import { formatDate, formatStipend } from '@/lib/formatters';
 import { SOURCE_LABELS } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
 import type { Application } from '@/types/application';
+import { Card } from '@/components/ui/Card';
 
 function DetailSkeleton(): JSX.Element {
   return (
@@ -102,7 +103,7 @@ export function ApplicationDetailPage(): JSX.Element {
     <div className="space-y-5">
       <Link
         to={paths.applications}
-        className="inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
+        className="inline-flex items-center gap-1 text-sm text-content-muted transition-colors hover:text-content"
       >
         <ChevronLeftIcon className="h-4 w-4" />
         All applications
@@ -144,25 +145,19 @@ export function ApplicationDetailPage(): JSX.Element {
         </div>
 
         <div className="space-y-5">
-          <section
-            aria-labelledby="facts-heading"
-            className="rounded-card border border-border bg-surface p-4"
-          >
+          <Card as="section" aria-labelledby="facts-heading">
             <h2 id="facts-heading" className="mb-3 text-sm font-semibold text-content">
               Details
             </h2>
             <Facts application={application} />
-          </section>
+          </Card>
 
-          <section
-            aria-labelledby="timeline-heading"
-            className="rounded-card border border-border bg-surface p-4"
-          >
+          <Card as="section" aria-labelledby="timeline-heading">
             <h2 id="timeline-heading" className="mb-4 text-sm font-semibold text-content">
               Timeline
             </h2>
             <ApplicationTimeline application={application} />
-          </section>
+          </Card>
         </div>
       </div>
 
