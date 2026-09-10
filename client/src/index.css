@@ -68,6 +68,7 @@
   --color-warning: 134 72 0;
   --color-danger: 170 30 18;
   --color-danger-fg: 255 255 255;
+  --color-danger-hover: 133 23 14;
   --color-info: 25 77 207;
   --color-ring: 104 46 179;
   --color-shadow: 13 26 28;
@@ -142,6 +143,7 @@
   --color-warning: 255 186 51;
   --color-danger: 255 131 119;
   --color-danger-fg: 42 10 6;
+  --color-danger-hover: 255 94 78;
   --color-info: 127 169 255;
   --color-ring: 178 151 234;
   --color-shadow: 0 0 0;

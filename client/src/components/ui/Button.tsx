@@ -8,7 +8,7 @@ const VARIANTS: Record<Variant, string> = {
   primary: 'bg-primary-fill text-primary-fill-fg hover:bg-primary-fill-hover',
   secondary: 'bg-surface text-content border border-border hover:bg-surface-muted',
   ghost: 'text-content-muted hover:bg-surface-muted hover:text-content',
-  danger: 'bg-danger text-danger-fg hover:opacity-90',
+  danger: 'bg-danger text-danger-fg hover:bg-danger-hover',
 };
 
 const SIZES: Record<Size, string> = {
@@ -47,7 +47,20 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       aria-busy={isLoading}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        /*
+          0.5 rather than 0.6, which puts it in the 0.38-0.5 band the
+          guidelines specify for a disabled control. Worth stating that this
+          *lowers* measured contrast rather than raising it: opacity composites
+          the label and the fill toward the page behind, so the label goes from
+          about 3.3:1 to about 2.7:1. That is allowed rather than overlooked —
+          WCAG 2.2 exempts inactive components from contrast entirely (SC
+          1.4.3), because the requirement being served here is affordance, not
+          legibility: a disabled control has to read as unmistakably not
+          clickable. 0.5 is the top of the band, so it is the smallest
+          reduction that satisfies it, and `cursor-not-allowed` carries the
+          same message a second way.
+        */
+        'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANTS[variant],
         SIZES[size],
         className,
