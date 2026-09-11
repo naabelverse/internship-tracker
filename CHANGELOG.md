@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The theme control's selected state is a thumb that slides.** One filled
+  thumb moves between light, dark and system on the tokenised 150 ms ease-out
+  instead of two buttons cross-fading; reduced-motion users get the end state
+  without the travel. The control is now a single Tab stop on the checked
+  option, and the arrow keys move both focus and the selection, which is what a
+  screen reader announcing "radio" promises. Its outline is `border-strong` and
+  its hover tint `content/10`, both measurably clearer on every ground it sits
+  on. Labels, roles and the account sync are unchanged.
 - **The interface has a new palette.** The violet "Dispatch" direction is
   replaced by a blue-ground direction adapted from a supplied shadcn-style
   reference: a neutral near-black primary on a pale blue canvas with white
