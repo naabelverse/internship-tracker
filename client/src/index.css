@@ -265,11 +265,34 @@
         rgb(var(--atmos-light) / var(--atmos-light-peak)),
         rgb(var(--atmos-light) / 0) 62%
       ),
-      linear-gradient(
-        var(--atmos-grade-axis),
-        rgb(var(--atmos-deep) / var(--atmos-deep-peak)),
-        rgb(var(--atmos-deep) / 0) 62%
-      );
+      /*
+       * The vertical grade, transparent at BOTH ends.
+       *
+       * It used to open at full `--atmos-deep-peak` on the axis's first edge,
+       * which put the deepest point exactly where the section stops. The next
+       * section carries no grade - it is plain `bg-canvas` - so the hero ended
+       * on one colour and its neighbour began on another, and the boundary read
+       * as a seam. Dark showed it and light did not, purely because the themes
+       * point this axis opposite ways: light runs `to bottom`, so its grade
+       * sits at the top, away from the seam; dark runs `to top`, so its grade
+       * sat directly on it. Measured at the shipped tokens, that edge was
+       * #0c1119 against the next section's #141d2b.
+       *
+       * Both ends return to the canvas now, so this element composites to
+       * exactly `--color-canvas` wherever it meets another section - whichever
+       * way the axis points, and whatever the peak is. That is what makes the
+       * fix structural rather than a smaller instance of the same bug: it holds
+       * for a future theme that flips the axis again, and it costs dark nothing,
+       * because the peak is still 0.42, just reached at 10% instead of at 0%.
+       *
+       * `tokenContrast.test.ts` asserts both end stops are transparent.
+       */
+        linear-gradient(
+          var(--atmos-grade-axis),
+          rgb(var(--atmos-deep) / 0) 0%,
+          rgb(var(--atmos-deep) / var(--atmos-deep-peak)) 10%,
+          rgb(var(--atmos-deep) / 0) 62%
+        );
   }
 
   /*

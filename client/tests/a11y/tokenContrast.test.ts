@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   composite,
@@ -235,5 +237,76 @@ describe.each(['light', 'dark'] as const)('%s theme atmosphere', (theme) => {
   // `text-warning` sitting directly on the glazed surface.
   it.each(SEMANTIC_TOKENS)('%s clears AA as text on the glazed panel', (name) => {
     expect(contrastRatio(token(name), glazed)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+});
+
+/*
+ * The seam between `.atmos-field` and the section under it.
+ *
+ * Every assertion above measures a colour against another colour. None of them
+ * could see this bug, because both sides of it were individually fine: the
+ * hero's grade was legible, the next section's canvas was legible, and the
+ * defect was only that they did not match each other. It shipped, and the
+ * palette change made it worse - a 42% black grade removes 9/255 from a
+ * near-black canvas and 18/255 from the lighter blue one, so the same
+ * declaration went from nearly imperceptible to a visible line across the page.
+ *
+ * What is asserted is the property that makes the seam impossible rather than
+ * the seam's measured size: if the grade is transparent at both ends of its
+ * axis, the element composites to exactly `--color-canvas` wherever it meets
+ * another section - whichever way `--atmos-grade-axis` points, and at any peak.
+ * Checking a ratio instead would pass the moment somebody lowered the peak to
+ * hide the symptom, which is the fix this deliberately did not take.
+ *
+ * This reads the stylesheet rather than the tokens because it is the gradient's
+ * shape that carries the guarantee, and no token records it.
+ */
+describe('the hero grade', () => {
+  const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+
+  /** The `.atmos-field::before` rule body, which holds both gradients. */
+  const rule = /\.atmos-field::before\s*\{([\s\S]*?)\n\s*\}/.exec(css)?.[1];
+
+  /** Its vertical grade: the `linear-gradient` built on `--atmos-deep`. */
+  const grade = rule ? /linear-gradient\(([\s\S]*?)\);/.exec(rule)?.[1] : undefined;
+
+  it('is found in the stylesheet at all', () => {
+    expect(rule, '.atmos-field::before is missing from src/index.css').toBeDefined();
+    expect(grade, 'the vertical grade is missing from .atmos-field::before').toBeDefined();
+  });
+
+  it('returns to the canvas at both ends of its axis', () => {
+    const stops = (grade ?? '').match(/rgb\(var\(--atmos-deep\)\s*\/\s*[^)]*\)[^,]*/g) ?? [];
+
+    expect(
+      stops.length,
+      'expected at least three colour stops on the grade',
+    ).toBeGreaterThanOrEqual(3);
+
+    const transparent = /\/\s*0\s*\)/;
+    // Defaulted rather than asserted non-null: `noUncheckedIndexedAccess` is on,
+    // and an empty string fails the match below, which is the right outcome for
+    // a grade that has no stops at all.
+    const first = stops[0] ?? '';
+    const last = stops[stops.length - 1] ?? '';
+
+    expect(
+      transparent.test(first),
+      `the grade opens at "${first.trim()}" rather than at zero alpha, so it paints ` +
+        'the edge where the hero meets the section below and that boundary reads as a seam',
+    ).toBe(true);
+
+    expect(
+      transparent.test(last),
+      `the grade closes at "${last.trim()}" rather than at zero alpha`,
+    ).toBe(true);
+  });
+
+  it('still reaches its full peak between those ends', () => {
+    expect(
+      grade,
+      'the grade no longer references --atmos-deep-peak, so fading the ends has ' +
+        'silently cost the dark theme its depth instead of relocating it',
+    ).toContain('var(--atmos-deep-peak)');
   });
 });

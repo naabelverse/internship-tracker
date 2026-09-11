@@ -3158,3 +3158,33 @@ presence the blue has on the auth split screen.
   and `--atmos-light` / `--atmos-deep` are consumed only inside its `::before`, so nothing
   else in the app moves. `.atmos-lit`, which the hero panel and `Modal` share, reads
   `--atmos-glaze` and was not touched.
+
+### Hero grade seam (11 Sep 2026)
+
+- **The hero and the section under it painted different colours in dark, and matched in
+  light.** One declaration, opposite outcomes: the grade ran from full `--atmos-deep-peak`
+  at the axis's first edge, and the two themes point that axis opposite ways. Light's
+  `to bottom` put the grade at the top, away from the boundary. Dark's `to top` put it
+  directly on it, so the hero ended at `#0c1119` against the next section's `#141d2b`.
+
+- **The palette redesign did not cause it but doubled it.** The dark grade tokens are
+  unchanged — `0 0 0`, `0.42`, `to top`. Only the canvas moved, and 42% black takes 9/255
+  off the old near-black `#0b1315` against 18/255 off `#141d2b`, which is the difference
+  between a seam nobody noticed and one visible across the page.
+
+- **Fixed by fading the grade at both ends rather than by lowering the peak.** Lowering it
+  would have shrunk one instance of the bug while leaving the mechanism; flipping dark's
+  axis would only have relocated the seam to the header boundary. With both ends at zero
+  alpha the element composites to exactly `--color-canvas` wherever it meets another
+  section, for any axis and any peak. Dark keeps its full 0.42, now reached at 10% instead
+  of 0%. Measured after: both edges 1.000:1, with the grade still reaching `#0c121b`.
+
+- **The gate asserts the gradient's shape, not the seam's size.** A ratio assertion would go
+  green the moment somebody lowered the peak to hide the symptom — the fix this deliberately
+  declined. The three new cases check that the end stops are transparent and that
+  `--atmos-deep-peak` is still referenced, so depth cannot be quietly traded for flatness.
+  Confirmed non-vacuous: reverting the gradient to its previous form fails the suite.
+
+- **Nothing else could have caught this.** Every other assertion in `tokenContrast.test.ts`
+  measures a colour against another colour, and both sides of this defect were individually
+  fine — the hero was legible, the next section was legible, they simply did not match.
