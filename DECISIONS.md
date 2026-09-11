@@ -3188,3 +3188,37 @@ presence the blue has on the auth split screen.
 - **Nothing else could have caught this.** Every other assertion in `tokenContrast.test.ts`
   measures a colour against another colour, and both sides of this defect were individually
   fine — the hero was legible, the next section was legible, they simply did not match.
+
+### Theme toggle: sliding thumb and the radio-group keyboard pattern (11 Sep 2026)
+
+- **Two of the four reported defects did not reproduce, and were not "fixed".** The report
+  described an invisible active state and a heavier sun icon. Measured with the gate's own
+  helpers, the selected thumb sits at 17.45:1 light / 11.48:1 dark against its container,
+  and every version of the file ever on `main` painted a solid fill there. The three icons
+  share one 1.75 stroke, and rasterised ink coverage is sun 15.6 %, moon 18.1 %, monitor
+  21.4 % — the sun has the least. The likeliest reading is a downscaled screenshot in which
+  the black block behind the white sun reads as a bold sun. Icons are untouched.
+
+- **The container boundary stays under 3:1, on purpose.** `border` measured 1.11–1.39:1 on
+  the three grounds the control sits on (surface, canvas, wash); `border-strong` — the
+  checkbox precedent — measures 1.72–2.15:1. No existing token reaches 3:1 as a group outline
+  on all three, and WCAG 1.4.11 does not require one when the members are identifiable on
+  their own: idle icons 8.22 / 5.40, thumb 17 / 11. A new token chasing 3:1 on a group
+  boundary was considered and declined.
+
+- **The iOS-style raised thumb was disqualified before any code.** `surface` on
+  `surface-muted` measures 1.14 / 1.11, well under the gate's 3:1 shape floor, so the solid
+  `primary-fill` thumb stays and slides instead.
+
+- **Hover is an opacity modifier, not a token.** `hover:bg-content/10` is the pattern the
+  status pills already use (`bg-<token>/15`); it measures 1.24 / 1.32 against the container
+  where `surface-muted` measured 1.14 / 1.11, and leaves the idle icon at 6.63 / 4.09.
+
+- **The accessible names stay `Light theme` / `Dark theme` / `Match system theme`.** They are
+  queried by three test files and the screenshot script, and "Match system theme" tells a
+  screen-reader user more than "System" would.
+
+- **Roving `tabIndex` and arrow keys complete the APG radio group.** Three separate Tab stops
+  cost three presses to cross the header, and `role="radio"` promises arrow-key behaviour.
+  Both cases are tested; a focused-but-unselected radio no longer exists, since focus and
+  selection move together.

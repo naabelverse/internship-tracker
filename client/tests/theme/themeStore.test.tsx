@@ -105,4 +105,54 @@ describe('ThemeToggle', () => {
     expect(screen.getByRole('radiogroup', { name: 'Theme' })).toBeInTheDocument();
     expect(screen.getAllByRole('radio')).toHaveLength(3);
   });
+
+  // The APG radio group pattern: the group is one Tab stop, sitting on the
+  // checked option, and the arrow keys move both focus and the selection. Three
+  // separate Tab stops would make the header cost three presses to cross, and
+  // a screen reader announcing "radio" promises arrow-key behaviour it would
+  // then fail to deliver.
+  it('is a single Tab stop, on the checked option', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <button type="button">before</button>
+        <ThemeToggle />
+        <button type="button">after</button>
+      </>,
+    );
+
+    screen.getByRole('button', { name: 'before' }).focus();
+    await user.tab();
+    expect(screen.getByRole('radio', { name: 'Dark theme' })).toHaveFocus();
+
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'after' })).toHaveFocus();
+  });
+
+  it('moves the selection with the arrow keys, wrapping at both ends', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ThemeToggle />);
+
+    screen.getByRole('radio', { name: 'Dark theme' }).focus();
+
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: 'Match system theme' })).toHaveFocus();
+    expect(screen.getByRole('radio', { name: 'Match system theme' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
+
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: 'Light theme' })).toHaveFocus();
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('radio', { name: 'Match system theme' })).toHaveFocus();
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
+
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('radio', { name: 'Dark theme' })).toHaveFocus();
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+  });
 });
