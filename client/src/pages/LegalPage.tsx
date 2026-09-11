@@ -24,7 +24,12 @@ interface LegalPageProps {
  * holding the day somebody edits it.
  */
 export function LegalPage({ title, description, source }: LegalPageProps): JSX.Element {
-  const html = renderMarkdown(source.split('{{CONTACT_EMAIL}}').join(CONTACT_EMAIL));
+  // `breaks: false` because these documents are hard-wrapped in the repository.
+  // With it on, every source wrap rendered as a line break and paragraphs came
+  // out ragged at whatever column the file happened to wrap at.
+  const html = renderMarkdown(source.split('{{CONTACT_EMAIL}}').join(CONTACT_EMAIL), {
+    breaks: false,
+  });
 
   return (
     <MarketingShell>

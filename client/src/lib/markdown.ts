@@ -9,8 +9,23 @@ import { marked } from 'marked';
  * Sanitising after parsing, not before, is what closes the gap where a payload is
  * harmless as markdown and dangerous once expanded to HTML.
  */
-export function renderMarkdown(source: string): string {
-  const html = marked.parse(source, { async: false, gfm: true, breaks: true });
+export interface RenderMarkdownOptions {
+  /**
+   * Whether a single newline becomes a `<br>`.
+   *
+   * True for a note, where the user typed the break and expects to see it.
+   * False for a document held in the repository: `content/terms.md` and
+   * `content/privacy.md` are hard-wrapped at about ninety columns, and with
+   * `breaks` on, every one of those wraps rendered as a line break - so a
+   * paragraph arrived broken at whatever column the source file happened to
+   * wrap at, which is what `/terms` and `/privacy` shipped.
+   */
+  breaks?: boolean;
+}
+
+export function renderMarkdown(source: string, options: RenderMarkdownOptions = {}): string {
+  const { breaks = true } = options;
+  const html = marked.parse(source, { async: false, gfm: true, breaks });
 
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
