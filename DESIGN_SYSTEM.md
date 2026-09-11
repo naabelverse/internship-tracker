@@ -119,6 +119,19 @@ drops to 4.14:1 by 0.28.
 
 The `wash` surface carries no atmosphere at all, and nothing darkens it.
 
+**The grade is transparent at both ends of its axis, and that is load-bearing.** It used to
+open at full `--atmos-deep-peak` on the axis's first edge, which put its deepest point
+exactly where `.atmos-field` stops. The section below carries no grade, so the hero ended on
+one colour and its neighbour began on another. Light never showed it and dark always did,
+purely because the themes point the axis opposite ways — light `to bottom`, away from that
+boundary; dark `to top`, straight onto it. The palette change then doubled it: a 42% black
+grade takes 9/255 off a near-black canvas and 18/255 off the lighter blue one.
+
+With both ends at zero alpha the element composites to exactly `--color-canvas` wherever it
+meets another section, whichever way the axis points and at any peak — so the property holds
+for a future theme that flips it. `tokenContrast.test.ts` asserts the end stops rather than a
+ratio, because a ratio would pass the moment somebody lowered the peak to hide the symptom.
+
 ---
 
 ## 3. Typography
