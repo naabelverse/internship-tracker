@@ -17,7 +17,7 @@ Every colour in the app is a CSS custom property holding **space-separated RGB c
 never a hex string:
 
 ```css
---color-primary: 104 46 179;
+--color-primary: 16 23 35;
 ```
 
 That one shape works three ways, which is why it was chosen:
@@ -47,27 +47,33 @@ first paint, so there is no flash of the wrong theme.
 The names say what a colour _is for_, not what it looks like. A component never reaches
 past this layer.
 
-| Token                             | Role                                | Light         | Dark          |
-| --------------------------------- | ----------------------------------- | ------------- | ------------- |
-| `canvas`                          | The page behind everything          | `232 237 236` | `11 19 21`    |
-| `surface`                         | A card or panel on the canvas       | `248 250 249` | `17 27 30`    |
-| `surface-muted`                   | A recessed row, a chip, a track     | `226 233 231` | `25 38 42`    |
-| `border`                          | The default rule                    | `199 213 210` | `33 50 55`    |
-| `border-strong`                   | An input edge, a dashed empty state | `163 183 180` | `51 72 78`    |
-| `content`                         | Primary text                        | `13 26 28`    | `227 237 235` |
-| `content-muted`                   | Secondary text, ledes, help         | `63 85 89`    | `154 175 178` |
-| `content-subtle`                  | Metadata, timestamps, captions      | `84 105 109`  | `138 160 164` |
-| `primary`                         | Brand accent **as text or an icon** | `104 46 179`  | `178 151 234` |
-| `primary-fill` / `-hover` / `-fg` | Brand accent **as a solid button**  | `104 46 179`  | `133 85 210`  |
-| `success`                         | Offer, completed                    | `8 102 48`    | `75 214 128`  |
-| `warning`                         | Deadline approaching                | `134 72 0`    | `255 186 51`  |
-| `danger` / `-fg` / `-hover`       | Rejected, destructive               | `170 30 18`   | `255 131 119` |
-| `info`                            | **Applied** status                  | `25 77 207`   | `127 169 255` |
-| `ring`                            | Focus ring                          | `104 46 179`  | `178 151 234` |
+| Token                             | Role                                 | Light         | Dark          |
+| --------------------------------- | ------------------------------------ | ------------- | ------------- |
+| `canvas`                          | The page behind everything           | `213 237 255` | `20 29 43`    |
+| `surface`                         | A card or panel on the canvas        | `249 252 255` | `26 37 51`    |
+| `surface-muted`                   | A recessed row, a chip, a track      | `231 237 246` | `35 45 60`    |
+| `wash`                            | The auth split screen, and only it   | `166 196 232` | `26 44 74`    |
+| `border`                          | The default rule                     | `216 223 233` | `43 54 70`    |
+| `border-strong`                   | An input edge, a dashed empty state  | `159 176 198` | `58 74 96`    |
+| `content`                         | Primary text                         | `6 10 18`     | `229 236 241` |
+| `content-muted`                   | Secondary text, ledes, help          | `53 62 72`    | `155 166 177` |
+| `content-subtle`                  | Metadata, timestamps, captions       | `68 78 89`    | `143 154 164` |
+| `primary`                         | Neutral accent **as text or icon**   | `16 23 35`    | `215 223 229` |
+| `primary-fill` / `-hover` / `-fg` | Neutral accent **as a solid button** | `16 23 35`    | `215 223 229` |
+| `success`                         | Offer, completed                     | `8 102 48`    | `75 214 128`  |
+| `warning`                         | Deadline approaching                 | `134 72 0`    | `255 186 51`  |
+| `danger` / `-fg` / `-hover`       | Rejected, destructive                | `170 30 18`   | `255 131 119` |
+| `info`                            | **Applied** status                   | `25 77 207`   | `139 178 255` |
+| `ring`                            | Focus ring                           | `16 23 35`    | `215 223 229` |
 
-**`primary` and `primary-fill` are deliberately two tokens.** One value cannot do both jobs
-in dark mode: a fill dark enough to carry white text is too dark to read as text on a card,
-and the readable value is too light to read as anything but a pastel button.
+**`primary` and `primary-fill` are still two tokens, but the blue-ground direction no
+longer needs them to differ.** Under the violet palette one value could not do both jobs in
+dark mode — a fill deep enough to carry white text was too dark to read as text on a card.
+A neutral accent has no such problem: it is near-black in light and near-white in dark, and
+reads correctly as both text and a slab, so the two tokens currently ship the same value in
+each theme. They are kept apart because the gate measures them separately — `primary-fill`
+against its own foreground, and as a shape on every surface — and collapsing them would
+discard those assertions to save one line.
 
 ### Categorical series — `chart-1` … `chart-8`
 
@@ -88,13 +94,30 @@ pseudo-element behind content or as a shadow around it, never as a text colour.
 The two layers that _do_ fall under text (the hero lamp, the panel glaze) are checked at
 peak alpha by the contrast gate.
 
-Light mode is not dark mode with the numbers flipped, and it is not the same numbers
-either. Both themes _add_ light at the lamp and fall back to their own canvas away from
-it, so the atmosphere can only ever lift a pale canvas toward white or deepen a near-black
-one toward black. Neither can push a background past a value the gate already checks.
-That is a property, not a coincidence: a violet lamp that tinted the light canvas _darker_
-dropped `content-subtle` to 4.27:1, because it clears the plain canvas by only 4.90:1 and
-has nowhere to go.
+**Read this before editing `atmos-light` or either peak.** This layer used to carry a
+structural guarantee: both themes _added_ light at the lamp and fell back to their own
+canvas away from it, so the atmosphere could only ever lift a pale canvas toward white or
+deepen a near-black one toward black — and therefore could never reach a background value
+the gate had not already checked. **That guarantee is gone on the light theme.**
+
+The light lamp is now tinted to the **wash** blue (`166 196 232`) at 0.7, so it _deepens_
+its canvas toward blue rather than lifting it toward white. It changed because a lamp only
+20/255 lighter than a pale canvas is not a lever at all: dropping its alpha to zero moved
+the hero by 4/255, and the white vertical grade was doing the washing out. The grade is
+down to 0.05 for the same reason.
+
+So the invariant now **holds by measurement, not by construction**. At peak the lamp
+resolves to `rgb(180 208 239)` and the worst body token on it is `content-subtle` at
+**5.33:1** (7.08:1 on the grade). The gate composites `atmos-light` over `canvas` at peak
+alpha precisely so that a future edit here has to prove itself the same way — a value
+picked by eye can now genuinely fail, where before it could not.
+
+Dark still adds light and is untouched. It cannot be pushed further: there the lamp is the
+only thing putting blue on a near-black canvas, so lowering it removes exactly what it
+gives, and raising it fails — `text-subtle` sits at 4.61:1 at the shipped 0.20 peak and
+drops to 4.14:1 by 0.28.
+
+The `wash` surface carries no atmosphere at all, and nothing darkens it.
 
 ---
 
@@ -285,12 +308,19 @@ out a third time, name it — as a component when it has behaviour or structure,
 
 **Changing type.** Read §3 first. The width axis is the identity, not the family name.
 
-**Two constraints, both measured, that any new palette must clear:**
+**Three constraints, all measured, that any new palette must clear:**
 
-1. **The OKLCH hue wheel is full.** Nine tokens occupy it and the widest gap is 57°. Blue
-   (~264) collides with `info`, which is the _Applied_ status. Teal (~175–190) is where a
-   previously rejected jade sat.
-2. **Archivo is a width axis, not a pairing.** See §3.
+1. **A saturated page ground cannot carry a status pill.** This is the one that decided the
+   current direction. A pill is `bg-<token>/15 text-<token>`, and the gate checks each
+   semantic against its own tint on every surface. On the reference's `#a6c4e8` the tint
+   lands so close to the token that passing forces every status to near-black — measured at
+   1.86–1.95:1 from body text, where Offer-green and Rejected-red stop reading as colour.
+   Sweeping canvas lightness, vivid semantics only survive at L≈0.94. So the canvas is pale
+   and the saturated blue is `wash`, painted on the auth split screen alone.
+2. **The hue wheel constrains an accent, not a ground.** Blue (~264) collides with `info`,
+   the _Applied_ status, which is why the violet direction refused a blue primary. The
+   current direction sidesteps it rather than solving it: the accent is neutral, so it
+   occupies no hue at all and the wheel belongs entirely to the status system.
+3. **Archivo is a width axis, not a pairing.** See §3. Unchanged by this redesign.
 
-The violet direction is settled. Six alternatives have been tried; one shipped.
-`DECISIONS.md` has the full record.
+`DECISIONS.md` has the full record, including the six directions tried before this one.

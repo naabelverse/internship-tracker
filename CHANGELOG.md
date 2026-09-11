@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The interface has a new palette.** The violet "Dispatch" direction is
+  replaced by a blue-ground direction adapted from a supplied shadcn-style
+  reference: a neutral near-black primary on a pale blue canvas with white
+  cards. The accent carries no hue of its own, so colour on screen now belongs
+  to the status system rather than to the brand. Both themes change; the status
+  colours themselves keep their meanings and their hues.
+- **The categorical chart series was rebuilt.** Eight entries spread across the
+  hue wheel, replacing the violet-era set. Charts that plot by source or by
+  company therefore look different, and their colours no longer coincide with
+  any status colour.
+- **The auth split screen has a saturated blue ground** (`--color-wash`). It is
+  the only surface that uses it; the page canvas elsewhere is a pale blue,
+  because a ground that saturated cannot keep a 15% status-pill tint legible.
+
 ### Fixed
 
 - **The refresh cookie is now sent in a split-host deployment.** It was

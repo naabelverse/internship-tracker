@@ -143,7 +143,10 @@ describe('theme token generation', () => {
     const channels = readThemeChannels('light');
 
     expect(values['atmos-grade-axis']).toBe('to bottom');
-    expect(values['atmos-light-peak']).toBe('1');
+    // Pinned to the shipped value, so it moves when the palette does. `0.7`
+    // also exercises the decimal branch of the scalar pattern, which the
+    // previous `1` did not.
+    expect(values['atmos-light-peak']).toBe('0.7');
     expect(channels['atmos-grade-axis']).toBeUndefined();
     expect(channels['atmos-light-peak']).toBeUndefined();
     expect(channels['color-primary']).toBe(values['color-primary']);

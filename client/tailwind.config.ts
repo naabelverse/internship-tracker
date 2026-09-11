@@ -26,6 +26,11 @@ export default {
         canvas: token('color-canvas'),
         surface: token('color-surface'),
         'surface-muted': token('color-surface-muted'),
+        // The saturated blue ground, used only on the auth split screen and
+        // behind the marketing hero. Deliberately not the canvas: a page ground
+        // this saturated forces every status colour to near-black to keep a 15%
+        // pill tint legible on it. Nothing carrying a pill is painted on it.
+        wash: token('color-wash'),
         border: token('color-border'),
         'border-strong': token('color-border-strong'),
         content: token('color-text'),

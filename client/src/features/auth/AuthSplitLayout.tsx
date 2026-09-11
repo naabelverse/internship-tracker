@@ -26,7 +26,7 @@ export function AuthSplitLayout({
   footer,
 }: AuthSplitLayoutProps): JSX.Element {
   return (
-    <div className="grid min-h-screen bg-canvas lg:grid-cols-2">
+    <div className="grid min-h-screen bg-wash lg:grid-cols-2">
       <aside className="hidden flex-col justify-between bg-surface p-10 lg:flex">
         <span className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-content">
           <BrandMark className="h-4 w-4 text-primary" />
