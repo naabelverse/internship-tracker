@@ -40,12 +40,12 @@ Two settings in that override are worth knowing about:
 
 ## Layout
 
-| Path                      | What it holds                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------ |
-| `flows/01…08`             | The eight SPEC section 10 flows, one file each                                             |
-| `audits/axe.spec.ts`      | `@axe-core/playwright` over landing, login, dashboard, board and the create modal          |
-| `audits/overflow.spec.ts` | Every route at 375 / 768 / 1440 px, asserting the document does not scroll sideways        |
-| `support/`                | API helpers, the mail-log reader, the client-address fixture, the overflow instrumentation |
+| Path                      | What it holds                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `flows/01…08`             | The eight SPEC section 10 flows, one file each                                                    |
+| `audits/axe.spec.ts`      | `@axe-core/playwright` over landing, login, terms, privacy, dashboard, board and the create modal |
+| `audits/overflow.spec.ts` | Every route at 375 / 768 / 1440 px, asserting the document does not scroll sideways               |
+| `support/`                | API helpers, the mail-log reader, the client-address fixture, the overflow instrumentation        |
 
 ## Conventions
 

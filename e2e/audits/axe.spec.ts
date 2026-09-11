@@ -70,6 +70,24 @@ test.describe('accessibility', () => {
     await audit(page, 'login (/login)');
   });
 
+  /*
+    The legal pages sat outside this list until the `.prose-legal` fix, which is
+    what made them worth adding: they render markdown from the repository
+    through `dangerouslySetInnerHTML`, so their heading hierarchy comes out of a
+    content file rather than a component, and nothing else checks it. axe's
+    `heading-order` rule is what catches a heading level skipped in a document
+    nobody re-reads.
+  */
+  test('the legal pages are clean', async ({ page }) => {
+    await page.goto('/terms');
+    await expect(page.getByRole('heading', { level: 1, name: /terms/i })).toBeVisible();
+    await audit(page, 'terms (/terms)');
+
+    await page.goto('/privacy');
+    await expect(page.getByRole('heading', { level: 1, name: /privacy/i })).toBeVisible();
+    await audit(page, 'privacy (/privacy)');
+  });
+
   test('the dashboard, the board and the create modal are clean', async ({ page }) => {
     const account = newAccount('axe');
     const api = await apiFor(9);
