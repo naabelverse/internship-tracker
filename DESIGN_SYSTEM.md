@@ -94,15 +94,30 @@ pseudo-element behind content or as a shadow around it, never as a text colour.
 The two layers that _do_ fall under text (the hero lamp, the panel glaze) are checked at
 peak alpha by the contrast gate.
 
-Light mode is not dark mode with the numbers flipped, and it is not the same numbers
-either. Both themes _add_ light at the lamp and fall back to their own canvas away from
-it, so the atmosphere can only ever lift a pale canvas toward white or deepen a near-black
-one toward black. Neither can push a background past a value the gate already checks.
-That is a property, not a coincidence: under the violet palette a lamp that tinted the
-light canvas _darker_ dropped `content-subtle` to 4.27:1, because it cleared that canvas by
-only 4.90:1 and had nowhere to go. The pale blue canvas gives it far more room — 7.01:1 —
-but the rule still holds where the ground is saturated: on `wash`, `content-subtle` clears
-by 4.71:1, which is why nothing darkens that surface either.
+**Read this before editing `atmos-light` or either peak.** This layer used to carry a
+structural guarantee: both themes _added_ light at the lamp and fell back to their own
+canvas away from it, so the atmosphere could only ever lift a pale canvas toward white or
+deepen a near-black one toward black — and therefore could never reach a background value
+the gate had not already checked. **That guarantee is gone on the light theme.**
+
+The light lamp is now tinted to the **wash** blue (`166 196 232`) at 0.7, so it _deepens_
+its canvas toward blue rather than lifting it toward white. It changed because a lamp only
+20/255 lighter than a pale canvas is not a lever at all: dropping its alpha to zero moved
+the hero by 4/255, and the white vertical grade was doing the washing out. The grade is
+down to 0.05 for the same reason.
+
+So the invariant now **holds by measurement, not by construction**. At peak the lamp
+resolves to `rgb(180 208 239)` and the worst body token on it is `content-subtle` at
+**5.33:1** (7.08:1 on the grade). The gate composites `atmos-light` over `canvas` at peak
+alpha precisely so that a future edit here has to prove itself the same way — a value
+picked by eye can now genuinely fail, where before it could not.
+
+Dark still adds light and is untouched. It cannot be pushed further: there the lamp is the
+only thing putting blue on a near-black canvas, so lowering it removes exactly what it
+gives, and raising it fails — `text-subtle` sits at 4.61:1 at the shipped 0.20 peak and
+drops to 4.14:1 by 0.28.
+
+The `wash` surface carries no atmosphere at all, and nothing darkens it.
 
 ---
 

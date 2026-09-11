@@ -3125,3 +3125,36 @@ measurement changed about it, since almost none of the reference shipped verbati
   pass with both sides equally wrong. Its own comment says it must be updated whenever the
   palette changes; it now pins `rgb(16 23 35)` and `rgb(215 223 229)`. No assertion was
   relaxed anywhere in this work — `tokenContrast.test.ts` gained six.
+
+### Hero atmosphere retune (11 Sep 2026)
+
+Follow-up to the blue-ground redesign, after the landing hero read too pale against the
+presence the blue has on the auth split screen.
+
+- **Lowering the lamp's peak alpha was the requested fix and would have done nothing.**
+  `--atmos-light` was `233 244 255` against a canvas of `213 237 255` — 20/255 lighter.
+  Dropping its alpha from 1 to 0 moved the hero top by 4/255. The white vertical grade at
+  0.38 was doing the washing out, not the lamp. Measured before changing anything, which is
+  what stopped a no-op shipping as a fix.
+
+- **The lamp is tinted to the wash blue rather than dimmed.** `166 196 232` at 0.7, with the
+  grade down to 0.05. The lamp now adds blue instead of removing it, resolving to
+  `rgb(180 208 239)` at peak against the auth screen's `166 196 232`.
+
+- **This reverses an invariant, deliberately and on the record.** The atmosphere could
+  previously only lift a pale canvas toward white or deepen a near-black one toward black,
+  so it could never reach a background the gate had not already checked — a property, not a
+  coincidence. A blue lamp deepens the light canvas, so that no longer holds by
+  construction. It holds by measurement: `content-subtle` is 5.33:1 on the lamp and 7.08:1
+  on the grade, and `tokenContrast.test.ts` passes 130/130. The note is carried in both
+  `tokens.json` and `DESIGN_SYSTEM.md` so the next editor of this layer meets it.
+
+- **Dark was left alone because it is already at its ceiling.** There the lamp is the only
+  thing putting blue on a near-black canvas, so lowering it removes what it gives. Raising
+  it fails: `text-subtle` is 4.61:1 at the shipped 0.20 peak and 4.14:1 by 0.28. The dark
+  hero is unchanged, and that is a measured limit rather than an oversight.
+
+- **Scope was checked before editing.** `.atmos-field` is applied only to the hero section,
+  and `--atmos-light` / `--atmos-deep` are consumed only inside its `::before`, so nothing
+  else in the app moves. `.atmos-lit`, which the hero panel and `Modal` share, reads
+  `--atmos-glaze` and was not touched.
