@@ -17,6 +17,12 @@ import { useTestDatabase } from './helpers/testDb';
  * This suite is the proof rather than the assumption. `tests/setup.ts` sets no
  * `SMTP_*` or `MAIL_*` variable at all, so the whole file runs in exactly the
  * state a developer gets from a fresh clone with no `.env`: nothing configured.
+ *
+ * "Unconfigured" is unset *or blank*. `config/env.ts` loads the developer's
+ * own `server/.env` at import time, and one copied verbatim from the example
+ * carries `SMTP_HOST=`, which dotenv reads as `""`. The loader drops blanks
+ * before validating (`withoutBlanks`), so that file is unconfigured too, and
+ * the guard below uses the loader's definition rather than a stricter one.
  */
 
 useTestDatabase();
@@ -32,10 +38,10 @@ beforeEach(() => {
 describe('the environment under test really is unconfigured', () => {
   it('has no SMTP variables set', () => {
     // If this ever fails, every other case in this file proves nothing.
-    expect(process.env.SMTP_HOST).toBeUndefined();
-    expect(process.env.SMTP_USER).toBeUndefined();
-    expect(process.env.SMTP_PASS).toBeUndefined();
-    expect(process.env.MAIL_TRANSPORT).toBeUndefined();
+    expect(process.env.SMTP_HOST ?? '').toBe('');
+    expect(process.env.SMTP_USER ?? '').toBe('');
+    expect(process.env.SMTP_PASS ?? '').toBe('');
+    expect(process.env.MAIL_TRANSPORT ?? '').toBe('');
   });
 
   it('parses a configuration with only the three required variables', () => {
