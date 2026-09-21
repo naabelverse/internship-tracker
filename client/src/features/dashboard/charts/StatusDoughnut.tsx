@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Doughnut } from 'react-chartjs-2';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { ChartDataSummary } from '@/features/dashboard/charts/ChartDataSummary';
 import { ChartFrame } from '@/features/dashboard/charts/ChartFrame';
 import { doughnutOptions } from '@/features/dashboard/charts/chartOptions';
@@ -83,11 +84,7 @@ export function StatusDoughnut({
         <ul className="grid w-full grid-cols-2 gap-x-4 gap-y-1.5">
           {entries.map((entry) => (
             <li key={entry.status} className="flex items-center gap-2 text-xs">
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: palette.statusColor(entry.status) }}
-                aria-hidden="true"
-              />
+              <StatusDot status={entry.status} size="md" />
               <span className="truncate text-content-muted">
                 {STATUS_CONFIG[entry.status].label}
               </span>

@@ -1,4 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { BoardCard } from '@/features/board/BoardCard';
 import type { BoardColumnModel } from '@/features/board/boardColumns';
 import { STATUS_CONFIG } from '@/lib/statusConfig';
@@ -27,10 +28,7 @@ export function BoardColumn({ column, onOpen }: BoardColumnProps): JSX.Element {
       )}
     >
       <header className="mb-2 flex items-center gap-2 px-1">
-        <span
-          aria-hidden="true"
-          className={cn('h-2 w-2 rounded-full', STATUS_CONFIG[column.status].dot)}
-        />
+        <StatusDot status={column.status} />
         <h2 className="panel-title">{column.label}</h2>
         <span
           className={cn(

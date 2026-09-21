@@ -1,5 +1,3 @@
-import type { ApplicationStatus } from '@/types/application';
-
 /**
  * The token names the charts read, and the orders they are read in.
  *
@@ -22,6 +20,10 @@ export const TOKENS = [
   'color-warning',
   'color-danger',
   'color-info',
+  'color-status-saved',
+  'color-status-assessment',
+  'color-status-ghosted',
+  'color-status-withdrawn',
   'color-chart-1',
   'color-chart-2',
   'color-chart-3',
@@ -33,22 +35,6 @@ export const TOKENS = [
 ] as const;
 
 export type TokenName = (typeof TOKENS)[number];
-
-/**
- * Statuses keep the colour their pill has, so a slice and a badge for the same
- * status never disagree. Ghosted and withdrawn share a grey pill but get
- * separate chart tokens, because two identical slices would be unreadable.
- */
-export const STATUS_TOKENS: Record<ApplicationStatus, TokenName> = {
-  saved: 'color-text-subtle',
-  applied: 'color-info',
-  assessment: 'color-primary',
-  interview: 'color-warning',
-  offer: 'color-success',
-  rejected: 'color-danger',
-  ghosted: 'color-chart-5',
-  withdrawn: 'color-chart-6',
-};
 
 /**
  * The categorical series, in the order a chart consumes it.

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/types/application';
@@ -83,7 +84,7 @@ function DispatchPanel(): JSX.Element {
                 </p>
                 <p className="truncate text-xs text-content-muted">{row.role}</p>
                 <p className="flex items-center justify-end gap-1.5 text-xs text-content-muted">
-                  <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
+                  <StatusDot status={row.status} size="xs" />
                   {status.label}
                 </p>
               </li>
@@ -110,10 +111,7 @@ function PipelineRail(): JSX.Element {
     <ul className="mt-12 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-7 sm:mt-14 sm:gap-x-7">
       {APPLICATION_STATUSES.map((status) => (
         <li key={status} className="flex items-center gap-2 text-xs text-content-muted">
-          <span
-            aria-hidden="true"
-            className={`h-1.5 w-1.5 rounded-full ${STATUS_CONFIG[status].dot}`}
-          />
+          <StatusDot status={status} size="xs" />
           {STATUS_CONFIG[status].label}
         </li>
       ))}

@@ -3222,3 +3222,98 @@ presence the blue has on the auth split screen.
   cost three presses to cross the header, and `role="radio"` promises arrow-key behaviour.
   Both cases are tested; a focused-but-unselected radio no longer exists, since focus and
   selection move together.
+
+## Status legend palette — one token per status, Ghosted drawn hollow (21 Sep 2026)
+
+- **Two status-colour maps existed and had drifted.** `STATUS_CONFIG` painted pills and dots;
+  `chartTokens.ts` carried a second `STATUS_TOKENS` map for the doughnut. They agreed on six
+  statuses and disagreed on Ghosted and Withdrawn: the dot was `border-strong` (pale grey-blue)
+  while the chart read `chart-5` and `chart-6`. The split was deliberate — the earlier decision
+  reads "separate chart tokens, because two identical slices would be unreadable" — and issue #4
+  then changed `chart-5`/`chart-6` underneath it, so the doughnut painted Ghosted amber (ΔE 3.3
+  from Interview in dark) and Withdrawn green (ΔE 0.9 from Offer under protan) while every pill
+  stayed grey. Measured against `HEAD`: ΔE 25–46 between a status's dot and its slice. The second
+  map is deleted; `readChartPalette().statusColor` reads `STATUS_CONFIG[status].token`, and
+  `tests/config/statusConfig.test.ts` asserts each status's classes name that same token and that
+  the token is in the chart's `TOKENS` list (an unknown token there falls back to a sentinel grey
+  silently). The decision that the legend "paints its swatch inline so it cannot drift" is
+  superseded: the swatch is the shared `StatusDot`.
+
+- **Ghosted and Withdrawn were the same token, and both failed the non-text floor.** Both dots
+  were `bg-border-strong` — rgb `159 176 198` light, `58 74 96` dark, ΔE 0.0 — a hairline colour
+  doing duty as a filled disc at 1.83 / 2.15 / 1.88 : 1 on canvas / surface / surface-muted in
+  light and 1.88 / 1.72 / 1.54 in dark, against a 3:1 floor. Saved, Ghosted and Withdrawn pills
+  all sat on the same neutral `bg-surface-muted`, differing only by text token. Nothing compared
+  one status with another, only each with its background — the gap that let the series duplicate
+  ship in issue #4.
+
+- **The report that "Saved and Ghosted are indistinguishable" needed a correction.** They were
+  the same hue family — near-achromatic cool greys, OKLCH hue 251° and 255°, chroma 0.02–0.04 —
+  but not close in colour distance: ΔE 33 light / 28 dark, a dark grey beside a light grey. What
+  made them read as one was that Ghosted's dot failed 3:1 and barely registered as a mark, and
+  that both were categorically grey, as were Assessment (`primary`, near-black since the
+  blue-ground redesign) and Withdrawn. By raw ΔE the old greys were further apart than the new
+  palette; the new palette wins on hue category, on the contrast floor, and on shape.
+
+- **Four tokens, not eight.** Applied, Interview, Offer and Rejected keep `info`, `warning`,
+  `success` and `danger`: those statuses mean the semantic, and `Hero.tsx` says so in copy —
+  "Amber is the only colour that means hurry" — with urgent rows painted `text-warning`. Issue
+  #4's rule against semantic reuse was for categorical series, whose only job is to differ;
+  duplicating semantic values into `status-*` tokens would create exactly the drift this closes.
+  Saved, Assessment, Ghosted and Withdrawn had nothing to borrow and get `color-status-*` tokens
+  through `tokens.json` → `generate:theme` → `index.css` → `tailwind.config.ts`.
+
+- **Values.** Light: saved `91 91 91`, assessment `119 61 161`, ghosted `43 78 122`, withdrawn
+  `104 67 48`. Dark: `171 171 171`, `201 157 228`, `163 196 234`, `221 185 159`. Saved is a true
+  neutral (equal channels, so the pin `R = G = B` cannot drift); Ghosted is a cool slate at
+  OKLCH chroma 0.084 light / 0.065 dark, about twice a Tailwind slate, because a grey and a
+  grey-blue at equal chroma read as one colour at six pixels. All eight sit in the family's
+  lightness band (light L 0.42–0.48, dark 0.74–0.83). The values were re-checked in this session
+  by a coordinate-descent search from them under the gate's own constraints, scoring the worst
+  pair under normal, protan and deutan vision; Saved, Assessment and Ghosted did not move in
+  light. Gate results, both themes: every dot ≥ 5.62:1 on the three surfaces and on the hero's
+  lit and glazed grounds; every pill's text ≥ 4.53:1 against its own 15 % tint on every surface
+  (the 4.53 is Rejected on dark surface-muted, pre-existing).
+
+- **Withdrawn stays the clearer brown, deliberately.** A sweep of the brown/taupe window showed
+  the value's weak neighbours under colour-vision deficiency are Offer under deutan (ΔE 2.3
+  light) and Rejected under protan (3.5). A lower-chroma taupe (`91 65 55` / `226 195 183`)
+  lifts those to 4.9 / 4.9 in light but stays below the 6.0 CVD floor, so it crosses no
+  threshold, and at chroma 0.04 it reads as a warm grey — a fourth grey again. Kept at chroma
+  0.06, in band. Brown is inherently squeezed between Rejected (h 30°), Interview (h 59°) and
+  Offer-under-deutan; its one lever is chroma, which pulls it toward Saved.
+
+- **Ghosted is the one hollow dot, and why that is enough.** Eight statuses pinned to one
+  lightness band cannot all clear the categorical floor of ΔE 15: the closest new pairs are
+  Saved/Withdrawn (7.8 light, 8.8 dark, normal vision), Withdrawn/Interview (7.1 light) and
+  Ghosted/Applied (7.2 dark), and purple/blue collapses under deutan (Assessment/Applied 4.6
+  dark). The weakest CVD pairs of all are among the fixed semantics — Interview/Rejected deutan
+  1.6 light, Offer/Rejected deutan 2.6 dark — and were not touched. So the pair that was broken
+  gets a signal a colour-blind reader keeps: `StatusDot` draws Ghosted as a ring, 2 px at
+  8–10 px and 1 px at 6 px so the hole survives, and every other status as a disc; the component
+  test pins that exactly one status is hollow. The doughnut slice stays solid — a slice cannot
+  be hollow — with its label and the `sr-only` table as the text alternative. Every site pairs
+  the dot with its label as text, and `StatusDot` is `aria-hidden`.
+
+- **The hollow marker exposed a timeline defect.** `ApplicationTimeline` draws its markers over
+  a 1 px rail, masked outside the dot by `ring-4 ring-canvas` and inside it by the dot's fill —
+  so a transparent ring showed the rail through its hole. The marker now sits in a wrapper that
+  paints `bg-surface` under whichever dot it holds. `StatusDot` itself keeps `bg-transparent`:
+  on the hero's lit canvas a surface-coloured hole would be a visible pale spot.
+
+- **Saved, Ghosted and Withdrawn pills are tinted now.** All eight are
+  `bg-<token>/15 text-<token>`, so the status select in the table, the card list and the detail
+  header, and the board's count badge, change from neutral to tinted for those three. Approved
+  in review as the consistency "one status, one token" requires.
+
+- **`tokenContrast.test.ts` went from 133 to 249 assertions.** The eight status tokens are read
+  from `STATUS_CONFIG` rather than restated; each is gated as pill text (4.5:1 on the card, and
+  against its own tint on all three surfaces) and as a dot (3:1 on the three surfaces, the
+  glazed panel and the lit canvas); no two statuses may resolve to the same rgb in either theme;
+  and Saved-neutral / Ghosted-cool is pinned. `SERIES_TOKENS` and `chart-1…8` are
+  byte-identical: the categorical series is a separate system and is not affected.
+
+- **The no-SMTP guard fix (`5973ab5`) is on this branch because `verify` was red on this
+  machine first.** The guard asserted `SMTP_HOST` was `undefined` where the loader's own
+  definition of unconfigured is unset-or-blank; a `server/.env` copied from the example carries
+  `SMTP_HOST=`. Its own commit, before any of the above was touched.

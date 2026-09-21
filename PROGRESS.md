@@ -906,6 +906,15 @@ _Dated notes on work outside the numbered phases. Not a checklist._
 
 ---
 
+- **2026-09-21 — the status legend: one token per status, Ghosted drawn hollow.** Two
+  status-colour maps had drifted — the doughnut painted Ghosted amber and Withdrawn green while
+  every badge showed them as one pale grey at 1.7–2.2:1 — and Saved, Assessment, Ghosted and
+  Withdrawn were four greys. Four `color-status-*` tokens went through the token pipeline;
+  `STATUS_TOKENS` is deleted and the chart reads `STATUS_CONFIG`; `StatusDot` is the one swatch,
+  a ring for Ghosted; a timeline marker defect the ring exposed was fixed in the same change.
+  `tokenContrast` 133 → 249 assertions, plus `statusConfig.test.ts` and `StatusDot.test.tsx`.
+  Values measured against the gate, not picked; the CVD caveats are in `DECISIONS.md`.
+
 ## Manual steps waiting on me (the human)
 _The agent appends anything it cannot do itself here — DNS records, account signups, secrets to generate._
 

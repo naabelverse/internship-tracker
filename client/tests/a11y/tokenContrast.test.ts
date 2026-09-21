@@ -9,6 +9,8 @@ import {
   type Rgb,
 } from '../utils/contrast';
 import { SERIES_TOKENS } from '@/features/dashboard/charts/chartTokens';
+import { STATUS_CONFIG } from '@/lib/statusConfig';
+import { APPLICATION_STATUSES } from '@/types/application';
 
 /** SPEC section 6 asks for 4.5:1, which is WCAG AA for body text. */
 const AA_TEXT = 4.5;
@@ -22,6 +24,19 @@ const BODY_TOKENS = ['text', 'text-muted', 'text-subtle'] as const;
 
 /** Semantics used as text on a card, e.g. the funnel labels and deadline chips. */
 const SEMANTIC_TOKENS = ['primary', 'success', 'warning', 'danger', 'info'] as const;
+
+/**
+ * The eight status tokens, read from the config the app ships rather than
+ * restated. Four are semantics already in the list above; the other four exist
+ * only for a status. Every one is painted two ways — as pill text over its own
+ * tint, and as a dot beside a label — and both are gated below.
+ */
+const STATUS_TOKENS = APPLICATION_STATUSES.map((status) =>
+  STATUS_CONFIG[status].token.replace(/^color-/, ''),
+);
+
+/** Everything painted as `bg-<token>/15 text-<token>`: the semantics and the statuses. */
+const PILL_TOKENS = [...new Set<string>([...SEMANTIC_TOKENS, ...STATUS_TOKENS])];
 
 /** `bg-<token>/15 text-<token>`, the shape every status pill and badge uses. */
 const PILL_ALPHA = 0.15;
@@ -66,7 +81,7 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
     expect(contrastRatio(token(fg), token('wash'))).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
-  it.each(SEMANTIC_TOKENS)('%s clears AA as text on a card', (name) => {
+  it.each(PILL_TOKENS)('%s clears AA as text on a card', (name) => {
     expect(contrastRatio(token(name), token('surface'))).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
@@ -78,7 +93,7 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
   // painted on `surface-muted`, and that is where a 4.48 badge shipped and axe
   // caught it in a real browser. Every surface a tint is actually painted on is
   // checked now, which is what makes this a gate rather than a spot check.
-  it.each(SEMANTIC_TOKENS.flatMap((fg) => SURFACES.map((bg) => [fg, bg] as const)))(
+  it.each(PILL_TOKENS.flatMap((fg) => SURFACES.map((bg) => [fg, bg] as const)))(
     '%s clears AA against its own 15 percent tint on %s',
     (name, surface) => {
       const tint = composite(token(name), token(surface), PILL_ALPHA);
@@ -86,6 +101,49 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
       expect(contrastRatio(token(name), tint)).toBeGreaterThanOrEqual(AA_TEXT);
     },
   );
+
+  // A status is also a dot beside its label — six pixels on the landing page,
+  // eight on the board — and a dot is a graphical object, gated at 3:1. Two
+  // statuses shipped at 2.15 in light and 1.72 in dark: `border-strong`, a
+  // token drawn for a hairline, doing duty as a filled disc.
+  it.each(STATUS_TOKENS.flatMap((fg) => SURFACES.map((bg) => [fg, bg] as const)))(
+    '%s reads as a status dot on %s',
+    (name, surface) => {
+      expect(contrastRatio(token(name), token(surface))).toBeGreaterThanOrEqual(AA_NON_TEXT);
+    },
+  );
+
+  // Ghosted and withdrawn were the same token, so the board drew them as the
+  // same dot. Nothing compared one status with another, only each with its
+  // background — the gap that let the chart series duplicate ship, again.
+  it('paints every status a different colour', () => {
+    const seen = new Map<string, string>();
+
+    for (const name of STATUS_TOKENS) {
+      const key = token(name).join(' ');
+      const clash = seen.get(key);
+
+      expect(clash, `${name} duplicates ${clash ?? ''} - both are rgb(${key})`).toBeUndefined();
+      seen.set(key, name);
+    }
+
+    expect(seen.size).toBe(STATUS_TOKENS.length);
+  });
+
+  // The pair that was broken. Saved and ghosted were two greys four degrees of
+  // hue apart, told apart only by lightness, which a small dot does not carry.
+  // Distinct values is not enough of a guarantee: the design is that saved is
+  // a true neutral and ghosted a visibly cool slate, and that is what is
+  // pinned. Ghosted's second signal, the hollow ring, lives in `StatusDot`.
+  it('keeps saved neutral and ghosted cool, so the two are not both grey', () => {
+    const [savedR, savedG, savedB] = token('status-saved');
+    const [ghostR, , ghostB] = token('status-ghosted');
+
+    expect(savedR).toBe(savedG);
+    expect(savedG).toBe(savedB);
+    // Blue leads red by a margin a reader sees as colour, not as a cast.
+    expect(ghostB - ghostR).toBeGreaterThanOrEqual(60);
+  });
 
   // The solid-fill pair is gated separately from the accent. Splitting them is
   // what lets the dark theme carry a genuinely deep button instead of a pastel
@@ -237,6 +295,17 @@ describe.each(['light', 'dark'] as const)('%s theme atmosphere', (theme) => {
   // `text-warning` sitting directly on the glazed surface.
   it.each(SEMANTIC_TOKENS)('%s clears AA as text on the glazed panel', (name) => {
     expect(contrastRatio(token(name), glazed)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  // The hero draws the smallest status dots in the app, six pixels, in two
+  // places the plain surfaces above do not cover: the example rows sit on the
+  // glazed panel and the pipeline rail on the lit canvas.
+  it.each(STATUS_TOKENS)('%s reads as a status dot on the glazed panel', (name) => {
+    expect(contrastRatio(token(name), glazed)).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
+  it.each(STATUS_TOKENS)('%s reads as a status dot at the peak of the hero light', (name) => {
+    expect(contrastRatio(token(name), lit)).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
 });
 
