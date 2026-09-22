@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BrandMark } from '@/components/marketing/MarketingChrome';
+import { paths } from '@/routes/paths';
 
 interface AuthSplitLayoutProps {
   title: string;
@@ -16,6 +18,30 @@ const HIGHLIGHTS = [
 ];
 
 /**
+ * The lockup as the one route back to the landing page from here: the other
+ * links on these pages only point at each other. One `Link` wraps both halves
+ * so the mark and the wordmark are a single target, and the hover swaps the
+ * text token on both rather than dimming the element, per the note on
+ * `danger-hover` in tailwind.config.ts. The mark is `aria-hidden`, so the
+ * wordmark alone names the link, the same name the marketing header's logo
+ * carries.
+ *
+ * Rendered twice below, because the aside that carries it on wide screens is
+ * hidden under `lg`. `className` is how the second copy hides itself above it.
+ */
+function BrandLink({ className = '' }: { className?: string }): JSX.Element {
+  return (
+    <Link
+      to={paths.landing}
+      className={`group flex w-fit items-center gap-2.5 rounded-control text-sm font-semibold tracking-tight text-content transition-colors hover:text-content-muted ${className}`}
+    >
+      <BrandMark className="h-4 w-4 shrink-0 text-primary transition-colors group-hover:text-content-muted" />
+      <span className="stretch-wide">Internship Tracker</span>
+    </Link>
+  );
+}
+
+/**
  * SPEC section 6: split screen. The marketing half is hidden below `lg` so the
  * form gets the whole viewport at 375 px instead of being pushed below the fold.
  */
@@ -28,10 +54,7 @@ export function AuthSplitLayout({
   return (
     <div className="grid min-h-screen bg-wash lg:grid-cols-2">
       <aside className="hidden flex-col justify-between bg-surface p-10 lg:flex">
-        <span className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-content">
-          <BrandMark className="h-4 w-4 text-primary" />
-          <span className="stretch-wide">Internship Tracker</span>
-        </span>
+        <BrandLink />
 
         <div className="space-y-6">
           <p className="max-w-[16ch] text-display-md stretch-wide text-content">
@@ -55,7 +78,14 @@ export function AuthSplitLayout({
       </aside>
 
       <main className="flex flex-col px-4 py-8 sm:px-8">
-        <div className="flex justify-end">
+        {/*
+          Under `lg` this bar is the only chrome the page has, so the lockup
+          sits here opposite the toggle. Above it the aside carries the lockup
+          and this copy is `display: none`, which would leave `justify-between`
+          pushing the toggle to the left: hence `lg:justify-end`.
+        */}
+        <div className="flex items-center justify-between lg:justify-end">
+          <BrandLink className="lg:hidden" />
           <ThemeToggle />
         </div>
 

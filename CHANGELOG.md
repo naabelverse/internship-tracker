@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The auth pages' logo is a link home, at every width.** The "Internship
+  Tracker" lockup at the top of the sign-in, create-account, forgot-password,
+  reset-password, verify-email and account-closed pages was a static label,
+  and below the `lg` breakpoint it was not shown at all; none of the other
+  links on those pages leave the auth flow. The mark and the wordmark are now
+  one link to the landing page, in the aside on wide screens and opposite the
+  theme toggle above the form on phones, with a hover that shifts both to the
+  muted text token, the same accessible name the marketing header's logo has,
+  and the standard focus ring. The forms are unchanged.
+
 - **Every status has one colour everywhere, and Ghosted is a ring.** The
   dashboard's status breakdown painted Ghosted amber and Withdrawn green while
   every badge showed them as one pale grey, and Saved, Assessment, Ghosted and
