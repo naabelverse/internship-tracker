@@ -145,6 +145,10 @@ for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(route);
         await expect(page.getByRole('link', { name: 'Internship Tracker' }).first()).toBeVisible();
+        // Checked rather than assumed: if the storage key ever moved, both
+        // passes would quietly run in the same theme and this test would stay
+        // green while claiming to cover two.
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
         // Layout settles a frame after the route paints.
         await page.waitForTimeout(250);
 
