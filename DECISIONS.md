@@ -3372,3 +3372,9 @@ presence the blue has on the auth split screen.
   owner's to run (`railway link` then `railway run npm run seed -w server`); `dotenv` 16 does not
   override variables already in the environment, which is why that command reaches Atlas even
   with a local `server/.env` present.
+
+- **Seeded 22 Sep 2026 — and on Windows the SRV string did not resolve.** `railway run` failed
+  with `querySrv ECONNREFUSED` against the `mongodb+srv://` URI, so the seed was run through
+  `railway shell` with Atlas's standard (non-SRV) connection string instead; anyone running seed
+  or migrate commands from a Windows machine against an SRV record should expect the same and
+  reach for the standard string. Confirmed: "Try the demo" signs in with 64 applications.

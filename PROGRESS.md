@@ -961,9 +961,11 @@ _The agent appends anything it cannot do itself here — DNS records, account si
       reach.
 - [ ] **Create the UptimeRobot monitor** on `https://<api>/health` at 5-minute intervals. It is
       both the availability alert and the keep-warm that stops Render's free tier sleeping.
-- [ ] **Run `railway run npm run seed -w server` against Atlas** so "Try the demo" has an
-      account. Not done as of 22 Sep 2026: the live button answered `DEMO_UNAVAILABLE`, and the
-      API now warns at boot until this is run. DEPLOYMENT.md step 11.
+- [x] **Run the seed against Atlas** so "Try the demo" has an account. Done 22 Sep 2026, after
+      the live button had answered `DEMO_UNAVAILABLE`: seeded through `railway shell` with the
+      standard (non-SRV) connection string, because `railway run` failed on Windows with
+      `querySrv ECONNREFUSED`. "Try the demo" signs in with 64 applications on production.
+      DEPLOYMENT.md step 11; the Windows note is in DECISIONS.md.
 - [ ] **Run `scripts/backup.sh` once and test a restore.** Atlas M0 has no automated backup —
       that is a real gap in the free tier, not a setting to find.
 - [ ] **Optional: enable Sentry**, then trigger one deliberate 500 and confirm it arrives. An
