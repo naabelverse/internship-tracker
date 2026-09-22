@@ -5,6 +5,7 @@ import { env } from '@/config/env';
 import { logger } from '@/config/logger';
 import { flushSentry, initSentry } from '@/config/sentry';
 import { startScheduledJobs, stopScheduledJobs } from '@/jobs';
+import { announceDemoAccount } from '@/services/demoAccount.service';
 import { initMailer } from '@/services/mailer.service';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -66,7 +67,10 @@ async function shutdown(reason: string, exitCode = 0): Promise<void> {
 }
 
 connectDatabase()
-  .then(() => {
+  .then(async () => {
+    // Says now, not on the first click, whether "Try the demo" can work. It
+    // never rejects, so it cannot turn a healthy boot into a shutdown.
+    await announceDemoAccount();
     // Started only once the database is reachable: a sweep against a dead
     // connection would just log failures every hour.
     startScheduledJobs();

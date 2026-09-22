@@ -3345,3 +3345,30 @@ presence the blue has on the auth split screen.
   a second shape cue beyond Ghosted's ring (Withdrawn is the candidate) or a change to the
   semantic tokens themselves, and both are separate design decisions to take in a future session
   only if one of these pairs becomes an actual reported problem.
+
+## "Try the demo" answered 404 in production — the seed was never run against Atlas (22 Sep 2026)
+
+- **The error was the unseeded-deployment path working as designed, not a gate.** `loginAsDemo`
+  only ever finds, and `env.ts` defaults both `DEMO_EMAIL` and `DEMO_PASSWORD`, so an unset
+  variable on Railway cannot produce `DEMO_UNAVAILABLE`; only an absent, non-demo or soft-deleted
+  user document can. Three things pointed at the seed: the Phase 16 "seed against Atlas" item in
+  `PROGRESS.md` was unchecked, the local `server/.env` targets `mongodb://127.0.0.1`, and the
+  Railway CLI was not installed on the machine every seed was run from. `DEPLOYMENT.md` step 11
+  also showed the seed command _without_ the `railway run` prefix that the migration step uses,
+  so following it literally seeds localhost; that is fixed, and the go-live checklist gained a
+  seed line beside its migrate line.
+
+- **The API now announces the demo account at boot, the way `initMailer` announces the
+  transport.** `announceDemoAccount` runs once the database connects and logs either
+  `Demo account ready` or a `warn` naming the address and the seed command. It shares its lookup
+  with `loginAsDemo` through `findDemoAccount`, so the boot log cannot say "ready" for an account
+  the route would refuse, and it never rejects, so a failed lookup cannot turn a healthy boot
+  into a shutdown. Chosen over enriching the 404 body because that message is shown verbatim in a
+  visitor's toast: "which env var or seed step is missing" is for whoever reads the deploy log,
+  not for the person who clicked. The nightly reset job's `info` line on the same condition was
+  left as it was; 04:20 UTC at `info` is not where anyone looks first.
+
+- **No production-facing action was taken from the session.** The seed against Atlas is the
+  owner's to run (`railway link` then `railway run npm run seed -w server`); `dotenv` 16 does not
+  override variables already in the environment, which is why that command reaches Atlas even
+  with a local `server/.env` present.

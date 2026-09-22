@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { Types } from 'mongoose';
-import { env } from '@/config/env';
 import {
   ACCOUNT_LOCK_MS,
   BCRYPT_ROUNDS,
@@ -16,6 +15,7 @@ import type {
   UpdateMeInput,
 } from '@/schemas/auth.schema';
 import { issueVerification } from '@/services/accountLifecycle.service';
+import { findDemoAccount } from '@/services/demoAccount.service';
 import { sendMail } from '@/services/mailer.service';
 import { assertHumanSignup } from '@/services/signupGuard.service';
 import {
@@ -124,15 +124,16 @@ export async function login(input: LoginInput, context: SessionContext): Promise
  * 2. It only ever *finds*. No branch here constructs a `User`, so it cannot mint
  *    accounts or bypass registration; an unseeded deployment gets a 404 rather
  *    than a helpfully created account.
- * 3. `isDemo: true` is part of the query, so somebody who registered the demo
- *    address before it was seeded cannot be logged into through this route.
+ * 3. `isDemo: true` is part of the query (see `findDemoAccount`), so somebody who
+ *    registered the demo address before it was seeded cannot be logged into
+ *    through this route.
  *
  * Escalation is closed off separately by `rejectDemoAccount`, which refuses the
  * password change, the email change and the deletion — so a demo session cannot
  * be turned into an account of one's own.
  */
 export async function loginAsDemo(context: SessionContext): Promise<AuthResult> {
-  const user = await User.findOne({ email: env.DEMO_EMAIL, isDemo: true, deletedAt: null });
+  const user = await findDemoAccount();
 
   if (!user) {
     throw ApiError.notFound(
