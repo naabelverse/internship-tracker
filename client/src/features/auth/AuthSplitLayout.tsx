@@ -28,12 +28,24 @@ const HIGHLIGHTS = [
  *
  * Rendered twice below, because the aside that carries it on wide screens is
  * hidden under `lg`. `className` is how the second copy hides itself above it.
+ *
+ * The `after:` band is the link's hit area, not decoration. The lockup paints
+ * 146x20 — `text-sm`'s 20px line box over a 16px mark — and 20px is half the
+ * 40px a pointer or a thumb wants. Padding is the obvious fix and the wrong one
+ * here: it would grow the link's own border box, which is what the aside's
+ * `justify-between` column distributes around, what the phone bar's
+ * `items-center` row measures its height from, and what the global
+ * `:focus-visible` ring in index.css draws around. An absolutely positioned
+ * pseudo-element is outside flow, so it is not a flex item, takes part in no
+ * measurement, and leaves the ring on the 20px box — it only answers
+ * `elementFromPoint`. `inset-x-0` keeps it exactly as wide as the lockup, so it
+ * cannot reach across the phone bar toward the theme toggle at the other end.
  */
 function BrandLink({ className = '' }: { className?: string }): JSX.Element {
   return (
     <Link
       to={paths.landing}
-      className={`group flex w-fit items-center gap-2.5 rounded-control text-sm font-semibold tracking-tight text-content transition-colors hover:text-content-muted ${className}`}
+      className={`group relative flex w-fit items-center gap-2.5 rounded-control text-sm font-semibold tracking-tight text-content transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-10 after:-translate-y-1/2 after:content-[''] hover:text-content-muted ${className}`}
     >
       <BrandMark className="h-4 w-4 shrink-0 text-primary transition-colors group-hover:text-content-muted" />
       <span className="stretch-wide">Internship Tracker</span>

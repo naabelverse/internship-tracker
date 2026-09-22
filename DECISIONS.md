@@ -3443,3 +3443,48 @@ presence the blue has on the auth split screen.
   mark-to-wordmark gap and both hover swaps unchanged — but that height is under the 40px a
   comfortable target wants. Logged on its own so it can be prioritised against the rest of the
   polish backlog rather than folded into a spacing fix.
+
+## The auth lockup's hit area, and a 40px minimum target (22 Sep 2026)
+
+- **The 20px measurement was re-verified against current `main` before anything was changed.**
+  Issue #26 reported 146x20, and a fresh sweep of the six auth routes at 375/768/1024/1440 in both
+  themes agreed exactly: the painted box is 146.02x20 in all 48 combinations, and walking
+  `elementFromPoint` outwards from the link's centre puts the real clickable extent at 146.5x20.
+  The width was never the problem; only the height.
+
+- **A pseudo-element, not padding, because the link's border box is load-bearing in four places.**
+  The link becomes `relative` and gains an `after:` band: `after:absolute` and `after:inset-x-0`
+  to span exactly the lockup's width, `after:h-10` for the 40px, `after:top-1/2` with
+  `after:-translate-y-1/2` to centre it, and `after:content-['']` because Tailwind leaves
+  `--tw-content` empty otherwise. That is 10px above the lockup and 10px below. Absolutely
+  positioned generated content is outside flow, so it is not a flex item in either copy,
+  contributes nothing to the aside's `justify-between` distribution or the phone bar's
+  `items-center` cross-size, and is invisible to layout entirely. It only answers a hit test.
+
+- **The padding alternative was built and measured rather than argued about.** `-my-2.5 py-2.5`
+  does reach 40px and does keep the mark, the wordmark and the theme toggle at identical
+  coordinates — the negative margin cancels the padding in flow. What it also does, in all 48
+  combinations, is grow the link's own border box from 20px to 40px and move its top up 10px. That
+  box is what `:focus-visible` in `index.css` draws its `ring-2 ring-offset-2` around, so the
+  padding fix doubles the height of the focus ring. It is a visual regression that only a keyboard
+  user ever sees, which is the kind this project should be least willing to ship.
+
+- **40px is a new convention here, not an existing one.** Nothing in the repository defined a
+  minimum target before this: there is no spacing token, no utility and no lint rule for it, and
+  the only prior mention is the note at the Category B audit recording that UI-UX Pro Max's 44pt
+  guidance was set aside as describing React Native rather than this product. 40px is taken from
+  Issue #26's own framing — comfortably above WCAG 2.2's 24x24 Target Size (Minimum), below the
+  44x44 Enhanced threshold, and a stock `h-10` rather than an invented step. Other interactive
+  elements can now be checked against it.
+
+- **The theme toggle is the first thing that convention does not clear, and it was left alone.**
+  Measured beside the lockup in the same sweep: the group is 90x34 and each of its three radio
+  buttons has a 28px hit height. That is a real finding, but it is a different control with a
+  different fix — the buttons are exactly the sliding thumb's size, which is what lets the thumb
+  travel in whole widths of itself, so growing them is a change to the control's mechanics rather
+  than an overlay. Out of scope for a hit-area fix on the logo; worth its own issue.
+
+- **What the expanded target cannot do is reach its neighbour.** `inset-x-0` pins the band to the
+  lockup's own width, so it grows only vertically and the two ends of the phone bar stay as far
+  apart as `justify-between` puts them — about 107px of clear space at 375px. The regression test
+  asserts the non-overlap directly rather than trusting that reasoning.
