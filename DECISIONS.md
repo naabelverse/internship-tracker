@@ -3378,3 +3378,36 @@ presence the blue has on the auth split screen.
   `railway shell` with Atlas's standard (non-SRV) connection string instead; anyone running seed
   or migrate commands from a Windows machine against an SRV record should expect the same and
   reach for the standard string. Confirmed: "Try the demo" signs in with 64 applications.
+
+## The auth logo links home (22 Sep 2026)
+
+- **The lockup in `AuthSplitLayout` is a `Link` to `paths.landing`, matching the marketing
+  header's logo.** Reported as "the signup page has no way back to the landing page", and it
+  held for every page that renders through the layout: the only links on them point at each
+  other (`/login` ↔ `/register`, the legal pages from the register form). One `Link` wraps the
+  mark and the wordmark rather than either alone, and it is `w-fit` so the target is the lockup,
+  not the whole width of the aside the old stretched `<span>` covered.
+
+- **Hover is a token swap to `content-muted` on both halves, not opacity.** Measured on the
+  aside's `surface`: hovered text sits at 10.55:1 light / 6.25:1 dark, and the rest→hover step
+  is 1.82:1 / 2.07:1. `hover:text-primary` was rejected because the neutral primary is 1.10:1
+  from the text token, which is no visible change; `opacity-80` was rejected because
+  `tailwind.config.ts` already says hovers swap a colour rather than dim the element, and its
+  dark-theme step (1.48:1) is smaller anyway.
+
+- **No `aria-label`.** The wordmark is always rendered wherever the aside is, and the mark is
+  `aria-hidden`, so the link's accessible name is already "Internship Tracker" — the same name
+  the marketing header's logo announces. A redundant label would only risk the two drifting.
+
+- **The lockup is rendered twice, once per breakpoint, rather than moved.** The aside that
+  carries it is `hidden lg:flex`, so the header fix alone left phones — most real visitors —
+  with no route home. Flagged at the checkpoint and folded in on the owner's call: the same
+  `BrandLink` sits in the form column's top bar opposite the theme toggle, `lg:hidden`, and the
+  bar is `justify-between lg:justify-end` so the toggle does not slide left once the copy beside
+  it is `display: none`. That column is on the wash, the one saturated ground, so the hover was
+  measured there too: `content-muted` on wash is 6.04:1 light / 5.64:1 dark, above the 4.5:1
+  the gate applies to body copy on it; the rest→hover step is the same 1.82:1 / 2.07:1 because
+  it is between the two text tokens, not against the ground. Two copies over one repositioned
+  element because the aside's copy is the top of a `justify-between` column and the bar's copy
+  is the left of a row: no single element can occupy both without a portal or a grid the layout
+  otherwise has no use for.
