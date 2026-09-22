@@ -1,14 +1,20 @@
 import { useMemo } from 'react';
+import { STATUS_CONFIG } from '@/lib/statusConfig';
 import { useThemeStore } from '@/store/themeStore';
 import type { ApplicationStatus } from '@/types/application';
-import { SERIES_TOKENS, STATUS_TOKENS, TOKENS, type TokenName } from './chartTokens';
+import { SERIES_TOKENS, TOKENS, type TokenName } from './chartTokens';
 
 export interface ChartPalette {
   /** `rgb(r g b)` for a token, or `rgb(r g b / a)` when an alpha is given. */
   color: (token: TokenName, alpha?: number) => string;
   /** The categorical series, long enough for the eight statuses. */
   series: string[];
-  /** Matches the status pills used everywhere else in the app. */
+  /**
+   * The token the status's pill and dot paint with, so a slice cannot disagree
+   * with a badge. This used to be a second map of its own, and when the chart
+   * series was rebuilt that map quietly turned ghosted amber and withdrawn
+   * green while every pill stayed grey.
+   */
   statusColor: (status: ApplicationStatus) => string;
 }
 
@@ -49,7 +55,7 @@ export function readChartPalette(): ChartPalette {
   return {
     color,
     series: SERIES_TOKENS.map((token) => color(token)),
-    statusColor: (status) => color(STATUS_TOKENS[status]),
+    statusColor: (status) => color(STATUS_CONFIG[status].token),
   };
 }
 

@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Every status has one colour everywhere, and Ghosted is a ring.** The
+  dashboard's status breakdown painted Ghosted amber and Withdrawn green while
+  every badge showed them as one pale grey, and Saved, Assessment, Ghosted and
+  Withdrawn were four greys. Saved is now a neutral grey, Assessment purple,
+  Ghosted a slate blue drawn as a hollow ring beside its label, and Withdrawn
+  brown, in both themes, and the chart reads the same definition as the badges.
+
 - **The refresh cookie is now sent in a split-host deployment.** It was
   `SameSite=Strict`, which a browser omits from every cross-site request, so
   `POST /auth/refresh` from a client on one domain to an API on another carried

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/Badge';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { formatDateTime } from '@/lib/formatters';
 import {
   INTERVIEW_MODE_LABELS,
@@ -7,17 +8,19 @@ import {
   INTERVIEW_TYPE_LABELS,
   STATUS_CONFIG,
 } from '@/lib/statusConfig';
-import { cn } from '@/lib/cn';
-import type { Application } from '@/types/application';
+import type { Application, ApplicationStatus } from '@/types/application';
 
-interface TimelineEvent {
+/**
+ * A status event's marker is the status itself, so the dot beside "Applied to
+ * Ghosted" is the same swatch the board and the legend draw for Ghosted. An
+ * interview has no status and keeps a plain marker.
+ */
+type TimelineEvent = {
   key: string;
   at: string;
-  kind: 'status' | 'interview';
   title: string;
   detail?: string;
-  dot: string;
-}
+} & ({ kind: 'status'; status: ApplicationStatus } | { kind: 'interview' });
 
 /**
  * Merges `statusHistory` and `interviews` into one chronological list, newest
@@ -33,7 +36,7 @@ function buildEvents(application: Application): TimelineEvent[] {
       ? `${STATUS_CONFIG[entry.from].label} to ${STATUS_CONFIG[entry.to].label}`
       : `Added as ${STATUS_CONFIG[entry.to].label}`,
     detail: entry.note,
-    dot: STATUS_CONFIG[entry.to].dot,
+    status: entry.to,
   }));
 
   const interviewEvents: TimelineEvent[] = application.interviews.map((interview) => ({
@@ -49,7 +52,6 @@ function buildEvents(application: Application): TimelineEvent[] {
     ]
       .filter(Boolean)
       .join(' · '),
-    dot: 'bg-primary',
   }));
 
   return [...statusEvents, ...interviewEvents].sort(
@@ -77,13 +79,22 @@ export function ApplicationTimeline({ application }: { application: Application 
 
       {events.map((event) => (
         <li key={event.key} className="relative">
-          <span
-            aria-hidden="true"
-            className={cn(
-              'absolute -left-6 top-1.5 h-2.5 w-2.5 rounded-full ring-4 ring-canvas',
-              event.dot,
-            )}
-          />
+          {event.kind === 'status' ? (
+            // The marker sits on the rail. A filled dot covers it, but Ghosted
+            // is a ring, and the rail would show through the hole - so the
+            // wrapper paints the card's own surface under whichever dot it holds.
+            <span
+              aria-hidden="true"
+              className="absolute -left-6 top-1.5 flex h-2.5 w-2.5 rounded-full bg-surface ring-4 ring-canvas"
+            >
+              <StatusDot status={event.status} size="md" />
+            </span>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="absolute -left-6 top-1.5 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-canvas"
+            />
+          )}
 
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <p className="text-sm font-medium text-content">{event.title}</p>

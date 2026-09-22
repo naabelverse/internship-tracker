@@ -52,6 +52,13 @@ export default {
         // variants rather than dimming the whole element with opacity.
         'danger-hover': token('color-danger-hover'),
         info: token('color-info'),
+        // The four statuses that carry no semantic. The other four paint with
+        // `info`, `warning`, `success` and `danger` because they mean those
+        // things; see `lib/statusConfig.ts`.
+        'status-saved': token('color-status-saved'),
+        'status-assessment': token('color-status-assessment'),
+        'status-ghosted': token('color-status-ghosted'),
+        'status-withdrawn': token('color-status-withdrawn'),
         // Chart series and heatmap levels, so a chart colour is a token like
         // every other colour in the app rather than a literal in a JS object.
         'chart-1': token('color-chart-1'),

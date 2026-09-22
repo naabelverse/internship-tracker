@@ -75,6 +75,28 @@ each theme. They are kept apart because the gate measures them separately — `p
 against its own foreground, and as a shape on every surface — and collapsing them would
 discard those assertions to save one line.
 
+### Status — `status-saved` · `status-assessment` · `status-ghosted` · `status-withdrawn`
+
+Every application status paints with exactly one token, everywhere it is painted: pill,
+dot, timeline marker and doughnut slice. Four statuses _mean_ a semantic and share it —
+Applied is `info`, Interview is `warning`, Offer is `success`, Rejected is `danger` — and
+the four here have nothing to borrow.
+
+| Token               | Status     | Light        | Dark          |
+| ------------------- | ---------- | ------------ | ------------- |
+| `status-saved`      | Saved      | `91 91 91`   | `171 171 171` |
+| `status-assessment` | Assessment | `119 61 161` | `201 157 228` |
+| `status-ghosted`    | Ghosted    | `43 78 122`  | `163 196 234` |
+| `status-withdrawn`  | Withdrawn  | `104 67 48`  | `221 185 159` |
+
+Saved is a true neutral (equal channels) and Ghosted a cool slate at roughly twice the
+chroma of a Tailwind slate, because a grey and a grey-blue at the same lightness read as
+one colour at dot size. Ghosted is also the one status drawn **hollow** — `StatusDot`
+renders it as a ring — so the pair that used to be two greys is told apart by shape as
+well as hue. `lib/statusConfig.ts` is the single map; `tests/config/statusConfig.test.ts`
+asserts every class in it names its own token, which is what lets the doughnut read the
+token directly without a second map that can drift.
+
 ### Categorical series — `chart-1` … `chart-8`
 
 The semantic tokens cannot carry a by-source or top-companies chart, because those need
@@ -257,7 +279,7 @@ should have a reason.
 
 `Badge` · `Button` · `Card` · `Checkbox` · `ConfirmDialog` · `EmptyState` · `ErrorState`
 · `FormError` · `Modal` · `PageHeader` · `PasswordField` · `Popover` · `Select` ·
-`Skeleton` · `TextArea` · `TextField` · `icons`
+`Skeleton` · `StatusDot` · `TextArea` · `TextField` · `icons`
 
 ### Composition rules
 
@@ -298,6 +320,7 @@ The system is enforced by tests, not by discipline. All run in `npm run verify`.
 | `tests/config/noRawColour.test.ts`    | Any hand-written hex or RGB triplet in either `src` tree                                                                               |
 | `tests/config/tailwindTokens.test.ts` | A Tailwind key naming a token that does not exist, **and** a token no utility can reach                                                |
 | `tests/config/themeTokens.test.ts`    | Drift between `tokens.json` and the generated CSS                                                                                      |
+| `tests/config/statusConfig.test.ts`   | A status whose pill or dot classes name a different token from the one its chart slice reads; two statuses on one token                |
 | `tests/config/brandPalette.test.ts`   | Brand assets diverging from the palette                                                                                                |
 | `tests/a11y/tokenContrast.test.ts`    | Any text pair below **4.5:1**, any non-text pair below **3:1**, in _both_ themes — including under the atmosphere layers at peak alpha |
 
