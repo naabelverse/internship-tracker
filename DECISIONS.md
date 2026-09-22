@@ -3411,3 +3411,35 @@ presence the blue has on the auth split screen.
   element because the aside's copy is the top of a `justify-between` column and the bar's copy
   is the left of a row: no single element can occupy both without a portal or a grid the layout
   otherwise has no use for.
+
+## The auth aside's horizontal inset (22 Sep 2026)
+
+- **The imbalance predates the logo fix; it is one mechanism, not two.** Reported as the signup
+  page's marketing copy sitting too close to the viewport edge, and raised against PR #24 because
+  that PR had just touched the same aside. It did not cause it: the `p-10` on the aside is
+  unchanged context in that diff and dates to the blue-palette work, and on the pre-change build
+  the lockup, the heading, the list and the footer all began at exactly 40px from the panel edge.
+  `BrandLink` shares their column rather than displacing them, so no second fix was needed.
+
+- **`p-10` became `px-16 py-10 xl:px-24` — horizontal only.** The two halves were insetting by
+  different mechanisms: the aside by a fixed padding, the form column by `mx-auto max-w-sm`
+  centring a 384px block, whose effective inset grows with the viewport (64px at `lg`, 128px at
+  1280, 168px at 1440, 288px at 1920) while the aside's stayed at 40px. `px-16` matches that 64px
+  exactly where the split first appears, and `xl:px-24` keeps the inset growing. Stock Tailwind
+  steps: the theme extends no `spacing` scale, and `xl:` is already in use in `StatCards.tsx`.
+
+- **`py-10` was deliberately left alone, so the vertical rhythm is provably unchanged.** The
+  aside is a `justify-between` column, so touching vertical padding would have recomposed the
+  gaps between the lockup, the copy and the footer. Measured before against after across six
+  routes, two themes and both split widths: every vertical delta is 0px, and the heading holds at
+  three lines at every width (it re-breaks at different words at 1024).
+
+- **No extra `max-width` was added.** The copy already had one: `max-w-[16ch]` on the heading
+  (411px) and `max-w-sm` on the list (384px), so it never ran edge-to-edge. The gap to the
+  divider was 61/88px at 1024 and is now 64/64; at 1440 it is 213/240.
+
+- **The lockup's 20px-tall hit area is a known separate item, not fixed here.** The padding change
+  leaves it byte-identical — 146x20 before and after in all 48 measured combinations, with the
+  mark-to-wordmark gap and both hover swaps unchanged — but that height is under the 40px a
+  comfortable target wants. Logged on its own so it can be prioritised against the rest of the
+  polish backlog rather than folded into a spacing fix.

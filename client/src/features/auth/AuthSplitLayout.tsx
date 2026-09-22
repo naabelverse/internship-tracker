@@ -53,7 +53,17 @@ export function AuthSplitLayout({
 }: AuthSplitLayoutProps): JSX.Element {
   return (
     <div className="grid min-h-screen bg-wash lg:grid-cols-2">
-      <aside className="hidden flex-col justify-between bg-surface p-10 lg:flex">
+      {/*
+        The horizontal inset is a step above the vertical one. This panel holds a
+        411px heading over a 384px list inside a half-viewport column, so at `p-10`
+        its copy started 40px from the viewport edge while the form column's centred
+        block starts 64px from its own edge at `lg` and 168px at 1440 — the left half
+        read as jammed against the edge. `px-16` matches that 64px exactly where the
+        split first appears and `xl:px-24` keeps the inset growing with the panel.
+        `py-10` is deliberately unchanged, so the rhythm `justify-between` distributes
+        between the lockup, the copy and the footer is the same as before.
+      */}
+      <aside className="hidden flex-col justify-between bg-surface px-16 py-10 lg:flex xl:px-24">
         <BrandLink />
 
         <div className="space-y-6">
