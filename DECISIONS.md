@@ -3317,3 +3317,31 @@ presence the blue has on the auth split screen.
   machine first.** The guard asserted `SMTP_HOST` was `undefined` where the loader's own
   definition of unconfigured is unset-or-blank; a `server/.env` copied from the example carries
   `SMTP_HOST=`. Its own commit, before any of the above was touched.
+
+- **Audited after merge (22 Sep 2026) and the residual pairs are accepted as known trade-offs.**
+  An independent pass over `main @ 42e3934` recomputed everything from the shipped files: eight
+  distinct values in each theme; 48/48 dot measurements at or above 3:1 against card, row and
+  canvas (lowest 5.62); and, measured in a browser against the built stylesheet, every rendered
+  channel — pill text, pill tint, dot or ring, and the custom property the doughnut reads — equal
+  to its token in all sixteen status × theme cells, with the token equal to `tokens.json` and the
+  generated `index.css`. Ghosted is the one hollow status at every size. The audit passed.
+
+  Under a strict rule (OKLab ΔE ×100 below 15, or the same hue family at similar weight) 12 of
+  28 pairs are flagged in light and 11 in dark. That count is structural — eight statuses held to
+  one lightness band so each clears the text and tint gates cannot all be 15 apart — and the pairs
+  that carry no signal but colour are, ranked: Interview/Withdrawn light 7.1 (5.8 protan /
+  7.3 deutan), amber and brown 12° apart at the same weight; Saved/Withdrawn 7.8 light and
+  8.8 dark, neutral against brown by chroma alone; Interview/Rejected light, deutan 1.6, and
+  Offer/Withdrawn light, deutan 2.3; Applied/Assessment dark 9.5 (4.3 / 4.6 under CVD). Pairs
+  involving Ghosted are flagged by colour but carry the ring, and every dot in the product sits
+  beside its label as text.
+
+  None is a regression: each pair is equal to or better than its state before PR #22, when four
+  of the eight statuses were greys and two were the same token at 2.15:1, and the worst residual
+  (7.1) is a different order of problem from the contrast failure that started the work.
+  Withdrawn's clearer brown (`104 67 48` / `221 185 159`) was chosen over the lower-chroma taupe
+  (`91 65 55` / `226 195 183`) deliberately: the taupe raises Interview/Withdrawn to 9.9 but reads
+  as a fourth grey and crosses no CVD threshold. Moving any of these pairs further needs either
+  a second shape cue beyond Ghosted's ring (Withdrawn is the candidate) or a change to the
+  semantic tokens themselves, and both are separate design decisions to take in a future session
+  only if one of these pairs becomes an actual reported problem.
