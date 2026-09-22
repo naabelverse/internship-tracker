@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The API says at boot whether the demo account exists.** Once the database
+  connects it logs `Demo account ready`, or a `warn` naming `DEMO_EMAIL` and the
+  seed command, so a deployment that shows "Try the demo" without having run
+  `npm run seed` is visible in the deploy log rather than only as a visitor's
+  404 toast. `DEPLOYMENT.md` step 11 now runs the seed through `railway run`,
+  which is what points it at Atlas instead of a local `MONGO_URI`.
 - `DEPLOYMENT.md`: free-tier deployment to MongoDB Atlas, Render and Vercel,
   covering every production environment variable, the cross-origin cookie and
   CORS configuration, SPF/DKIM/DMARC records for email deliverability, cold-start

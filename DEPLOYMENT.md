@@ -1255,11 +1255,19 @@ authentication surface, no route, no role model.
 ## Step 11 — Seed the demo account
 
 The landing page's **Try the demo** button signs a visitor into a sandboxed account, and it needs
-that account to exist. Run it through the Railway CLI so it uses the deployed variables:
+that account to exist. Run it through the Railway CLI so it uses the deployed variables — the
+`railway run` prefix is what points it at Atlas rather than the `MONGO_URI` in your local
+`server/.env`, exactly as the migration step in 4.4 does:
 
 ```bash
-npm run seed -w server
+railway link                          # once: pick the project, then the api service
+railway run npm run seed -w server
 ```
+
+The API also checks for the account every time it boots and logs
+`No demo account on this deployment: POST /auth/demo answers 404 until it is seeded` at `warn`
+until this step has been done, so a skipped seed shows up in the deploy log rather than as a
+visitor's error toast.
 
 This creates `DEMO_EMAIL` / `DEMO_PASSWORD` with 60+ realistic applications spread over six months,
 so every dashboard chart has real data. `npm run seed:reset` wipes and reseeds; a nightly cron
@@ -1399,6 +1407,8 @@ launch.
 
 - [ ] `GET /health` → 200 and `GET /ready` → 200 on the live API.
 - [ ] `npm run migrate -w server` has been run against the production database.
+- [ ] `railway run npm run seed -w server` has been run, and the api boot log says `Demo account ready`
+      rather than `No demo account on this deployment`. (Step 11.)
 - [ ] Opening `https://tracker.example.com/applications` **directly** and reloading it returns the
       app, not a 404 — the Caddy `try_files` fallback. (Step 5.4.)
 - [ ] Source maps are not published: `curl -I https://tracker.example.com/assets/index-*.js.map`
