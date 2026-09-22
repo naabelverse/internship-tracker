@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The auth pages' logo is easier to hit.** The "Internship Tracker" lockup on
+  sign-in, create-account, forgot-password, reset-password, verify-email and
+  account-closed was a 146x20 link — wide enough, but half as tall as a
+  comfortable pointer or thumb target, and on a phone it is the only chrome the
+  page has. Its clickable area is now 40px tall, gained from an invisible band
+  centred on the lockup rather than from padding. Nothing moves: the mark, the
+  wordmark, the gap between them, the focus ring and the theme toggle opposite
+  are at identical coordinates across all six pages, both themes and every
+  width, and the larger target cannot reach the toggle.
 - **The auth pages' marketing panel no longer hugs the left edge.** Its copy sat
   40px from the viewport edge at every width, while the form beside it sits 64px
   from its own edge at the narrowest split and 168px at 1440 — the two halves
