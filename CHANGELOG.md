@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The auth pages' marketing panel no longer hugs the left edge.** Its copy sat
+  40px from the viewport edge at every width, while the form beside it sits 64px
+  from its own edge at the narrowest split and 168px at 1440 — the two halves
+  insetting by different mechanisms, so the page read as lopsided on sign-in,
+  create-account, forgot-password, reset-password, verify-email and
+  account-closed alike. The panel's horizontal padding now starts at that same
+  64px and widens on larger screens. Its vertical spacing, the copy itself and
+  the logo's position, target and hover are all unchanged, and the panel is
+  still hidden on phones.
 - **The auth pages' logo is a link home, at every width.** The "Internship
   Tracker" lockup at the top of the sign-in, create-account, forgot-password,
   reset-password, verify-email and account-closed pages was a static label,
