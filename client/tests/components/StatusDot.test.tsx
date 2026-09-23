@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { StatusDot } from '@/components/ui/StatusDot';
 import type { ApplicationStatus } from '@/types/application';
 
-function dot(status: ApplicationStatus, size?: 'xs' | 'sm' | 'md'): Element {
-  const { container } = render(<StatusDot status={status} size={size} />);
+function dot(status: ApplicationStatus): Element {
+  const { container } = render(<StatusDot status={status} />);
   const element = container.querySelector('[data-status-dot]');
 
   if (!element) throw new Error('StatusDot rendered nothing');
@@ -33,14 +33,6 @@ describe('StatusDot', () => {
     expect(element.getAttribute('data-status-dot')).toBe('solid');
     expect(element.className).toContain('bg-status-saved');
     expect(element.className).not.toMatch(/\bborder/);
-  });
-
-  it('thins the ring at the smallest size so the hole survives', () => {
-    const element = dot('ghosted', 'xs');
-
-    expect(element.className).toContain('h-1.5');
-    expect(element.className).toMatch(/\bborder\b/);
-    expect(element.className).not.toContain('border-2');
   });
 
   it('is decorative, because every site pairs it with the label as text', () => {

@@ -326,9 +326,10 @@ describe.each(['light', 'dark'] as const)('%s theme atmosphere', (theme) => {
     expect(contrastRatio(token(name), glazed)).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
-  // The hero draws the smallest status dots in the app, six pixels, in two
-  // places the plain surfaces above do not cover: the example rows sit on the
-  // glazed panel and the pipeline rail on the lit canvas.
+  // The hero draws dots in two places the plain surfaces above do not cover:
+  // the example rows sit on the glazed panel and their key on the lit canvas.
+  // Both paint `danger` and `info`, which are status tokens too; gating all
+  // eight keeps either free to change which colours the key uses.
   it.each(STATUS_TOKENS)('%s reads as a status dot on the glazed panel', (name) => {
     expect(contrastRatio(token(name), glazed)).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
