@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { StatusDot } from '@/components/ui/StatusDot';
 import { UpcomingRow } from '@/features/dashboard/UpcomingRow';
-import { STATUS_CONFIG } from '@/lib/statusConfig';
+import { cn } from '@/lib/cn';
+import { EVENT_KIND_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
 import { APPLICATION_STATUSES } from '@/types/application';
 import type { CalendarEvent } from '@/types/calendar';
@@ -61,6 +62,33 @@ function exampleAt(inDays: number, now: Date): string {
   return at.toISOString();
 }
 
+const EVENT_KINDS = Object.keys(EVENT_KIND_CONFIG) as CalendarEvent['kind'][];
+
+/**
+ * What the panel's dots mean. They mark the event, not the application's
+ * status, so the page's status legend further down would contradict them here:
+ * an interview row is blue, and the Interview status is amber. This keys the
+ * two colours the panel actually uses, drawn the same size as the rows' dots.
+ */
+function EventKindKey(): JSX.Element {
+  return (
+    <ul
+      aria-label="What the dots mean"
+      className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2"
+    >
+      {EVENT_KINDS.map((kind) => (
+        <li key={kind} className="flex items-center gap-2 text-xs text-content-muted">
+          <span
+            className={cn('h-2 w-2 shrink-0 rounded-full', EVENT_KIND_CONFIG[kind].dot)}
+            aria-hidden="true"
+          />
+          {EVENT_KIND_CONFIG[kind].label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * The dashboard's upcoming panel, as it would look mid-search. Each row is the
  * dashboard's own `UpcomingRow`, so the date wording, the amber and the dot are
@@ -85,6 +113,8 @@ function DispatchPanel(): JSX.Element {
           ))}
         </ul>
       </div>
+
+      <EventKindKey />
 
       <figcaption className="mt-3 text-xs leading-relaxed text-content-subtle nums-proportional">
         An example week. Amber and red mean it needs attention.
@@ -152,7 +182,7 @@ export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Ele
             </p>
           </div>
 
-          <div className="lg:col-span-6 lg:pt-2">
+          <div className="lg:col-span-6 lg:self-center">
             <DispatchPanel />
           </div>
         </div>

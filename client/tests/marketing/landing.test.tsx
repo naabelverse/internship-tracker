@@ -103,7 +103,7 @@ describe("the hero's example panel", () => {
     const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
     const dots = [...panel.querySelectorAll<HTMLElement>('[data-event-dot]')];
 
-    expect(dots).toHaveLength(within(panel).getAllByRole('listitem').length);
+    expect(dots).toHaveLength(panel.querySelectorAll('[data-upcoming-row]').length);
 
     for (const dot of dots) {
       const kind = EVENT_KIND_CONFIG[dot.dataset.eventDot as CalendarEvent['kind']];
@@ -124,7 +124,8 @@ describe("the hero's example panel", () => {
 
     renderWithProviders(<App />, { route: paths.landing });
     const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
-    const items = within(panel).getAllByRole('listitem');
+    // The first list is the rows; the dot key below the card is the second.
+    const items = within(within(panel).getAllByRole('list')[0]).getAllByRole('listitem');
 
     // One UpcomingRow per item: a hand-built row here is what drifted before.
     for (const item of items) {
@@ -152,6 +153,28 @@ describe("the hero's example panel", () => {
     const caption = panel.querySelector('figcaption');
     expect(caption).toHaveTextContent(/amber and red mean it needs attention/i);
     expect(caption).not.toHaveTextContent(/only/i);
+  });
+
+  it('keys its dots by event type, not by application status', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+    const key = within(panel).getByRole('list', { name: 'What the dots mean' });
+    const entries = within(key).getAllByRole('listitem');
+
+    expect(entries).toHaveLength(Object.keys(EVENT_KIND_CONFIG).length);
+
+    for (const [kind, config] of Object.entries(EVENT_KIND_CONFIG)) {
+      const entry = within(key).getByText(config.label);
+
+      expect(entry.querySelector('[aria-hidden="true"]')).toHaveClass(config.dot);
+      expect(panel.querySelector(`[data-event-dot="${kind}"]`)).toHaveClass(config.dot);
+    }
+
+    // The status legend sits at the foot of the hero, not beside the panel,
+    // where its amber Interview would contradict the blue interview rows.
+    expect(within(panel).queryByText(STATUS_CONFIG.withdrawn.label)).toBeNull();
   });
 });
 
