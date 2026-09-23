@@ -3593,3 +3593,31 @@ what a row's dot means.
   Interview sits at 12.02, so the floor is effectively a pin on that pair, which is intended.
   The floor covers Withdrawn's pairs rather than all 28: a palette-wide floor would fail on the
   semantic pairs above, which this change deliberately leaves alone.
+
+## A dot key under the hero panel, not the status legend (23 Sep 2026)
+
+The request was to move the eight-status legend from the foot of the hero to sit under the "Next
+up" panel, on the premise that it explains the panel's dots and would fill the empty space under
+the shorter right-hand column.
+
+- **The premise stopped being true in PR #28.** The panel's dots mark the event kind from
+  `EVENT_KIND_CONFIG` — deadline `bg-danger`, interview `bg-info` — not the application status.
+  A prototype with the status legend under the panel put an interview row's blue dot directly
+  above a legend that says blue is Applied and Interview is amber, and a deadline's red above
+  "Rejected". That is the disagreement PR #28 removed, reintroduced by layout.
+- **So the panel gets a key for what it does paint, and the status legend stays where it was.**
+  `EventKindKey` sits between the card and the caption, reads `EVENT_KIND_CONFIG` so it cannot
+  drift from the rows, and draws its dots at the rows' 8px rather than the legend's 6px. Key
+  before caption because the caption's "red" then points at a colour the reader has just seen
+  named. It uses `mt-3`, the spacing this hero already uses under the card and under the buttons.
+- **The key does not balance the columns; centring the right column does.** At 1440 and 1024
+  wide the right column's content grew from 306px to 334px against the left's 498px, which left
+  8px above it and 156px below. The status-legend version would have reached 362px, still 136px
+  short, and wrapped Withdrawn onto a line of its own. Nothing was added to fill the space:
+  the right column swapped `lg:pt-2` for `lg:self-center`, so it now sits 82px from the top and
+  82px from the bottom of the grid. `lg:pt-2` only nudged the card's top down to meet the
+  headline's cap height, which stops meaning anything once the column is centred, and kept
+  would have put the card 4px off centre. Below `lg` the grid is one column and nothing changes.
+- **Two existing hero tests were narrowed, deliberately.** They counted every list item in the
+  figure as a row; the key adds two that are not. They now count `[data-upcoming-row]` and the
+  rows list respectively, which is what they meant.
