@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The landing page's "Next up" example says what its dots mean.** A small
+  key under the card names the two colours it uses, red for a deadline and blue
+  for an interview, so they are not read against the status legend lower down,
+  where blue is Applied and Interview is amber. On wide screens the card now
+  sits centred against the headline column instead of hanging from its top.
 - **Withdrawn no longer looks like Interview.** Its brown sat so close to
   Interview's amber in the light theme that the two were hard to tell apart at
   dot size, closer than Interview is to Rejected's red. Withdrawn is now a
