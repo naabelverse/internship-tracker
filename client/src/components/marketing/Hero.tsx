@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { StatusDot } from '@/components/ui/StatusDot';
-import { STATUS_CONFIG } from '@/lib/statusConfig';
+import { EVENT_KIND_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
-import { APPLICATION_STATUSES, type ApplicationStatus } from '@/types/application';
+import { APPLICATION_STATUSES } from '@/types/application';
+import type { CalendarEvent } from '@/types/calendar';
 
 /**
  * The landing hero, per SPEC section 12.
@@ -27,9 +28,10 @@ interface HeroProps {
 interface ExampleRow {
   company: string;
   role: string;
-  status: ApplicationStatus;
+  /** What the dashboard's upcoming panel marks a row by: the event, not the status. */
+  kind: CalendarEvent['kind'];
   due: string;
-  /** The imminent one is the only warm thing in the panel. That is the point. */
+  /** Inside three days, which is where the dashboard turns the date amber. */
   urgent?: boolean;
 }
 
@@ -44,13 +46,13 @@ const EXAMPLE_ROWS: ExampleRow[] = [
   {
     company: 'Stripe',
     role: 'Software Engineering Intern',
-    status: 'interview',
+    kind: 'interview',
     due: 'in 2 days',
     urgent: true,
   },
-  { company: 'Razorpay', role: 'Backend Intern', status: 'assessment', due: 'in 4 days' },
-  { company: 'Zomato', role: 'Data Analyst Intern', status: 'applied', due: 'in 6 days' },
-  { company: 'Notion', role: 'Product Design Intern', status: 'saved', due: 'in 11 days' },
+  { company: 'Razorpay', role: 'Backend Intern', kind: 'deadline', due: 'in 4 days' },
+  { company: 'Zomato', role: 'Data Analyst Intern', kind: 'interview', due: 'in 6 days' },
+  { company: 'Notion', role: 'Product Design Intern', kind: 'deadline', due: 'in 11 days' },
 ];
 
 /** The deadline list, as it would look mid-search. */
@@ -65,7 +67,7 @@ function DispatchPanel(): JSX.Element {
 
         <ul className="divide-y divide-border">
           {EXAMPLE_ROWS.map((row) => {
-            const status = STATUS_CONFIG[row.status];
+            const kind = EVENT_KIND_CONFIG[row.kind];
 
             return (
               <li
@@ -84,8 +86,12 @@ function DispatchPanel(): JSX.Element {
                 </p>
                 <p className="truncate text-xs text-content-muted">{row.role}</p>
                 <p className="flex items-center justify-end gap-1.5 text-xs text-content-muted">
-                  <StatusDot status={row.status} size="xs" />
-                  {status.label}
+                  <span
+                    data-event-dot={row.kind}
+                    aria-hidden="true"
+                    className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${kind.dot}`}
+                  />
+                  {kind.label}
                 </p>
               </li>
             );

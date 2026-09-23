@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { CalendarIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 import { daysUntil, formatDateTime, formatRelative } from '@/lib/formatters';
+import { EVENT_KIND_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -82,10 +83,8 @@ export function UpcomingPanel({
                 className="flex items-center gap-3 rounded-control py-2.5 transition-colors hover:bg-surface-muted"
               >
                 <span
-                  className={cn(
-                    'h-2 w-2 shrink-0 rounded-full',
-                    event.kind === 'deadline' ? 'bg-danger' : 'bg-info',
-                  )}
+                  data-event-dot={event.kind}
+                  className={cn('h-2 w-2 shrink-0 rounded-full', EVENT_KIND_CONFIG[event.kind].dot)}
                   aria-hidden="true"
                 />
                 <span className="min-w-0 flex-1">
@@ -93,7 +92,7 @@ export function UpcomingPanel({
                     {event.company}
                   </span>
                   <span className="block truncate text-xs text-content-subtle">
-                    {event.kind === 'deadline' ? 'Deadline' : 'Interview'} — {event.role}
+                    {EVENT_KIND_CONFIG[event.kind].label} — {event.role}
                   </span>
                 </span>
                 <span className="shrink-0 text-right">

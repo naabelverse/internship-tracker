@@ -1,8 +1,10 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
+import { EVENT_KIND_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
+import type { CalendarEvent } from '@/types/calendar';
 import { errorBody, makeSession, makeUser, successBody } from '../utils/factories';
 import { installMockApi } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
@@ -90,6 +92,31 @@ describe('the landing page', () => {
     expect(image.getAttribute('alt')?.length ?? 0).toBeGreaterThan(40);
     // Below the fold, so it must not compete with the hero for bandwidth.
     expect(image).toHaveAttribute('loading', 'lazy');
+  });
+});
+
+describe("the hero's example panel", () => {
+  it('marks each row by event type, painted as the dashboard paints it', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+    const dots = [...panel.querySelectorAll<HTMLElement>('[data-event-dot]')];
+
+    expect(dots).toHaveLength(within(panel).getAllByRole('listitem').length);
+
+    for (const dot of dots) {
+      const kind = EVENT_KIND_CONFIG[dot.dataset.eventDot as CalendarEvent['kind']];
+
+      expect(dot).toHaveClass(kind.dot);
+      expect(dot.parentElement).toHaveTextContent(kind.label);
+    }
+
+    // The regression: the panel used to paint an interview with the Interview
+    // *status* colour, amber, where the dashboard's upcoming panel paints it blue.
+    expect(panel.querySelector('[data-event-dot="interview"]')).not.toHaveClass(
+      STATUS_CONFIG.interview.dot,
+    );
   });
 });
 
