@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Withdrawn no longer looks like Interview.** Its brown sat so close to
+  Interview's amber in the light theme that the two were hard to tell apart at
+  dot size, closer than Interview is to Rejected's red. Withdrawn is now a
+  deeper brown in the light theme and a paler sand in the dark theme, the same
+  hue at a lightness no other status uses. The change reaches every status pill,
+  dot, board column, timeline marker and doughnut slice at once, and it also
+  separates Withdrawn from Saved, Offer and Rejected for colour-blind readers.
 - **The landing page's "Next up" example now shows the dashboard as it really
   is.** It was hand-built and had drifted: it coloured each row by application
   status, so an interview was amber on the landing page and blue in the

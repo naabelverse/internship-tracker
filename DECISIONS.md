@@ -3532,3 +3532,64 @@ what a row's dot means.
   now reaches `lib/formatters`, and through it date-fns. Formatting the example with the product's
   own functions is the whole point of the change, so a hand-rolled "in N days" to save 8 KB would
   have reintroduced the copy this removes.
+
+## Withdrawn moves out of the status lightness band (23 Sep 2026)
+
+- **The pair.** Withdrawn `104 67 48` sat 7.1 (OKLab ΔE ×100) from Interview's amber in light,
+  closer than Interview sits to Rejected's red (9.8), and 11.2 in dark, where its nearest
+  status was in fact Saved at 8.8. PR #28's hero audit flagged it and left it out of scope.
+
+- **Hue and chroma could not move it.** A sweep of OKLCH hue 38–62° and chroma 0.045–0.09 at
+  every lightness the gates allow found nothing at L ≥ 0.43 in light that beats the shipped
+  value. Each candidate ran through every `tokenContrast.test.ts` assertion a status gets, the
+  glazed panel and lit canvas included, and only values that make no Withdrawn pair worse under
+  protan or deutan were kept. Turning the hue toward red trades Interview for Rejected under
+  protan; dropping chroma trades Interview for Saved. The unconstrained optimum was oxblood at
+  25°, Rejected's own hue. The tint gate caps light Withdrawn at L 0.48 and dark at 0.74, so
+  the one open direction is away from the ground — and lightness is also the axis that
+  survives a red-green deficiency.
+
+- **Values.** Light `79 47 30` (OKLCH 0.341 0.055 48.2°), dark `245 207 181` (0.880 0.055
+  56.3°). Hue and chroma are unchanged within rounding; only lightness moves. The nearest
+  status is now Interview in both themes, 14.0 light and 12.0 dark, and the lowest pair under
+  colour-vision deficiency is 7.3 light (Rejected, protan) and 6.9 dark (Offer, protan). All
+  fourteen of Withdrawn's pairs grew, under all three kinds of vision. Of the weak pairs the
+  status legend audit listed: Interview/Withdrawn light 7.1 → 14.0 (protan 5.8 → 12.0);
+  Saved/Withdrawn 7.8 → 14.2 light, 8.8 → 15.0 dark; Offer/Withdrawn deutan 2.3 → 10.4 light,
+  3.9 → 10.5 dark; Rejected/Withdrawn protan 3.5 → 7.3 light, deutan 6.5 → 13.0 dark. Pairs
+  that do not involve Withdrawn are untouched and are now the weakest in the palette, all
+  between fixed semantics: Interview/Rejected deutan 1.6 light, Offer/Rejected deutan 2.6
+  dark, Applied/Assessment 4.3 / 4.6 dark.
+
+- **Gates.** Pill text on the card 8.38 → 11.60 light and 8.49 → 10.67 dark; text against its
+  own tint on the least forgiving surface 5.70 → 7.64 and 5.50 → 6.58; dot on the least
+  forgiving ground 5.43 → 7.51 (the lit canvas) and 7.25 → 9.11.
+
+- **This supersedes "Withdrawn stays the clearer brown" in the status legend entry, in part.**
+  That decision held Withdrawn inside the band the other seven share (light L 0.42–0.48, dark
+  0.74–0.83), which is why it concluded that "its one lever is chroma". Its reason for keeping
+  the brown — chroma 0.06 reads as brown, the lower-chroma taupe as a fourth grey — stands, and
+  chroma stays at 0.055. What is given up is the band.
+
+- **A correction to that entry's record of the taupe.** Re-measured on `main @ 4791a18`, the
+  declined taupe (`91 65 55` / `226 195 183`) raises Interview/Withdrawn to 9.9 light and 13.0
+  dark, but it also makes three more colour-blind pairs worse, in both themes: Ghosted (light
+  12.1 → 11.1, dark 10.4 → 7.9), Assessment (17.5 → 16.5, 13.9 → 13.7) and Applied (25.5 → 24.3,
+  15.0 → 13.7). PR #22's checkpoint reported only the two pairs the taupe improved. Keeping the
+  brown over the taupe was right, for a stronger reason than was known when it was decided.
+
+- **What it costs.** Withdrawn is now the heaviest mark in both themes — the darkest dot and
+  slice in light, the palest in dark — so a closed status carries the most visual weight. It
+  also sits nearer the body text: light against `text-muted` 10.0 → 7.7, dark against `text`
+  14.4 → 8.8. Each is a warm colour beside a cool neutral, and the pill's tint frames the label.
+  The hero rail, the doughnut and the board headers were captured in both themes and reviewed
+  before the change was made.
+
+- **The guard.** `tokenContrast.test.ts` now holds Withdrawn at least 12 from each of the other
+  seven statuses, and at least 6 under protan and deutan, in both themes, through
+  `tests/utils/colorDistance.ts` — OKLab with the Machado 2009 matrices at full severity, the
+  method the audit used, so its figures reproduce. Against the old values 8 of the 14 cases
+  fail, printing the audit's own numbers (7.12, 2.35, 3.53, 8.83, 11.22, 3.89 among them). Dark
+  Interview sits at 12.02, so the floor is effectively a pin on that pair, which is intended.
+  The floor covers Withdrawn's pairs rather than all 28: a palette-wide floor would fail on the
+  semantic pairs above, which this change deliberately leaves alone.

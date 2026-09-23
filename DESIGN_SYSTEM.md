@@ -87,13 +87,17 @@ the four here have nothing to borrow.
 | `status-saved`      | Saved      | `91 91 91`   | `171 171 171` |
 | `status-assessment` | Assessment | `119 61 161` | `201 157 228` |
 | `status-ghosted`    | Ghosted    | `43 78 122`  | `163 196 234` |
-| `status-withdrawn`  | Withdrawn  | `104 67 48`  | `221 185 159` |
+| `status-withdrawn`  | Withdrawn  | `79 47 30`   | `245 207 181` |
 
 Saved is a true neutral (equal channels) and Ghosted a cool slate at roughly twice the
 chroma of a Tailwind slate, because a grey and a grey-blue at the same lightness read as
 one colour at dot size. Ghosted is also the one status drawn **hollow** — `StatusDot`
 renders it as a ring — so the pair that used to be two greys is told apart by shape as
-well as hue. `lib/statusConfig.ts` is the single map; `tests/config/statusConfig.test.ts`
+well as hue. Withdrawn is the one status outside the shared lightness band — darker than
+the rest in light, paler in dark — because inside the band its brown sat 7.1 OKLab ΔE ×100
+from Interview's amber, and every hue or chroma move traded that pair for another.
+`tokenContrast.test.ts` holds it at least 12 from every status, and 6 under protan and
+deutan vision. `lib/statusConfig.ts` is the single map; `tests/config/statusConfig.test.ts`
 asserts every class in it names its own token, which is what lets the doughnut read the
 token directly without a second map that can drift.
 
