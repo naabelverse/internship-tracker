@@ -100,7 +100,7 @@ function DispatchPanel(): JSX.Element {
       </div>
 
       <figcaption className="mt-3 text-xs leading-relaxed text-content-subtle nums-proportional">
-        An example week. Amber is the only colour that means hurry.
+        An example week. Amber and red mean it needs attention.
       </figcaption>
     </figure>
   );

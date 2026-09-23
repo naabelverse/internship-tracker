@@ -14,9 +14,10 @@ import type { CalendarEvent } from '@/types/calendar';
  * The custom property a status paints with, everywhere it is painted.
  *
  * Applied, Interview, Offer and Rejected carry the semantic their token already
- * means - the hero copy says amber is the only colour that means hurry, and
- * that is Interview - so they share it rather than duplicating its value. The
- * other four have no semantic to borrow and have tokens of their own.
+ * means - amber and red are the colours that ask for attention, and Interview
+ * is the status that asks for it soonest - so they share it rather than
+ * duplicating its value. The other four have no semantic to borrow and have
+ * tokens of their own.
  */
 export type StatusToken =
   | 'color-status-saved'

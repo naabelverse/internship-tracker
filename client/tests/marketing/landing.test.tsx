@@ -118,6 +118,21 @@ describe("the hero's example panel", () => {
       STATUS_CONFIG.interview.dot,
     );
   });
+
+  it('names both warm colours in its caption, because the panel paints with both', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+
+    expect(panel.querySelector('.text-warning')).not.toBeNull();
+    expect(panel.querySelector('.bg-danger')).not.toBeNull();
+    // The caption used to say amber was the only colour that meant hurry,
+    // beside a red deadline dot and in an app that paints overdue dates red.
+    const caption = panel.querySelector('figcaption');
+    expect(caption).toHaveTextContent(/amber and red mean it needs attention/i);
+    expect(caption).not.toHaveTextContent(/only/i);
+  });
 });
 
 describe('the FAQ accordion', () => {

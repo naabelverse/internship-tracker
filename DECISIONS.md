@@ -3506,3 +3506,11 @@ what a row's dot means.
   inline ternary in `UpcomingPanel`; putting it beside `STATUS_CONFIG` gives the hero one source to
   read rather than a second copy of the ternary to drift from. The calendar's month grid already
   uses the same danger/info pair as pill tones in `monthModel.ts` and was left alone.
+
+- **The caption was reworded, not the palette.** "Amber is the only colour that means hurry" was
+  untrue: red marks overdue dates, High priority and every deadline dot, and in the light theme
+  Withdrawn's brown sits closer to the amber than Rejected's red does. The rule Phase 17 actually
+  recorded is that amber and red are the warm colours and warm means it wants attention, so the
+  caption now says that: "Amber and red mean it needs attention." Moving Withdrawn or Rejected
+  off the warm side of the wheel is a palette change with its own risk and was left out of scope;
+  this supersedes the caption quoted in the status legend entry above.
