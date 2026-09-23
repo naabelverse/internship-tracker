@@ -2,6 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DashboardView } from '@/features/dashboard/DashboardView';
+import { EVENT_KIND_CONFIG } from '@/lib/statusConfig';
+import type { CalendarEvent } from '@/types/calendar';
 import {
   makeCalendarEvent,
   makeFunnel,
@@ -219,6 +221,23 @@ describe('dashboard', () => {
       expect(within(items[0]).getByText('Shopee')).toBeInTheDocument();
       expect(within(items[0]).getByText(/in 2 days/i)).toBeInTheDocument();
       expect(within(items[1]).getByText(/in 3 days/i)).toBeInTheDocument();
+    });
+
+    it('marks each row by event type from the config the landing hero shares', async () => {
+      renderDashboard();
+
+      const panel = (await screen.findByText('Upcoming')).closest('section') as HTMLElement;
+      await within(panel).findAllByRole('listitem');
+      const dots = [...panel.querySelectorAll<HTMLElement>('[data-event-dot]')];
+
+      expect(dots.map((dot) => dot.dataset.eventDot)).toEqual(
+        expect.arrayContaining(['deadline', 'interview']),
+      );
+      for (const dot of dots) {
+        const kind = EVENT_KIND_CONFIG[dot.dataset.eventDot as CalendarEvent['kind']];
+
+        expect(dot).toHaveClass(kind.dot);
+      }
     });
 
     it('shows at most five', async () => {

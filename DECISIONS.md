@@ -3488,3 +3488,47 @@ presence the blue has on the auth split screen.
   lockup's own width, so it grows only vertically and the two ends of the phone bar stay as far
   apart as `justify-between` puts them — about 107px of clear space at 375px. The regression test
   asserts the non-overlap directly rather than trusting that reasoning.
+
+## The landing hero's "Next up" panel and the dashboard's upcoming panel (23 Sep 2026)
+
+An audit of the hero panel against the in-app list it depicts found it was hand-built markup that
+shared only `StatusDot` and the theme tokens with the product, and that the two disagreed about
+what a row's dot means.
+
+- **The dot marks the event, not the application's status, and the hero was changed to match.**
+  `UpcomingPanel` paints a deadline red and an interview blue; the hero painted each row with its
+  application status, so an interview was amber on the landing page and blue on the dashboard.
+  Event type is the more useful signal in a panel of upcoming things - the question is "is this a
+  deadline or an interview" - so the real app kept its meaning and the hero's example rows now
+  carry an event kind instead of a status.
+
+- **The kind-to-colour mapping moved into `EVENT_KIND_CONFIG` in `statusConfig.ts`.** It was an
+  inline ternary in `UpcomingPanel`; putting it beside `STATUS_CONFIG` gives the hero one source to
+  read rather than a second copy of the ternary to drift from. The calendar's month grid already
+  uses the same danger/info pair as pill tones in `monthModel.ts` and was left alone.
+
+- **The caption was reworded, not the palette.** "Amber is the only colour that means hurry" was
+  untrue: red marks overdue dates, High priority and every deadline dot, and in the light theme
+  Withdrawn's brown sits closer to the amber than Rejected's red does. The rule Phase 17 actually
+  recorded is that amber and red are the warm colours and warm means it wants attention, so the
+  caption now says that: "Amber and red mean it needs attention." Moving Withdrawn or Rejected
+  off the warm side of the wheel is a palette change with its own risk and was left out of scope;
+  this supersedes the caption quoted in the status legend entry above.
+
+- **The hero now renders the dashboard's own row.** `UpcomingRow` holds the dot, the text, the
+  relative and absolute dates and `urgencyClass`; `UpcomingPanel` wraps it in a link to the
+  application and the hero renders it plain, because an example has nowhere to go. The hero's
+  frame - the "Next up" header, "12 open", the glaze, the 14px radius and the caption - stayed
+  hero-only on purpose: it is presentation around the example, not part of what the example claims
+  the product looks like.
+
+- **The example dates are offsets from today, not fixed dates or strings.** The rows are stored
+  as whole days from now and dated at render, rounded down to the hour so the absolute time reads
+  like a booking. Losing under an hour from a whole number of days still rounds to the same
+  "in N days", so the copy stays true on any day, and the amber on the first row is `urgencyClass`
+  applied to a date two days out rather than a flag saying so.
+
+- **The landing chunk grew from 114.2 KB to 122.4 KB gzip, inside its 150 KB budget.** The hero
+  now reaches `lib/formatters`, and through it date-fns. Formatting the example with the product's
+  own functions is the whole point of the change, so a hand-rolled "in N days" to save 8 KB would
+  have reintroduced the copy this removes.

@@ -3,8 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CalendarIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/cn';
-import { daysUntil, formatDateTime, formatRelative } from '@/lib/formatters';
+import { UpcomingRow } from '@/features/dashboard/UpcomingRow';
 import { paths } from '@/routes/paths';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -17,22 +16,9 @@ interface UpcomingPanelProps {
 
 const UPCOMING_LIMIT = 5;
 
-/** Matches the board's deadline chip: amber inside three days, red once overdue. */
-function urgencyClass(at: string): string {
-  const days = daysUntil(at);
-
-  if (days === null) return 'text-content-subtle';
-  if (days < 0) return 'text-danger';
-
-  return days <= 3 ? 'text-warning' : 'text-content-subtle';
-}
-
 /**
- * The next five deadlines and interviews, from the merged calendar stream.
- *
- * The relative date is the headline SPEC section 6 asks for, with the absolute
- * moment kept beside it — "in 3 days" alone is ambiguous once someone has left
- * the tab open overnight.
+ * The next five deadlines and interviews, from the merged calendar stream. Each
+ * row is an `UpcomingRow`, which the landing hero's example panel renders too.
  */
 export function UpcomingPanel({
   events,
@@ -77,34 +63,7 @@ export function UpcomingPanel({
         <ul className="mt-3 divide-y divide-border">
           {upcoming.map((event) => (
             <li key={event.id}>
-              <Link
-                to={paths.applicationDetail(event.applicationId)}
-                className="flex items-center gap-3 rounded-control py-2.5 transition-colors hover:bg-surface-muted"
-              >
-                <span
-                  className={cn(
-                    'h-2 w-2 shrink-0 rounded-full',
-                    event.kind === 'deadline' ? 'bg-danger' : 'bg-info',
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-content">
-                    {event.company}
-                  </span>
-                  <span className="block truncate text-xs text-content-subtle">
-                    {event.kind === 'deadline' ? 'Deadline' : 'Interview'} — {event.role}
-                  </span>
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className={cn('block text-xs font-medium', urgencyClass(event.at))}>
-                    {formatRelative(event.at)}
-                  </span>
-                  <span className="block text-[0.625rem] text-content-subtle">
-                    {formatDateTime(event.at)}
-                  </span>
-                </span>
-              </Link>
+              <UpcomingRow event={event} to={paths.applicationDetail(event.applicationId)} />
             </li>
           ))}
         </ul>

@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { StatusDot } from '@/components/ui/StatusDot';
+import { UpcomingRow } from '@/features/dashboard/UpcomingRow';
 import { STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
-import { APPLICATION_STATUSES, type ApplicationStatus } from '@/types/application';
+import { APPLICATION_STATUSES } from '@/types/application';
+import type { CalendarEvent } from '@/types/calendar';
 
 /**
  * The landing hero, per SPEC section 12.
@@ -24,13 +26,12 @@ interface HeroProps {
   showDemo: boolean;
 }
 
-interface ExampleRow {
+interface ExampleEvent {
   company: string;
   role: string;
-  status: ApplicationStatus;
-  due: string;
-  /** The imminent one is the only warm thing in the panel. That is the point. */
-  urgent?: boolean;
+  kind: CalendarEvent['kind'];
+  /** Whole days from now. The panel dates itself when it renders, so it never goes stale. */
+  inDays: number;
 }
 
 /**
@@ -40,21 +41,34 @@ interface ExampleRow {
  * making the claim that this is what your week looks like, and placeholder names
  * would undercut it.
  */
-const EXAMPLE_ROWS: ExampleRow[] = [
-  {
-    company: 'Stripe',
-    role: 'Software Engineering Intern',
-    status: 'interview',
-    due: 'in 2 days',
-    urgent: true,
-  },
-  { company: 'Razorpay', role: 'Backend Intern', status: 'assessment', due: 'in 4 days' },
-  { company: 'Zomato', role: 'Data Analyst Intern', status: 'applied', due: 'in 6 days' },
-  { company: 'Notion', role: 'Product Design Intern', status: 'saved', due: 'in 11 days' },
+const EXAMPLE_EVENTS: ExampleEvent[] = [
+  { company: 'Stripe', role: 'Software Engineering Intern', kind: 'interview', inDays: 2 },
+  { company: 'Razorpay', role: 'Backend Intern', kind: 'deadline', inDays: 4 },
+  { company: 'Zomato', role: 'Data Analyst Intern', kind: 'interview', inDays: 6 },
+  { company: 'Notion', role: 'Product Design Intern', kind: 'deadline', inDays: 11 },
 ];
 
-/** The deadline list, as it would look mid-search. */
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * The example's instant, on the hour so the absolute time reads like a real
+ * booking. Dropping the minutes takes less than an hour off a whole number of
+ * days, which the relative date still rounds back to the same "in N days".
+ */
+function exampleAt(inDays: number, now: Date): string {
+  const at = new Date(now.getTime() + inDays * MS_PER_DAY);
+  at.setMinutes(0, 0, 0);
+  return at.toISOString();
+}
+
+/**
+ * The dashboard's upcoming panel, as it would look mid-search. Each row is the
+ * dashboard's own `UpcomingRow`, so the date wording, the amber and the dot are
+ * whatever the product does today rather than a copy of it.
+ */
 function DispatchPanel(): JSX.Element {
+  const now = new Date();
+
   return (
     <figure className="m-0">
       <div className="atmos-lit overflow-hidden rounded-panel border border-border bg-surface shadow-float">
@@ -64,37 +78,16 @@ function DispatchPanel(): JSX.Element {
         </div>
 
         <ul className="divide-y divide-border">
-          {EXAMPLE_ROWS.map((row) => {
-            const status = STATUS_CONFIG[row.status];
-
-            return (
-              <li
-                key={row.company}
-                className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 px-4 py-3.5 sm:px-5"
-              >
-                <p className="truncate text-sm font-semibold tracking-tight text-content">
-                  {row.company}
-                </p>
-                <p
-                  className={`text-right text-xs font-semibold ${
-                    row.urgent === true ? 'text-warning' : 'text-content-subtle'
-                  }`}
-                >
-                  {row.due}
-                </p>
-                <p className="truncate text-xs text-content-muted">{row.role}</p>
-                <p className="flex items-center justify-end gap-1.5 text-xs text-content-muted">
-                  <StatusDot status={row.status} size="xs" />
-                  {status.label}
-                </p>
-              </li>
-            );
-          })}
+          {EXAMPLE_EVENTS.map((example) => (
+            <li key={example.company} className="px-4 sm:px-5">
+              <UpcomingRow event={{ ...example, at: exampleAt(example.inDays, now) }} />
+            </li>
+          ))}
         </ul>
       </div>
 
       <figcaption className="mt-3 text-xs leading-relaxed text-content-subtle nums-proportional">
-        An example week. Amber is the only colour that means hurry.
+        An example week. Amber and red mean it needs attention.
       </figcaption>
     </figure>
   );

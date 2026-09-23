@@ -1,8 +1,10 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
+import { EVENT_KIND_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
+import type { CalendarEvent } from '@/types/calendar';
 import { errorBody, makeSession, makeUser, successBody } from '../utils/factories';
 import { installMockApi } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
@@ -90,6 +92,66 @@ describe('the landing page', () => {
     expect(image.getAttribute('alt')?.length ?? 0).toBeGreaterThan(40);
     // Below the fold, so it must not compete with the hero for bandwidth.
     expect(image).toHaveAttribute('loading', 'lazy');
+  });
+});
+
+describe("the hero's example panel", () => {
+  it('marks each row by event type, painted as the dashboard paints it', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+    const dots = [...panel.querySelectorAll<HTMLElement>('[data-event-dot]')];
+
+    expect(dots).toHaveLength(within(panel).getAllByRole('listitem').length);
+
+    for (const dot of dots) {
+      const kind = EVENT_KIND_CONFIG[dot.dataset.eventDot as CalendarEvent['kind']];
+
+      expect(dot).toHaveClass(kind.dot);
+      expect(dot.parentElement).toHaveTextContent(kind.label);
+    }
+
+    // The regression: the panel used to paint an interview with the Interview
+    // *status* colour, amber, where the dashboard's upcoming panel paints it blue.
+    expect(panel.querySelector('[data-event-dot="interview"]')).not.toHaveClass(
+      STATUS_CONFIG.interview.dot,
+    );
+  });
+
+  it("draws every row with the dashboard's own row, dated rather than told its urgency", async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+    const items = within(panel).getAllByRole('listitem');
+
+    // One UpcomingRow per item: a hand-built row here is what drifted before.
+    for (const item of items) {
+      expect(item.querySelectorAll('[data-upcoming-row]')).toHaveLength(1);
+    }
+    // An example has nowhere to go, so none of it is a link.
+    expect(within(panel).queryByRole('link')).toBeNull();
+
+    // The amber comes from the date: the first example is two days out.
+    const first = within(items[0]).getByText('in 2 days');
+    expect(first).toHaveClass('text-warning');
+    expect(within(items[1]).getByText('in 4 days')).toHaveClass('text-content-subtle');
+  });
+
+  it('names both warm colours in its caption, because the panel paints with both', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+
+    expect(panel.querySelector('.text-warning')).not.toBeNull();
+    expect(panel.querySelector('.bg-danger')).not.toBeNull();
+    // The caption used to say amber was the only colour that meant hurry,
+    // beside a red deadline dot and in an app that paints overdue dates red.
+    const caption = panel.querySelector('figcaption');
+    expect(caption).toHaveTextContent(/amber and red mean it needs attention/i);
+    expect(caption).not.toHaveTextContent(/only/i);
   });
 });
 

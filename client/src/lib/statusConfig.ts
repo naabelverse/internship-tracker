@@ -8,14 +8,16 @@ import type {
   Source,
   WorkMode,
 } from '@/types/application';
+import type { CalendarEvent } from '@/types/calendar';
 
 /**
  * The custom property a status paints with, everywhere it is painted.
  *
  * Applied, Interview, Offer and Rejected carry the semantic their token already
- * means - the hero copy says amber is the only colour that means hurry, and
- * that is Interview - so they share it rather than duplicating its value. The
- * other four have no semantic to borrow and have tokens of their own.
+ * means - amber and red are the colours that ask for attention, and Interview
+ * is the status that asks for it soonest - so they share it rather than
+ * duplicating its value. The other four have no semantic to borrow and have
+ * tokens of their own.
  */
 export type StatusToken =
   | 'color-status-saved'
@@ -99,6 +101,17 @@ export const STATUS_CONFIG: Record<ApplicationStatus, StatusConfig> = {
     pill: 'bg-status-withdrawn/15 text-status-withdrawn',
     dot: 'bg-status-withdrawn',
   },
+};
+
+/**
+ * What a calendar event is, in words and colour: the dot the upcoming panel
+ * puts on each row, and the landing hero's example of that panel. It marks the
+ * event, not the application's status, so an interview is blue here even though
+ * the Interview status is amber.
+ */
+export const EVENT_KIND_CONFIG: Record<CalendarEvent['kind'], { label: string; dot: string }> = {
+  deadline: { label: 'Deadline', dot: 'bg-danger' },
+  interview: { label: 'Interview', dot: 'bg-info' },
 };
 
 export const PRIORITY_CONFIG: Record<Priority, { label: string; dot: string }> = {

@@ -33,6 +33,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The landing page's "Next up" example now shows the dashboard as it really
+  is.** It was hand-built and had drifted: it coloured each row by application
+  status, so an interview was amber on the landing page and blue in the
+  dashboard's upcoming panel. Its caption also claimed amber was the only colour
+  that means hurry, while the app paints overdue dates red. The example now
+  renders the dashboard's own row: a dot for deadline or interview, the relative
+  date above the exact one, and amber inside three days decided by the same rule.
+  Its dates count from today, so "in 2 days" stays true. The caption now reads
+  "Amber and red mean it needs attention."
 - **The auth pages' logo is easier to hit.** The "Internship Tracker" lockup on
   sign-in, create-account, forgot-password, reset-password, verify-email and
   account-closed was a 146x20 link — wide enough, but half as tall as a
