@@ -62,6 +62,25 @@ describe('the landing page', () => {
     expect(cards.length).toBeLessThanOrEqual(6);
   });
 
+  it('gives every feature card the same cell, so no row is left with one card in it', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const heading = await screen.findByRole('heading', { name: /the spreadsheet was missing/i });
+    const grid = heading.parentElement?.querySelector('ul') as HTMLElement;
+    const cards = [...grid.querySelectorAll(':scope > li')];
+
+    // The regression: cells spanned 7/5, 4/4/4 and then 12, which stranded the
+    // shortest card alone in a full-width row. Equal columns that divide the
+    // card count leave every row full at both breakpoints.
+    expect(grid).toHaveClass('sm:grid-cols-2', 'lg:grid-cols-3');
+    expect(cards.length % 2).toBe(0);
+    expect(cards.length % 3).toBe(0);
+    for (const card of cards) {
+      expect(card.className).not.toMatch(/col-span/);
+    }
+  });
+
   it('links Terms, Privacy, the repository and a contact address from the footer', async () => {
     installMockApi({});
 
