@@ -56,14 +56,15 @@ export function readThemeNumbers(theme: 'light' | 'dark'): Record<string, number
   return values;
 }
 
-function channel(value: number): number {
+/** One 0-255 sRGB channel decoded to linear light, 0 to 1. */
+export function linearChannel(value: number): number {
   const c = value / 255;
   return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 }
 
 /** WCAG relative luminance. */
 function luminance([r, g, b]: Rgb): number {
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  return 0.2126 * linearChannel(r) + 0.7152 * linearChannel(g) + 0.0722 * linearChannel(b);
 }
 
 /** WCAG contrast ratio, 1 to 21. */

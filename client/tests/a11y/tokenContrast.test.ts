@@ -8,6 +8,7 @@ import {
   readThemeTokens,
   type Rgb,
 } from '../utils/contrast';
+import { colorDistance } from '../utils/colorDistance';
 import { SERIES_TOKENS } from '@/features/dashboard/charts/chartTokens';
 import { STATUS_CONFIG } from '@/lib/statusConfig';
 import { APPLICATION_STATUSES } from '@/types/application';
@@ -40,6 +41,11 @@ const PILL_TOKENS = [...new Set<string>([...SEMANTIC_TOKENS, ...STATUS_TOKENS])]
 
 /** `bg-<token>/15 text-<token>`, the shape every status pill and badge uses. */
 const PILL_ALPHA = 0.15;
+
+/** OKLab distance x100 that Withdrawn keeps from every other status. */
+const WITHDRAWN_MIN_DISTANCE = 12;
+/** The same gap as a protanope or deuteranope sees it. */
+const WITHDRAWN_MIN_CVD_DISTANCE = 6;
 
 const CHART_TOKENS = [
   'chart-1',
@@ -144,6 +150,29 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
     // Blue leads red by a margin a reader sees as colour, not as a cast.
     expect(ghostB - ghostR).toBeGreaterThanOrEqual(60);
   });
+
+  // Distinct values were not enough here either. Withdrawn's brown shipped 7.1
+  // from Interview's amber in light, closer than Rejected's red, and 2.3 from
+  // Offer's green for a deuteranope. It sat inside the other statuses'
+  // lightness band, where hue and chroma are the only levers and each one
+  // trades one neighbour for another. Lightness separates it now, and
+  // lightness is also what survives a red-green deficiency, so the gap is
+  // pinned under all three kinds of vision against every other status. In the
+  // dark theme Interview sits at 12.02, so an edit toward the amber fails here.
+  it.each(STATUS_TOKENS.filter((name) => name !== 'status-withdrawn'))(
+    'keeps status-withdrawn apart from %s, including under protan and deutan vision',
+    (name) => {
+      const withdrawn = token('status-withdrawn');
+      const other = token(name);
+
+      for (const vision of ['normal', 'protan', 'deutan'] as const) {
+        const distance = colorDistance(withdrawn, other, vision);
+        const floor = vision === 'normal' ? WITHDRAWN_MIN_DISTANCE : WITHDRAWN_MIN_CVD_DISTANCE;
+
+        expect(distance, `${vision} vision: ${distance.toFixed(2)}`).toBeGreaterThanOrEqual(floor);
+      }
+    },
+  );
 
   // The solid-fill pair is gated separately from the accent. Splitting them is
   // what lets the dark theme carry a genuinely deep button instead of a pastel
