@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
-import { StatusDot } from '@/components/ui/StatusDot';
 import { UpcomingRow } from '@/features/dashboard/UpcomingRow';
 import { cn } from '@/lib/cn';
-import { EVENT_KIND_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
+import { EVENT_KIND_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
-import { APPLICATION_STATUSES } from '@/types/application';
 import type { CalendarEvent } from '@/types/calendar';
 
 /**
@@ -66,9 +64,9 @@ const EVENT_KINDS = Object.keys(EVENT_KIND_CONFIG) as CalendarEvent['kind'][];
 
 /**
  * What the panel's dots mean. They mark the event, not the application's
- * status, so the page's status legend further down would contradict them here:
- * an interview row is blue, and the Interview status is amber. This keys the
- * two colours the panel actually uses, drawn the same size as the rows' dots.
+ * status: an interview row is blue, where the Interview status is amber. So
+ * this keys the two colours the panel actually uses, drawn the same size as the
+ * rows' dots, and the page carries no status legend to read them against.
  */
 function EventKindKey(): JSX.Element {
   return (
@@ -123,25 +121,6 @@ function DispatchPanel(): JSX.Element {
   );
 }
 
-/**
- * The eight statuses, in the order an application moves through them.
- *
- * It doubles as the page's colour legend and as a plain statement of what the
- * product tracks, which is more useful than a row of adjectives would be.
- */
-function PipelineRail(): JSX.Element {
-  return (
-    <ul className="mt-12 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-7 sm:mt-14 sm:gap-x-7">
-      {APPLICATION_STATUSES.map((status) => (
-        <li key={status} className="flex items-center gap-2 text-xs text-content-muted">
-          <StatusDot status={status} size="xs" />
-          {STATUS_CONFIG[status].label}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Element {
   return (
     <section className="atmos-field border-b border-border">
@@ -186,8 +165,6 @@ export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Ele
             <DispatchPanel />
           </div>
         </div>
-
-        <PipelineRail />
       </div>
     </section>
   );

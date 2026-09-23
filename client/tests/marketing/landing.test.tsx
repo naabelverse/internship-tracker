@@ -171,10 +171,20 @@ describe("the hero's example panel", () => {
       expect(entry.querySelector('[aria-hidden="true"]')).toHaveClass(config.dot);
       expect(panel.querySelector(`[data-event-dot="${kind}"]`)).toHaveClass(config.dot);
     }
+  });
 
-    // The status legend sits at the foot of the hero, not beside the panel,
-    // where its amber Interview would contradict the blue interview rows.
-    expect(within(panel).queryByText(STATUS_CONFIG.withdrawn.label)).toBeNull();
+  it('carries no status legend anywhere on the page to read the dots against', async () => {
+    installMockApi({});
+
+    const { container } = renderWithProviders(<App />, { route: paths.landing });
+    await screen.findByText('Next up');
+
+    // The eight-status rail at the foot of the hero said blue was Applied and
+    // amber was Interview, while the panel above it paints an interview blue.
+    // Nothing on this page shows a status, so no status swatch belongs on it.
+    expect(container.querySelector('[data-status-dot]')).toBeNull();
+    expect(screen.queryByText(STATUS_CONFIG.withdrawn.label)).toBeNull();
+    expect(screen.queryByText(STATUS_CONFIG.ghosted.label)).toBeNull();
   });
 });
 

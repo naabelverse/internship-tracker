@@ -3,12 +3,11 @@ import { STATUS_CONFIG } from '@/lib/statusConfig';
 import type { ApplicationStatus } from '@/types/application';
 
 /**
- * The three sizes a dot is drawn at, and the ring weight a hollow one gets at
- * each. A two-pixel ring on a six-pixel dot would leave a two-pixel hole, which
- * reads as a filled disc again, so the smallest size thins to one pixel.
+ * The sizes a dot is drawn at, and the ring weight a hollow one gets at each.
+ * The ring has to leave a hole that still reads as one: a two-pixel ring on a
+ * six-pixel dot would not, so a size that small would need a one-pixel ring.
  */
 const SIZES = {
-  xs: { box: 'h-1.5 w-1.5', ring: 'border' },
   sm: { box: 'h-2 w-2', ring: 'border-2' },
   md: { box: 'h-2.5 w-2.5', ring: 'border-2' },
 } as const;
@@ -21,7 +20,7 @@ interface StatusDotProps {
 
 /**
  * The colour swatch that sits beside a status label: on the board's column
- * headers, the timeline, the dashboard legend and the landing page.
+ * headers, the timeline and the dashboard legend.
  *
  * It is always decorative. Every site pairs it with the label as text, so a
  * reader who cannot see the colour loses nothing; what the dot adds is a
