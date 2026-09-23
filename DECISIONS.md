@@ -3514,3 +3514,21 @@ what a row's dot means.
   caption now says that: "Amber and red mean it needs attention." Moving Withdrawn or Rejected
   off the warm side of the wheel is a palette change with its own risk and was left out of scope;
   this supersedes the caption quoted in the status legend entry above.
+
+- **The hero now renders the dashboard's own row.** `UpcomingRow` holds the dot, the text, the
+  relative and absolute dates and `urgencyClass`; `UpcomingPanel` wraps it in a link to the
+  application and the hero renders it plain, because an example has nowhere to go. The hero's
+  frame - the "Next up" header, "12 open", the glaze, the 14px radius and the caption - stayed
+  hero-only on purpose: it is presentation around the example, not part of what the example claims
+  the product looks like.
+
+- **The example dates are offsets from today, not fixed dates or strings.** The rows are stored
+  as whole days from now and dated at render, rounded down to the hour so the absolute time reads
+  like a booking. Losing under an hour from a whole number of days still rounds to the same
+  "in N days", so the copy stays true on any day, and the amber on the first row is `urgencyClass`
+  applied to a date two days out rather than a flag saying so.
+
+- **The landing chunk grew from 114.2 KB to 122.4 KB gzip, inside its 150 KB budget.** The hero
+  now reaches `lib/formatters`, and through it date-fns. Formatting the example with the product's
+  own functions is the whole point of the change, so a hand-rolled "in N days" to save 8 KB would
+  have reintroduced the copy this removes.

@@ -119,6 +119,26 @@ describe("the hero's example panel", () => {
     );
   });
 
+  it("draws every row with the dashboard's own row, dated rather than told its urgency", async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const panel = (await screen.findByText('Next up')).closest('figure') as HTMLElement;
+    const items = within(panel).getAllByRole('listitem');
+
+    // One UpcomingRow per item: a hand-built row here is what drifted before.
+    for (const item of items) {
+      expect(item.querySelectorAll('[data-upcoming-row]')).toHaveLength(1);
+    }
+    // An example has nowhere to go, so none of it is a link.
+    expect(within(panel).queryByRole('link')).toBeNull();
+
+    // The amber comes from the date: the first example is two days out.
+    const first = within(items[0]).getByText('in 2 days');
+    expect(first).toHaveClass('text-warning');
+    expect(within(items[1]).getByText('in 4 days')).toHaveClass('text-content-subtle');
+  });
+
   it('names both warm colours in its caption, because the panel paints with both', async () => {
     installMockApi({});
 
