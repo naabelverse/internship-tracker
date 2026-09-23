@@ -175,6 +175,8 @@ export function makeSummary(overrides: Partial<AnalyticsSummary> = {}): Analytic
         interviewed: 4,
         offers: 2,
         responseRate: 54.5,
+        interviewRate: 36.4,
+        avgDaysToFirstResponse: 5.2,
       },
       previous: {
         created: 8,
@@ -184,6 +186,8 @@ export function makeSummary(overrides: Partial<AnalyticsSummary> = {}): Analytic
         interviewed: 1,
         offers: 1,
         responseRate: 37.5,
+        interviewRate: 12.5,
+        avgDaysToFirstResponse: 7.8,
       },
     },
     ...overrides,
@@ -200,6 +204,8 @@ export function makeEmptySummary(): AnalyticsSummary {
     interviewed: 0,
     offers: 0,
     responseRate: 0,
+    interviewRate: 0,
+    avgDaysToFirstResponse: null,
   };
 
   return makeSummary({

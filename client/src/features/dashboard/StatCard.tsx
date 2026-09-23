@@ -55,13 +55,16 @@ export function StatCard({
       </div>
 
       {!isLoading && (
-        <p className="mt-3 flex items-center gap-1.5 text-xs">
+        // Wraps between the change and its period, never inside either, so a
+        // narrow card reads "↑ 32.3 pts" over "vs previous 30 days" rather
+        // than splitting "32.3" from "pts" or "No" from "change".
+        <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
           {isFlat ? (
-            <span className="text-content-subtle">No change</span>
+            <span className="whitespace-nowrap text-content-subtle">No change</span>
           ) : (
             <span
               className={cn(
-                'inline-flex items-center gap-1 font-medium',
+                'inline-flex items-center gap-1 whitespace-nowrap font-medium',
                 isGood ? 'text-success' : 'text-danger',
               )}
             >

@@ -13,6 +13,9 @@ export interface PeriodMetrics {
   interviewed: number;
   offers: number;
   responseRate: number;
+  interviewRate: number;
+  /** Null when nobody in the cohort has heard back yet. */
+  avgDaysToFirstResponse: number | null;
 }
 
 export interface PeriodComparison {

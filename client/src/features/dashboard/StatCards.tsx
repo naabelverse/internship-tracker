@@ -9,9 +9,15 @@ interface StatCardsProps {
 
 const plain = (delta: number): string => String(delta);
 const points = (delta: number): string => `${String(Math.round(delta * 10) / 10)} pts`;
+const days = (value: number): string => {
+  const rounded = Math.round(value * 10) / 10;
+  return `${String(rounded)} ${rounded === 1 ? 'day' : 'days'}`;
+};
 
 /**
- * The six cards SPEC section 6 asks for, each with a delta.
+ * The six cards SPEC section 6 asks for, plus interview rate and time to first
+ * reply, each with a delta. Eight tiles 2 x 4 below `xl` and 4 x 2 from it,
+ * so no row is left part-filled.
  *
  * The headline number is the account's standing right now; the delta compares
  * the cohort created in the last period against the cohort created in the one
@@ -25,8 +31,15 @@ export function StatCards({ summary, isLoading }: StatCardsProps): JSX.Element {
     pick: (metrics: NonNullable<typeof period>['current']) => number,
   ): number | null => (period === undefined ? null : pick(period.current) - pick(period.previous));
 
+  // A window where nobody heard back has no reply time, so there is nothing to
+  // compare against rather than a zero.
+  const replyNow = period?.current.avgDaysToFirstResponse ?? null;
+  const replyBefore = period?.previous.avgDaysToFirstResponse ?? null;
+  const replyDelta = replyNow === null || replyBefore === null ? null : replyNow - replyBefore;
+  const replyTime = summary?.avgDaysToFirstResponse ?? null;
+
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <StatCard
         label="Total"
         value={String(summary?.total ?? 0)}
@@ -65,6 +78,23 @@ export function StatCards({ summary, isLoading }: StatCardsProps): JSX.Element {
         delta={delta((metrics) => metrics.responseRate)}
         formatDelta={points}
         periodLabel={periodLabel}
+        isLoading={isLoading}
+      />
+      <StatCard
+        label="Interview rate"
+        value={`${String(summary?.interviewRate ?? 0)}%`}
+        delta={delta((metrics) => metrics.interviewRate)}
+        formatDelta={points}
+        periodLabel={periodLabel}
+        isLoading={isLoading}
+      />
+      <StatCard
+        label="Time to first reply"
+        value={replyTime === null ? '—' : days(replyTime)}
+        delta={replyDelta}
+        formatDelta={days}
+        periodLabel={periodLabel}
+        lowerIsBetter
         isLoading={isLoading}
       />
       <StatCard
