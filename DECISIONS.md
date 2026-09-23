@@ -3621,3 +3621,35 @@ the shorter right-hand column.
 - **Two existing hero tests were narrowed, deliberately.** They counted every list item in the
   figure as a row; the key adds two that are not. They now count `[data-upcoming-row]` and the
   rows list respectively, which is what they meant.
+
+## The landing page drops the status legend (23 Sep 2026)
+
+A further step in the line PR #28 and PR #30 started. PR #30 kept the eight-status rail at the
+foot of the hero while giving the "Next up" panel its own event-kind key; this removes the rail.
+
+- **Nothing on the landing page shows a status any more.** Since PR #28 the panel's dots mark the
+  event kind, and PR #30's key names those two colours in place. The rail was the only thing left
+  on the page that used the status palette, so it keyed nothing the reader could see, and it said
+  blue was Applied a few hundred pixels below a card that paints an interview blue. Removing it
+  resolves that contradiction outright rather than managing it with distance, which is the part of
+  PR #30's entry ("the status legend stays where it was") this supersedes.
+- **The rail was hero-only markup, so it was deleted, not unlinked.** `PipelineRail` was a private
+  function in `Hero.tsx`; its `mt-12 sm:mt-14 border-t pt-7` divider existed only to set it off and
+  went with it. `StatusDot`, `STATUS_CONFIG` and `APPLICATION_STATUSES` are shared with the board,
+  timeline and doughnut and are unchanged, bar one thing below.
+- **`StatusDot`'s `xs` size was removed with its only caller.** The 6px size and its one-pixel
+  ring existed for the rail; after it nothing in the app asked for them, and the only reference
+  left was the unit test that pinned the thin ring. That test was deleted with the size it tested,
+  not to make a build pass: `sm` and `md` both keep a two-pixel ring, which the remaining ghosted
+  ring test still covers. A future 6px dot would need to reintroduce both.
+- **The hero now closes on its own padding and is symmetric.** Measured on the built pages: at
+  1440 and 1024 wide the section went from 824px to 723px, with 112px from its top to the headline
+  and 113px from the last ink to its bottom border, against 214px below before. At 390 wide it went
+  from 1097px to 980px, 64px above and 65px below, against 182px. Nothing was added to take up the
+  space; the right column's `lg:self-center` still holds the card 82px from each end of the grid.
+- **Tests.** The hero test that asserted the legend was _not beside_ the panel became one that
+  asserts the page draws no `[data-status-dot]` and no Withdrawn or Ghosted label anywhere; run
+  against the previous `Hero.tsx` it fails on the status dots. `tokenContrast.test.ts` keeps its
+  "status dot on the glazed panel / at the peak of the hero light" gates: the key's dots now sit
+  on the lit canvas where the rail did, and they paint `danger` and `info`, which are status tokens
+  too. Only the comment naming the rail changed.
