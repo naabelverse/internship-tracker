@@ -110,8 +110,48 @@ describe('dashboard', () => {
       // The fixture created 12 in the current window against 8 in the previous
       // one, so the Total card shows +4 rather than either raw number.
       expect(screen.getAllByText('4').length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/vs previous 30 days/i)).toHaveLength(5);
+      expect(screen.getAllByText(/vs previous 30 days/i)).toHaveLength(7);
       expect(screen.getByText(/vs last week/i)).toBeInTheDocument();
+    });
+
+    it("shows the server's interview rate and time to first reply as their own cards", async () => {
+      renderDashboard();
+      await screen.findByText('Total');
+
+      // Straight from `interviewRate` and `avgDaysToFirstResponse` on the
+      // summary, not recomputed from the funnel, which counts differently.
+      const interview = screen.getByText('Interview rate').closest('div') as HTMLElement;
+      expect(within(interview).getByText('23.7%')).toBeInTheDocument();
+      const reply = screen.getByText('Time to first reply').closest('div') as HTMLElement;
+      expect(within(reply).getByText('6.4 days')).toBeInTheDocument();
+      // Reply time fell from 7.8 to 5.2 days, which is the good direction.
+      expect(screen.getByText('2.6 days').closest('span')).toHaveClass('text-success');
+    });
+
+    it('shows no reply time, and no delta, before anyone has heard back', async () => {
+      const base = makeSummary();
+      renderDashboard({
+        'GET /analytics/summary': () => ({
+          status: 200,
+          data: successBody(
+            makeSummary({
+              avgDaysToFirstResponse: null,
+              period: {
+                ...base.period,
+                current: { ...base.period.current, avgDaysToFirstResponse: null },
+              },
+            }),
+          ),
+        }),
+      });
+      await screen.findByText('Total');
+
+      // Up from the label to the whole card, which is the first ancestor that
+      // also holds the delta line.
+      let card = screen.getByText('Time to first reply').parentElement as HTMLElement;
+      while (!card.textContent?.includes('vs previous')) card = card.parentElement as HTMLElement;
+      expect(card).toHaveTextContent('—');
+      expect(card).toHaveTextContent('No change');
     });
 
     it('names the direction in text, not colour alone', async () => {

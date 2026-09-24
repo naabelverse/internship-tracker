@@ -198,6 +198,36 @@ describe('GET /summary period deltas', () => {
     expect(response.body.data.period.previous.responseRate).toBe(100);
   });
 
+  it('measures interview rate and time to first reply on each window own cohort', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, [
+      // Each interview row reaches interview one day after it was created.
+      { daysAgo: 3, status: 'applied' },
+      { daysAgo: 4, status: 'interview' },
+      { daysAgo: 35, status: 'interview' },
+      { daysAgo: 45, status: 'interview' },
+    ]);
+
+    const response = await get('/summary', accessToken);
+    const { current, previous } = response.body.data.period;
+
+    expect(current).toMatchObject({ interviewRate: 50, avgDaysToFirstResponse: 1 });
+    expect(previous).toMatchObject({ interviewRate: 100, avgDaysToFirstResponse: 1 });
+  });
+
+  it('reports no reply time for a cohort that has not heard back', async () => {
+    const { accessToken, userId } = await registerUser(app);
+    await seedAgedApplications(userId, [{ daysAgo: 3, status: 'applied' }]);
+
+    const response = await get('/summary', accessToken);
+
+    expect(response.body.data.period.current).toMatchObject({
+      interviewRate: 0,
+      avgDaysToFirstResponse: null,
+    });
+    expect(response.body.data.period.previous.avgDaysToFirstResponse).toBeNull();
+  });
+
   it('honours a caller supplied window length', async () => {
     const { accessToken, userId } = await registerUser(app);
     await seedAgedApplications(userId, [

@@ -8,8 +8,8 @@ export function DashboardSkeleton(): JSX.Element {
   return (
     <div className="space-y-4" data-testid="dashboard-skeleton">
       <Skeleton className="h-8 w-48" label="Loading dashboard" />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-        {[0, 1, 2, 3, 4, 5].map((card) => (
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((card) => (
           <Skeleton key={card} className="h-28 w-full" />
         ))}
       </div>

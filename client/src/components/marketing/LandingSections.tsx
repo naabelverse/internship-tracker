@@ -13,51 +13,38 @@ interface Feature {
   body: string;
   /** Inline path data, so a feature icon costs no request and no icon library. */
   icon: string;
-  /**
-   * Column span at `lg`. The features are not six equal things, and a six-up
-   * grid of identical cards says they are. The board is the reason people stay,
-   * so it gets the widest cell; the spans still tile 12 exactly, which is what
-   * lets the cell borders collapse into one continuous set of rules.
-   */
-  span: string;
 }
 
 const FEATURES: Feature[] = [
   {
     title: 'A board that matches how you think',
-    body: 'Drag an application from Applied to Interview to Offer. Every move saves instantly and is recorded in its history, so you can see how long each stage really took.',
+    body: 'Drag an application from Applied to Interview to Offer. Every move saves instantly and is recorded in its history, so you can see when each move happened.',
     icon: 'M4 5h5v14H4zM10 5h5v9h-5zM16 5h4v6h-4z',
-    span: 'lg:col-span-7',
   },
   {
     title: 'Deadlines on a calendar',
     body: 'Application deadlines and interview times on a month view, in your own timezone, so a 9am slot is 9am where you actually are.',
     icon: 'M7 3v2m10-2v2M4 8h16M5 5h14v15H5z',
-    span: 'lg:col-span-5',
   },
   {
     title: 'Reminders that arrive in the morning',
     body: 'One digest of what is due, sent at 8am on your clock rather than the server one. Switch it off in a single click from any message.',
     icon: 'M3 6h18v12H3zM3 7l9 6 9-6',
-    span: 'lg:col-span-4',
   },
   {
     title: 'Statistics worth reading',
-    body: 'Response rate, interview rate, time to first reply, a funnel, and which sources actually convert. Numbers about your search, not vanity counters.',
+    body: 'Response rate, interview rate, time to first reply, a funnel, and where your applications come from. Numbers about your search, not vanity counters.',
     icon: 'M4 19V9m5 10V5m5 14v-7m5 7V7',
-    span: 'lg:col-span-4',
   },
   {
     title: 'Files where they belong',
     body: 'Attach the CV and cover letter you actually sent to each application, so you always know which version went where.',
     icon: 'M14 3v5h5M7 3h8l5 5v13H7zM10 13h6M10 17h4',
-    span: 'lg:col-span-4',
   },
   {
     title: 'Your data stays yours',
     body: 'Export everything as JSON at any time, and delete your account whenever you like. Nothing is sold, shared, or used to train anything.',
     icon: 'M12 3l8 4v5c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V7zM9 12l2 2 4-4',
-    span: 'lg:col-span-12',
   },
 ];
 
@@ -76,13 +63,17 @@ export function FeatureCards(): JSX.Element {
         and each cell draws its own right and bottom rule, so the borders meet
         as a single grid of hairlines instead of six separate outlines with the
         same soft shadow under each.
+
+        Every cell is the same size: six features tile 2 x 3 at `sm` and 3 x 2
+        at `lg` with nothing left over. From `sm`, `auto-rows-fr` makes every
+        row as tall as the tallest card, and content stays top-aligned inside
+        it, so a short blurb leaves space under itself rather than a gap in the
+        frame. A phone's single column keeps natural heights: equal rows there
+        would only pad the short cards with empty space.
       */}
-      <ul className="mt-10 grid overflow-hidden rounded-panel border-l border-t border-border lg:grid-cols-12">
+      <ul className="mt-10 grid overflow-hidden sm:auto-rows-fr rounded-panel border-l border-t border-border sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((feature) => (
-          <li
-            key={feature.title}
-            className={`border-b border-r border-border bg-surface p-6 sm:p-7 ${feature.span}`}
-          >
+          <li key={feature.title} className="border-b border-r border-border bg-surface p-6 sm:p-7">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"

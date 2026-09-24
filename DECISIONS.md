@@ -3654,6 +3654,51 @@ foot of the hero while giving the "Next up" panel its own event-kind key; this r
   on the lit canvas where the rail did, and they paint `danger` and `info`, which are status tokens
   too. Only the comment naming the rail changed.
 
+## The feature grid tiles evenly, and its copy claims only what ships (24 Sep 2026)
+
+- **Six equal cells replace the 7/5, 4/4/4, 12 spans.** The spans stranded "Your data stays yours",
+  the shortest blurb, alone in a full-width row. Six cells divide by both two and three, so the
+  grid runs 2 x 3 from `sm` and 3 x 2 from `lg` with every row full, where before it was a single
+  column all the way to 1023px. From `sm`, `auto-rows-fr` makes the rows equal and content stays
+  top-aligned; a phone's single column keeps natural heights, because equal rows there would only
+  pad the short cards. This gives up the old code comment's intent of making the board the widest
+  cell. That intent was never recorded here, and the unbalanced last row cost more than it bought.
+  Measured on the dev build: 368 x 220 per cell at 1440, 325 x 243 at 1024, 360 x 220 at 768, no
+  horizontal overflow, and contrast of at least 6.25:1 for body text and 11.48:1 for icons in both
+  themes.
+- **The board card no longer promises stage durations.** "So you can see how long each stage
+  really took" became "so you can see when each move happened". `statusHistory` records every
+  move with a timestamp and the detail page's timeline lists them, but nothing computes or shows a
+  duration. No other line on the page uses "how long" language.
+- **The statistics card no longer claims per-source conversion.** Nothing computes it: the server
+  only counts applications per source. "Which sources actually convert" became "where your
+  applications come from", which is the "By source" chart's own description.
+- **Interview rate and time to first reply are now dashboard cards.** The server already returned
+  both on the summary, but no screen showed them, so the landing copy named two numbers a user
+  could not find. The headline values are the server's `interviewRate` and
+  `avgDaysToFirstResponse`, not a client recomputation. The funnel's "% of applied" at Interview
+  counts differently: Interview only, where `interviewRate` counts Interview or Offer. Each card
+  carries a period delta like Response rate. To make that possible, the cohort `$group` now also
+  returns `interviewRate` and `avgDaysToFirstResponse`, using the same expressions as the
+  all-time figures. `$avg` skips the null a non-responder yields, so a cohort nobody has heard
+  back from reports `null`, and the card shows "—" and "No change" rather than a fake zero. Reply
+  time is marked `lowerIsBetter`, so a fall is shown in green.
+- **Eight cards tile 2 x 4 below `xl` and 4 x 2 from it.** The stat grid moved from
+  `lg:grid-cols-3 xl:grid-cols-6` to `xl:grid-cols-4`, and `DashboardSkeleton` matches it, because
+  eight cards in threes would leave a part-filled last row, the same defect the feature grid had.
+  Four columns were tried from `lg` first and rejected on the signed-in build: at 1024 the sidebar
+  leaves the grid about 700px, so cards were 167px wide, "Weekly goal" truncated and the deltas
+  broke inside "32.3 pts" and "No change". Measured after the change: 271px cards at 1440, 231px at
+  1280, 346px at 1024 and 173px at 390, with no clipped label or value in either theme.
+- **A delta now wraps between the change and its period, never inside either.** `StatCard`'s delta
+  line is `flex-wrap`, with the arrow and value and "No change" held `whitespace-nowrap`. On a 390px
+  phone the old line already split "32.3" from "pts" and "No" from "change"; the two new cards made
+  that more visible, so it was fixed here rather than left for later.
+- **One dashboard test assertion changed, deliberately.** "Derives each delta" counted five
+  "vs previous 30 days" labels. The two new cards carry that label by design, so it now counts
+  seven. The cards themselves are covered by two new tests, and the cohort fields by two new
+  server tests.
+
 ## A closed account can be restored by signing in within 30 days (24 Sep 2026)
 
 The FAQ promised a 30-day grace period "in case you change your mind", but nothing could undo a
