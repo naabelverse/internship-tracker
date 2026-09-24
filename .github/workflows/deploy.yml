@@ -61,48 +61,91 @@ jobs:
             echo "See DEPLOYMENT.md, 'Automated deploys', to turn this on."
           fi
 
-      # Railway has no deploy-hook URL to POST to, unlike Render and Vercel.
-      # Deployment goes through its CLI, authenticated by a project token, so the
-      # CLI has to be on the runner before either service can be told to deploy.
-      - name: Install the Railway CLI
-        if: steps.gate.outputs.enabled == 'true'
-        run: npm install -g @railway/cli
-
-      # Each service is independently optional: deploying only the API, or only
-      # the client, is a legitimate setup and should not fail the run.
+      # Railway has no deploy-hook URL to POST to, unlike Render and Vercel, so
+      # each service is deployed through Railway's public GraphQL API with the
+      # project token. `serviceInstanceDeployV2` takes an explicit `commitSha`:
+      # Railway builds the service from its connected GitHub repo at exactly
+      # that commit.
       #
-      # `railway redeploy` rebuilds the service from the commit its GitHub
-      # connection already points at, which is this one — CI has just passed on
-      # it. `railway up` would instead upload the runner's working directory as
-      # an ad-hoc build context: the same code by a less traceable route, and it
-      # detaches the deployment from the commit history Railway shows you.
-      - name: Deploy the API service
+      # The commit is the one CI just passed on (`workflow_run.head_sha`), or
+      # the dispatched ref's head for a manual run. It is never "whatever Railway
+      # deployed last". `railway redeploy`, which this step used to call, does
+      # the latter: it rebuilds the service's latest deployment, commit and all.
+      # So if Railway's own GitHub trigger stopped delivering pushes, a green
+      # run here would have rebuilt the stale commit and looked like a deploy.
+      #
+      # Each service is independently optional: deploying only the API, or only
+      # the client, is a legitimate setup and should not fail the run. A service
+      # secret may hold the service's name or its id, as DEPLOYMENT.md says.
+      - name: Deploy both services at the commit CI passed
         if: steps.gate.outputs.enabled == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
+          API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE }}
+          WEB_SERVICE: ${{ secrets.RAILWAY_WEB_SERVICE }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$SERVICE" ]; then
-            echo "RAILWAY_TOKEN or RAILWAY_API_SERVICE is not set; skipping the API deploy."
+          # The default shell is `bash -e` without pipefail; a failed API call
+          # piped into jq must still fail the step.
+          set -o pipefail
+
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "RAILWAY_TOKEN is not set; skipping both deploys."
             exit 0
           fi
-          railway redeploy --service "$SERVICE" --yes
-          echo "Railway accepted a redeploy for the API service."
 
-      - name: Deploy the web service
-        if: steps.gate.outputs.enabled == 'true'
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          SERVICE: ${{ secrets.RAILWAY_WEB_SERVICE }}
-        run: |
-          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$SERVICE" ]; then
-            echo "RAILWAY_TOKEN or RAILWAY_WEB_SERVICE is not set; skipping the client deploy."
-            exit 0
-          fi
-          railway redeploy --service "$SERVICE" --yes
-          echo "Railway accepted a redeploy for the web service."
+          # One GraphQL call. Fails the step on an HTTP error or on a GraphQL
+          # `errors` array, which Railway returns with a 200 status.
+          gql() {
+            local body response
+            body=$(jq -n --arg q "$1" --argjson v "$2" '{query: $q, variables: $v}')
+            response=$(curl --silent --show-error --fail-with-body \
+              --header "Project-Access-Token: $RAILWAY_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$body" \
+              https://backboard.railway.com/graphql/v2)
+            if echo "$response" | jq -e '.errors // empty | length > 0' > /dev/null; then
+              echo "Railway API error: $(echo "$response" | jq -c '.errors')" >&2
+              return 1
+            fi
+            echo "$response"
+          }
 
-      # An accepted redeploy means the platform queued a build, not that the
+          # A project token is bound to one project and one environment, so both
+          # ids come from the token itself rather than from two more secrets.
+          scope=$(gql 'query { projectToken { projectId environmentId } }' '{}')
+          project_id=$(echo "$scope" | jq -r '.data.projectToken.projectId')
+          environment_id=$(echo "$scope" | jq -r '.data.projectToken.environmentId')
+          services=$(gql 'query($id: String!) { project(id: $id) { services { edges { node { id name } } } } }' \
+            "$(jq -n --arg id "$project_id" '{id: $id}')")
+
+          deploy() {
+            local label=$1 wanted=$2 service_id deployment_id
+            if [ -z "$wanted" ]; then
+              echo "No service configured for the $label; skipping it."
+              return 0
+            fi
+            service_id=$(echo "$services" | jq -r --arg s "$wanted" \
+              '.data.project.services.edges[].node | select(.id == $s or .name == $s) | .id')
+            if [ -z "$service_id" ]; then
+              echo "No service named or with id '$wanted' in this project." >&2
+              return 1
+            fi
+            deployment_id=$(gql \
+              'mutation($e: String!, $s: String!, $sha: String!) { serviceInstanceDeployV2(environmentId: $e, serviceId: $s, commitSha: $sha) }' \
+              "$(jq -n --arg e "$environment_id" --arg s "$service_id" --arg sha "$COMMIT_SHA" '{e: $e, s: $s, sha: $sha}')" \
+              | jq -r '.data.serviceInstanceDeployV2 // empty')
+            if [ -z "$deployment_id" ]; then
+              echo "Railway returned no deployment id for the $label." >&2
+              return 1
+            fi
+            echo "Railway queued deployment $deployment_id of the $label at $COMMIT_SHA."
+          }
+
+          deploy "API service" "$API_SERVICE"
+          deploy "web service" "$WEB_SERVICE"
+
+      # A queued deployment means the platform accepted a build, not that the
       # build succeeded. Say so, rather than letting a green check here be read
       # as a green deploy.
       - name: Summarise
@@ -115,7 +158,7 @@ jobs:
             exit 0
           fi
           {
-            echo "### Railway redeploy requested"
+            echo "### Railway deploy requested at \`${{ github.event.workflow_run.head_sha || github.sha }}\`"
             echo "Railway has **queued** a build for each configured service. Watch the"
             echo "project dashboard for the outcome — a queued build is not a finished one."
           } >> "$GITHUB_STEP_SUMMARY"

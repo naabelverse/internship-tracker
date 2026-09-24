@@ -3786,3 +3786,28 @@ restore rather than withdrawing the promise.
   Settings, the closed page's date and callout, the 409 dialog in light and dark with focus inside
   it, "Keep it closed" clearing the password and leaving the account closed, a restore landing on
   the dashboard with the toast and `deletedAt` cleared, and the 410 shown inline.
+
+## The deploy workflow deploys the commit CI passed, not Railway's last one (25 Sep 2026)
+
+- **`deploy.yml` calls `serviceInstanceDeployV2` with `commitSha`, not `railway redeploy`.** The
+  earlier entry said `redeploy` builds "the commit its GitHub connection already points at — the one
+  CI just passed on". That was wrong. `redeploy` rebuilds the service's latest deployment, including
+  its commit. On 24 Sep Railway's GitHub trigger stopped creating deployments after `f8cebb2` (PR
+  #32). A redeploy that day rebuilt `f8cebb2` for the client and `8a519ad` for the server, so
+  production looked freshly deployed while it still served the pre-#33 landing copy. With
+  `DEPLOY_ENABLED` on, the workflow would have done the same thing after every green CI run.
+- **The commit is `workflow_run.head_sha`, or `github.sha` for a manual dispatch.** Both are the
+  exact commit the run is about, so what Railway builds is never inferred from Railway's own state.
+- **The API is called with `curl` and `jq`, not the Railway CLI.** The CLI has no deploy-by-commit
+  command. Both tools ship on the Ubuntu runner, so the step no longer installs anything. Railway
+  returns GraphQL errors with HTTP 200, so the step checks the `errors` array itself, and it sets
+  `pipefail` because the default Actions shell does not.
+- **The project and environment ids come from the token.** A project token is bound to one of
+  each, and the `projectToken` query returns both, so no new secret was added.
+  `RAILWAY_API_SERVICE` and `RAILWAY_WEB_SERVICE` still accept a name or an id, as DEPLOYMENT.md
+  already promised. They are resolved against the project's service list.
+- **DEPLOYMENT.md no longer says to disconnect the repo.** Deploy-by-commit builds from the
+  connected repo, so disconnecting it would break the workflow. The doc points to Railway's "Wait
+  for CI" setting instead.
+- **`DEPLOY_ENABLED` stays unset.** Turning it on waits until the Railway GitHub App connection is
+  confirmed working again.

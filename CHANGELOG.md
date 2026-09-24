@@ -61,6 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The deploy workflow deploys the commit CI passed.** It used `railway redeploy`,
+  which rebuilds whatever Railway deployed last. If Railway stopped picking up
+  pushes, a green run would have rebuilt an old commit and looked like a deploy.
+  It now asks Railway to build `workflow_run.head_sha` explicitly. Deploys stay
+  off behind `DEPLOY_ENABLED`.
 - **The landing page's "Next up" example says what its dots mean.** A small
   key under the card names the two colours it uses, red for a deadline and blue
   for an interview. On wide screens the card now sits centred against the
