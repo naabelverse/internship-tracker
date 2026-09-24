@@ -123,7 +123,7 @@ export function accountDeletedTemplate(data: AccountDeletedData): TemplateOutput
       },
       {
         type: 'paragraph',
-        text: `Your applications, interviews, notes and reminders are kept until ${date} and then permanently removed. Uploaded files are not removed at that point yet: they stay in storage, no longer linked to any account. To make sure a file is gone, restore the account, delete the file from its application, then close the account again.`,
+        text: `Your account and its records (applications, interviews, notes and reminders) are kept until ${date} and then permanently removed. Uploaded files are not removed at that point yet: they stay in storage, no longer linked to any account. To make sure a file is gone, restore the account, delete the file from its application, then close the account again.`,
       },
       {
         type: 'note',

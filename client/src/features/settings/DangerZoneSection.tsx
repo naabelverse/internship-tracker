@@ -95,10 +95,10 @@ export function DangerZoneSection(): JSX.Element {
     >
       <div className="space-y-2 text-sm text-content">
         <p>
-          Your applications, interviews, notes and reminders are kept for 30 days and then deleted
-          for good, and your email address stays reserved for that window. Uploaded files are not
-          yet removed with them: to make sure a file is gone, delete it from its application before
-          you close the account.
+          Your account and its records (applications, interviews, notes and reminders) are kept for
+          30 days and then deleted for good, and your email address stays reserved for that window.
+          Uploaded files are not yet removed with them: to make sure a file is gone, delete it from
+          its application before you close the account.
         </p>
         <p className="text-content-muted">
           You can restore the account by signing in within those 30 days. Password reset does not
