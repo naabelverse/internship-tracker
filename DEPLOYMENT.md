@@ -1360,10 +1360,16 @@ disabled by default** and does nothing at all until you opt in, so a fork or a c
 accidentally deploy to anything.
 
 **Railway has no URL deploy hook.** Render and Vercel both hand you a secret URL you `POST` to;
-Railway does not work that way. Deployment is driven by its CLI, authenticated with a **project
-token**, so the workflow installs `@railway/cli` and runs `railway redeploy` per service. That is the
-one substantive change from the Render/Vercel version of this workflow — the CI gate, the
-`DEPLOY_ENABLED` switch and the green-skip resting state are all unchanged.
+Railway does not work that way. The workflow calls Railway's public GraphQL API with a **project
+token** and asks for each service to be deployed **at the exact commit CI just passed**
+(`serviceInstanceDeployV2` with `commitSha`). Railway builds that commit from the service's
+connected GitHub repo. That is the one substantive change from the Render/Vercel version of this
+workflow — the CI gate, the `DEPLOY_ENABLED` switch and the green-skip resting state are all
+unchanged.
+
+It does not use `railway redeploy`. That command rebuilds a service's _latest deployment_, commit
+and all, so if Railway's GitHub trigger ever stops picking up pushes, a green run would quietly
+rebuild the old commit.
 
 To enable it, add these repository secrets under **Settings → Secrets and variables → Actions**:
 
@@ -1382,9 +1388,10 @@ resting state: CI keeps guarding `main` and nothing deploys.
 
 **Turn off Railway's own GitHub auto-deploy if you want the gate to mean anything.** Railway deploys
 on every push to the connected branch by default, which happens _before_ CI has finished and
-regardless of whether it passes. Either disconnect the repo from each service and let this workflow
-be the only deploy path, or accept that the workflow is redundant. Having both is the worst of the
-two: you get an ungated deploy and a gated one racing each other.
+regardless of whether it passes. **Do not disconnect the repo** to stop that: the workflow's deploy
+builds from the connected repo, so it needs the connection. Turn on the service's **Wait for CI**
+setting instead, or accept that the workflow is redundant. An ungated push deploy racing a gated
+one is the worst of the two.
 
 ---
 
