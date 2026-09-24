@@ -3711,6 +3711,18 @@ restore rather than withdrawing the promise.
   files are not yet removed and how to delete one individually, which does erase it. **When #34
   ships, restore the files claim in the FAQ, privacy.md (the "Deleted accounts" row and "Deleting
   your data"), `DangerZoneSection` and `accountDeletedTemplate`, and update this entry.**
+- **The deletion claim says "your account and its records", not "your data".** "Data" includes
+  uploaded files, which #34 means are not erased, so "your data is kept until {date}, then
+  permanently deleted" promised more than the purge does. "Your account and its records" names only
+  what the purge removes: the user record, applications with their interviews and notes, reminders
+  and sessions. The same term is used for the same claim on the closed page (both the status line
+  and the forgotten-password callout), the FAQ, `DangerZoneSection`, `accountDeletedTemplate` and
+  the privacy policy's "Deleted accounts" row. Where a surface lists the records in brackets, the
+  separate files sentence follows it and adds the part "records" leaves out: files are not yet
+  removed, and how to delete one. The two never state the same point twice. Sentences about
+  _restoring_ ("files and reminders come back as you left them") are untouched, because files are
+  intact during the window. **Optional cleanup once #34 ships:** "records" can revert to "data"
+  in these same places. This is not required, since "records" stays accurate either way.
 - **`DELETE /auth/me` now returns `purgeAt`**, which the client passes to `AccountClosedPage` in
   route state so the page can name the date. A reload loses route state, so every sentence on that
   page has a wording that holds without the date.
