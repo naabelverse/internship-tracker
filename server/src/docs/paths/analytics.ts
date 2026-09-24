@@ -27,6 +27,8 @@ const periodMetrics = objectOf({
   interviewed: { type: 'integer' },
   offers: { type: 'integer' },
   responseRate: { type: 'number' },
+  interviewRate: { type: 'number' },
+  avgDaysToFirstResponse: { type: 'number', nullable: true },
 });
 
 const summaryData = objectOf({

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The landing page's feature grid is six equal cells.** It runs 2 x 3 from
+  640px and 3 x 2 from 1024px, replacing the 7/5, 4/4/4, 12 spans that left
+  the shortest card alone in a full-width last row. Below 640px it is one
+  column, as before.
+- **Two feature claims were corrected to match the app.** The board card says
+  the history shows when each move happened, not how long each stage took,
+  which nothing computes. The statistics card says where applications come
+  from, not which sources convert, which nothing computes either.
+- **Dashboard stat cards sit 2 x 4 below 1280px and 4 x 2 from it**, and a
+  delta wraps between the change and "vs previous 30 days" instead of splitting
+  "32.3 pts" or "No change" across lines on a narrow card.
+
 - **The theme control's selected state is a thumb that slides.** One filled
   thumb moves between light, dark and system on the tokenised 150 ms ease-out
   instead of two buttons cross-fading; reduced-motion users get the end state
@@ -109,6 +121,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the build, so a static host no longer serves the readable source.
 
 ### Added
+
+- **Interview rate and time to first reply on the dashboard.** Both were
+  already on `GET /analytics/summary` but shown nowhere. Each card carries a
+  30-day delta like response rate, from two new fields on each `period` window;
+  a falling reply time reads as good, and a window nobody heard back in shows
+  "—" rather than zero.
 
 - **The API says at boot whether the demo account exists.** Once the database
   connects it logs `Demo account ready`, or a `warn` naming `DEMO_EMAIL` and the

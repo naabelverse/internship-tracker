@@ -88,6 +88,11 @@ const withMilestones: PipelineStage = {
   },
 };
 
+/** Days from applying to the first response, as an aggregation expression. */
+const daysToFirstResponse = {
+  $divide: [{ $subtract: ['$respondedAt', '$appliedAt'] }, MS_PER_DAY],
+};
+
 function percentage(part: number, whole: number): number {
   if (whole === 0) return 0;
   return Math.round((part / whole) * 1000) / 10;
@@ -110,6 +115,9 @@ export interface PeriodMetrics {
   interviewed: number;
   offers: number;
   responseRate: number;
+  interviewRate: number;
+  /** Null when nobody in the cohort has heard back yet, so there is no average to take. */
+  avgDaysToFirstResponse: number | null;
 }
 
 /** The current window and the window of equal length immediately before it. */
@@ -160,6 +168,7 @@ interface CohortRow {
   responded: number;
   interviewed: number;
   offers: number;
+  avgDays: number | null;
 }
 
 interface SummaryFacet {
@@ -208,6 +217,9 @@ const cohortGroup: PipelineStage.FacetPipelineStage = {
     responded: { $sum: { $cond: ['$isResponded', 1, 0] } },
     interviewed: { $sum: { $cond: ['$isInterviewed', 1, 0] } },
     offers: { $sum: { $cond: ['$isOffered', 1, 0] } },
+    // The same expression as the all-time `responseTime` branch. A record with
+    // no response yields null, which `$avg` skips, so only replies are averaged.
+    avgDays: { $avg: daysToFirstResponse },
   },
 };
 
@@ -223,12 +235,23 @@ const EMPTY_COHORT: CohortRow = {
   responded: 0,
   interviewed: 0,
   offers: 0,
+  avgDays: null,
 };
 
-function toPeriodMetrics(rows: CohortRow[]): PeriodMetrics {
-  const row = rows[0] ?? EMPTY_COHORT;
+/** One decimal place, the precision every day count on the dashboard uses. */
+function roundDays(days: number | null): number | null {
+  return days === null ? null : Math.round(days * 10) / 10;
+}
 
-  return { ...row, responseRate: percentage(row.responded, row.applied) };
+function toPeriodMetrics(rows: CohortRow[]): PeriodMetrics {
+  const { avgDays, ...row } = rows[0] ?? EMPTY_COHORT;
+
+  return {
+    ...row,
+    responseRate: percentage(row.responded, row.applied),
+    interviewRate: percentage(row.interviewed, row.applied),
+    avgDaysToFirstResponse: roundDays(avgDays),
+  };
 }
 
 /**
@@ -284,12 +307,7 @@ export async function getSummary(
         responseTime: [
           { $match: { respondedAt: { $ne: null } } },
           {
-            $group: {
-              _id: null,
-              avgDays: {
-                $avg: { $divide: [{ $subtract: ['$respondedAt', '$appliedAt'] }, MS_PER_DAY] },
-              },
-            },
+            $group: { _id: null, avgDays: { $avg: daysToFirstResponse } },
           },
         ],
         thisWeek: countOf({ createdAt: { $gte: weekStart } }),
@@ -329,7 +347,7 @@ export async function getSummary(
     responseRate: percentage(responded, applied),
     interviewRate: percentage(interviewed, applied),
     offerRate: percentage(offers, applied),
-    avgDaysToFirstResponse: average === null ? null : Math.round(average * 10) / 10,
+    avgDaysToFirstResponse: roundDays(average),
     currentStreakDays: computeStreak(
       facet.dayKeys.map((row) => row._id),
       localDayKey(now, timeZone),
