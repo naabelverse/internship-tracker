@@ -8,8 +8,8 @@ import { installMockApi, type MockApi, type Responder } from '../utils/mockAdapt
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 
 /**
- * Closing an account starts a 30 day clock on real data and there is no
- * un-delete endpoint anywhere in the API, so the destructive call must not be
+ * Closing an account starts a 30 day clock on real data, and only someone who
+ * still knows the password can undo it, so the destructive call must not be
  * reachable by one click. These cases assert the gates hold rather than merely
  * that they are rendered.
  */
@@ -103,9 +103,18 @@ describe('closing an account cannot happen by accident', () => {
     await screen.findByRole('heading', { name: 'Your account is closed' });
   });
 
-  it('does not promise a recovery the API cannot deliver', async () => {
+  // Rewritten deliberately with the restore flow. This used to assert the page
+  // never offered restoring by signing in, because the API could not do it and
+  // support was the only route back. Now signing in is the only route back, so
+  // the page must offer it, with the date, and must not name support at all.
+  it('offers self-restore by signing in before the purge date, and nothing else', async () => {
     const userEvents = userEvent.setup();
-    renderSettings({ 'DELETE /auth/me': accepted });
+    renderSettings({
+      'DELETE /auth/me': () => ({
+        status: 200,
+        data: { success: true, data: { deleted: true, purgeAt: '2026-10-24T12:00:00.000Z' } },
+      }),
+    });
 
     await userEvents.click(await screen.findByRole('button', { name: 'Close my account' }));
     await userEvents.type(screen.getByLabelText('Your password'), 'Correct1Password');
@@ -118,8 +127,14 @@ describe('closing an account cannot happen by accident', () => {
     const heading = await screen.findByRole('heading', { name: 'Your account is closed' });
     const page = heading.closest('div')?.parentElement?.textContent ?? '';
 
-    // `login` filters `deletedAt: null`, so signing back in is not a route home.
-    expect(page).not.toMatch(/sign (back )?in to (restore|reactivate|recover)/i);
-    expect(page).toMatch(/contact support/i);
+    expect(page).toMatch(
+      /sign in with your email and password before 24 October 2026\. You will be asked whether to restore/i,
+    );
+    expect(page).toMatch(/kept until 24 October 2026/);
+    // The forgotten-password case is stated plainly, not left to small print.
+    expect(screen.getByText(/if you have forgotten your password/i)).toHaveTextContent(
+      /cannot restore this account yourself.*permanently deleted on 24 October 2026/,
+    );
+    expect(page).not.toMatch(/support/i);
   });
 });

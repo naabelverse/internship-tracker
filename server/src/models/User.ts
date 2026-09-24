@@ -46,6 +46,9 @@ export interface UserAttributes {
   pendingEmail?: string;
   passwordResetTokenHash?: string;
   passwordResetExpires?: Date;
+  /** Digest of the token a closed account's sign-in hands back to confirm a restore. */
+  restoreTokenHash?: string;
+  restoreTokenExpires?: Date;
   passwordChangedAt?: Date;
   failedLoginAttempts: number;
   lockedUntil?: Date;
@@ -71,6 +74,8 @@ const PRIVATE_FIELDS = [
   'emailVerificationExpires',
   'passwordResetTokenHash',
   'passwordResetExpires',
+  'restoreTokenHash',
+  'restoreTokenExpires',
   'failedLoginAttempts',
   'lockedUntil',
   '__v',
@@ -107,6 +112,8 @@ const userSchema = new Schema<UserAttributes, UserModelType, UserMethods>(
     pendingEmail: { type: String, lowercase: true, trim: true },
     passwordResetTokenHash: { type: String, select: false },
     passwordResetExpires: { type: Date },
+    restoreTokenHash: { type: String, select: false },
+    restoreTokenExpires: { type: Date },
     passwordChangedAt: { type: Date },
     failedLoginAttempts: { type: Number, default: 0, min: 0 },
     lockedUntil: { type: Date },

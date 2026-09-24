@@ -25,15 +25,16 @@ type DeleteValues = z.infer<typeof deleteSchema>;
  * Closing the account.
  *
  * Three gates, on purpose, because this starts a 30 day clock on someone's real
- * data and there is no un-delete endpoint: the form is not even rendered until
- * the user asks for it, then it needs the account password and the word DELETE
- * typed exactly. The password is re-checked server-side regardless - the gates
- * here are about intent, not authorisation.
+ * data: the form is not even rendered until the user asks for it, then it needs
+ * the account password and the word DELETE typed exactly. The password is
+ * re-checked server-side regardless - the gates here are about intent, not
+ * authorisation.
  *
- * The copy says what actually happens rather than what would be reassuring. The
- * server filters `deletedAt: null` on both login and forgot-password, so a
- * closed account gets the same answer as a wrong password and cannot be
- * recovered from the sign-in page at all.
+ * The copy says what actually happens rather than what would be reassuring.
+ * Signing in with the same password inside the 30 days offers a restore, but
+ * forgot-password filters out closed accounts, so a forgotten password cannot
+ * get one back. Uploaded files are named as the exception because the purge
+ * does not yet erase them (issue #34).
  */
 export function DangerZoneSection(): JSX.Element {
   const [isConfirming, setIsConfirming] = useState(false);
@@ -94,13 +95,15 @@ export function DangerZoneSection(): JSX.Element {
     >
       <div className="space-y-2 text-sm text-content">
         <p>
-          Your applications, interviews, notes and uploads are kept for 30 days and then deleted for
-          good.
+          Your account and its records (applications, interviews, notes and reminders) are kept for
+          30 days and then deleted for good, and your email address stays reserved for that window.
+          Uploaded files are not yet removed with them: to make sure a file is gone, delete it from
+          its application before you close the account.
         </p>
         <p className="text-content-muted">
-          You will not be able to sign in again, and your email address stays reserved for that
-          window. Closing this cannot be undone from the app — contact support inside the 30 days if
-          you change your mind.
+          You can restore the account by signing in within those 30 days. Password reset does not
+          work on a closed account, so if you forget your password you will not be able to restore
+          it.
         </p>
       </div>
 

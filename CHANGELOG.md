@@ -20,6 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dashboard stat cards sit 2 x 4 below 1280px and 4 x 2 from it**, and a
   delta wraps between the change and "vs previous 30 days" instead of splitting
   "32.3 pts" or "No change" across lines on a narrow card.
+- **Closing an account says what actually happens.** The closed page, the
+  Settings danger zone, the closure email, the FAQ and the privacy policy now
+  describe restoring by signing in, say plainly that a forgotten password rules
+  it out, and no longer offer "contact support", which could not reopen an
+  account. None of them claims uploaded files are erased any more: the purge
+  does not yet delete them from storage (issue #34), and the privacy policy
+  explains exactly what is and is not removed.
 
 - **The theme control's selected state is a thumb that slides.** One filled
   thumb moves between light, dark and system on the tokenised 150 ms ease-out
@@ -127,6 +134,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   30-day delta like response rate, from two new fields on each `period` window;
   a falling reply time reads as good, and a window nobody heard back in shows
   "—" rather than zero.
+- **A closed account can be restored by signing in within 30 days.** The
+  correct password on a closed account now opens a dialog naming the deletion
+  date and asking whether to restore it; "Restore my account" brings everything
+  back as it was, and "Keep it closed" leaves it closed. Reminders that came due
+  while closed are not sent, and devices signed in before the closure stay
+  signed out. A wrong password still gets the same answer as an unknown email,
+  and forgot-password still does not work for a closed account. New endpoint:
+  `POST /auth/restore`; `POST /auth/login` can answer 409 or 410 for a closed
+  account; `DELETE /auth/me` returns `purgeAt`. An "account restored" security
+  email is sent.
 
 - **The API says at boot whether the demo account exists.** Once the database
   connects it logs `Demo account ready`, or a `warn` naming `DEMO_EMAIL` and the

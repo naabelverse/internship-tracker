@@ -3698,3 +3698,91 @@ foot of the hero while giving the "Next up" panel its own event-kind key; this r
   "vs previous 30 days" labels. The two new cards carry that label by design, so it now counts
   seven. The cards themselves are covered by two new tests, and the cohort fields by two new
   server tests.
+
+## A closed account can be restored by signing in within 30 days (24 Sep 2026)
+
+The FAQ promised a 30-day grace period "in case you change your mind", but nothing could undo a
+closure: `login` filtered `deletedAt: null` and there was no restore endpoint. This builds the
+restore rather than withdrawing the promise.
+
+- **Closing changes one field, so restoring clears one field.** `DELETE /auth/me` sets `deletedAt`
+  and revokes every refresh token. Nothing is anonymised or moved, and the email stays reserved by
+  the unique index. A restore therefore clears `deletedAt` and starts a session, and that is the
+  whole reversal.
+- **Login answers only a correct password differently.** A closed account is now looked up like any
+  other, so a wrong password on it runs the same bcrypt comparison and returns the same 401 as a
+  wrong password anywhere. It also counts towards the same lockout. A correct password gets
+  `409 ACCOUNT_PENDING_DELETION` with `{ purgeAt, restoreToken }` inside the window, or
+  `410 ACCOUNT_PURGED` after it but before the purge runs. Neither creates a session. The distinct
+  answers only follow a verified password, so they reveal nothing a successful sign-in would not.
+  A test compares a wrong password on a closed account with an unknown email byte for byte, apart
+  from `requestId` and the development-only `stack`.
+- **A restore token, not a second password submission.** The 409 carries a token from the existing
+  `issueSingleUseToken`, valid for 10 minutes; only its SHA-256 digest is stored, as
+  `restoreTokenHash` (select: false) with `restoreTokenExpires`. `POST /auth/restore` exchanges it.
+  This keeps the password out of the client's memory while the dialog is open, and it means a
+  restore always follows an explicit "Restore my account" rather than any successful sign-in. The
+  claim is one conditional `findOneAndUpdate` that checks the token, its expiry and the window in
+  the same write that clears them, so two racing requests cannot both restore. A failed claim
+  clears the token, and a new sign-in issues a new one. The error handler logs no `details`, so the
+  token never reaches a log.
+- **The window is `deletedAt + 30 days`, exclusive, the same boundary the purge uses**, so there is
+  no instant at which an account is both restorable and eligible for purge.
+- **Reminders that came due while the account was closed are marked sent on restore**, rather than
+  delivered in the next 8am digest. A backlog of deadlines already past is noise, not a reminder.
+  The range is `dueAt` from `deletedAt` to the moment of restore; anything due before closure and
+  still unsent was legitimately pending and goes out as normal. They are set `sent: true` without a
+  `sentAt`, since nothing was actually delivered.
+- **Old sessions stay revoked.** Only the session the restore creates is live, and presenting a
+  pre-closure refresh cookie still fails. The "account restored" security email tells the owner, and
+  says to change the password if it was not them. That makes five security emails, and privacy.md
+  now says five.
+- **Forgot-password stays disabled for closed accounts, on purpose.** It still filters
+  `deletedAt: null` and answers identically for every address, so it cannot be used to probe for a
+  closed account, consistent with the rest of this design. The cost is stated plainly rather than
+  buried: a user who has forgotten their password cannot restore, and the account is deleted when
+  the window ends. The closed page puts that in a bordered callout, and the FAQ, Settings and
+  privacy.md say it in full.
+- **"Contact support" is gone from every surface.** There is no support tool that can reopen an
+  account, so the closed page, the Settings danger zone and the closure email no longer offer one.
+  Signing in is the only route back. The privacy policy's "email us to delete sooner" line stays:
+  that is a real, separate channel for early deletion, not a restore.
+- **No surface claims uploaded files are deleted any more, until issue #34 is fixed.** Mapping the
+  deletion found that the purge job, and deleting an application, remove documents but never call
+  the storage adapter, so the files stay in storage unlinked. That is tracked as
+  [issue #34](https://github.com/naabelverse/internship-tracker/issues/34), deliberately out of
+  scope here. The FAQ drops "including uploaded files" and points to the privacy policy instead;
+  privacy.md describes exactly what is and is not erased; the danger zone and the closure email say
+  files are not yet removed and how to delete one individually, which does erase it. **When #34
+  ships, restore the files claim in the FAQ, privacy.md (the "Deleted accounts" row and "Deleting
+  your data"), `DangerZoneSection` and `accountDeletedTemplate`, and update this entry.**
+- **The deletion claim says "your account and its records", not "your data".** "Data" includes
+  uploaded files, which #34 means are not erased, so "your data is kept until {date}, then
+  permanently deleted" promised more than the purge does. "Your account and its records" names only
+  what the purge removes: the user record, applications with their interviews and notes, reminders
+  and sessions. The same term is used for the same claim on the closed page (both the status line
+  and the forgotten-password callout), the FAQ, `DangerZoneSection`, `accountDeletedTemplate` and
+  the privacy policy's "Deleted accounts" row. Where a surface lists the records in brackets, the
+  separate files sentence follows it and adds the part "records" leaves out: files are not yet
+  removed, and how to delete one. The two never state the same point twice. Sentences about
+  _restoring_ ("files and reminders come back as you left them") are untouched, because files are
+  intact during the window. **Optional cleanup once #34 ships:** "records" can revert to "data"
+  in these same places. This is not required, since "records" stays accurate either way.
+- **`DELETE /auth/me` now returns `purgeAt`**, which the client passes to `AccountClosedPage` in
+  route state so the page can name the date. A reload loses route state, so every sentence on that
+  page has a wording that holds without the date.
+- **The login dialog is derived, not stored.** `LoginForm` reads the prompt from `login.error`
+  rather than copying it into `useState`; "Keep it closed", Escape and the backdrop all call
+  `login.reset()` and clear the password field. `useLogin` does not toast the 409, because it is a
+  question for the user, not a failure.
+- **Three existing tests were rewritten, deliberately.** `auth.softDelete.test.ts` asserted that the
+  correct password on a closed account got 401; it now asserts 409 with no session, and the
+  wrong-password half lives in `auth.restore.test.ts`. `deleteAccountFriction.test.tsx` asserted the
+  closed page never offered restoring by signing in and did name support; it now asserts the
+  opposite of both, with the date. The mail suites' per-kind fixtures and the "security kinds" list
+  gained `account_restored`, and `account_deleted` fixtures take `purgeDate` instead of
+  `purgeDays`. None of these loosens an assertion.
+- **Verified in a browser** against the built client and a seeded in-memory API: closing through
+  Settings, the closed page's date and callout, the 409 dialog in light and dark with focus inside
+  it, "Keep it closed" clearing the password and leaving the account closed, a restore landing on
+  the dashboard with the toast and `deletedAt` cleared, and the 410 shown inline.

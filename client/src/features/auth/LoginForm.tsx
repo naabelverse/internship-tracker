@@ -6,8 +6,10 @@ import { FormError } from '@/components/ui/FormError';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
 import { loginSchema, type LoginValues } from '@/features/auth/authSchemas';
+import { readPendingDeletion } from '@/features/auth/accountClosure';
+import { RestoreAccountDialog } from '@/features/auth/RestoreAccountDialog';
 import { applyServerErrors } from '@/features/auth/serverErrors';
-import { useLogin } from '@/features/auth/useAuthMutations';
+import { useLogin, useRestoreAccount } from '@/features/auth/useAuthMutations';
 import { readRedirectTarget } from '@/routes/redirectTarget';
 
 const FIELDS = ['email', 'password'] as const;
@@ -15,11 +17,16 @@ const FIELDS = ['email', 'password'] as const;
 export function LoginForm(): JSX.Element {
   const redirectTo = readRedirectTarget(useLocation().state);
   const login = useLogin(redirectTo);
+  const restore = useRestoreAccount();
+  // Derived from the mutation rather than copied into state: the prompt exists
+  // exactly as long as the login's last answer was "closed, restorable".
+  const pending = readPendingDeletion(login.error);
 
   const {
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -30,9 +37,28 @@ export function LoginForm(): JSX.Element {
     try {
       await login.mutateAsync(values);
     } catch (error) {
+      if (readPendingDeletion(error)) return;
       applyServerErrors(error, setError, FIELDS, 'Could not sign you in');
     }
   });
+
+  const dismissPrompt = (): void => {
+    login.reset();
+    setValue('password', '');
+  };
+
+  const onRestore = (): void => {
+    if (!pending) return;
+
+    restore.mutate(pending.restoreToken, {
+      onError: (error) => {
+        // An expired token or a window that ended meanwhile: close the prompt
+        // and say why next to the form, where signing in again starts over.
+        dismissPrompt();
+        applyServerErrors(error, setError, FIELDS, 'Your account could not be restored');
+      },
+    });
+  };
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
@@ -57,6 +83,13 @@ export function LoginForm(): JSX.Element {
       <Button type="submit" className="w-full" isLoading={isSubmitting} loadingLabel="Signing in">
         Sign in
       </Button>
+
+      <RestoreAccountDialog
+        pending={pending}
+        isRestoring={restore.isPending}
+        onRestore={onRestore}
+        onKeepClosed={dismissPrompt}
+      />
     </form>
   );
 }

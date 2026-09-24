@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import * as authApi from '@/api/auth';
 import { getErrorMessage } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
+import { readPendingDeletion } from '@/features/auth/accountClosure';
 import { paths } from '@/routes/paths';
 import { clearAuthState, useAuthStore } from '@/store/authStore';
 import type { AuthSession } from '@/types/user';
@@ -37,7 +38,26 @@ export function useLogin(
       toast.success(`Welcome back, ${session.user.name.split(' ')[0]}`);
     },
     onError: (error) => {
+      // A closed account's correct password is a question for the user, which
+      // the restore dialog asks; it is not a failure to toast.
+      if (readPendingDeletion(error)) return;
       toast.error(getErrorMessage(error, 'Could not sign you in'));
+    },
+  });
+}
+
+/** "Restore my account" in the dialog a closed account's login opens. */
+export function useRestoreAccount(): UseMutationResult<AuthSession, unknown, string> {
+  const onEstablished = useSessionEstablished();
+
+  return useMutation({
+    mutationFn: authApi.restoreAccount,
+    onSuccess: (session) => {
+      onEstablished(session, paths.dashboard);
+      toast.success('Your account is restored');
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Your account could not be restored'));
     },
   });
 }

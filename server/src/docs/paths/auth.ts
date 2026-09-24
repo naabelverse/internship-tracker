@@ -86,7 +86,7 @@ export const authPaths: Record<string, unknown> = {
       tags: TAG,
       summary: 'Exchange credentials for a session',
       description:
-        'Ten consecutive failures lock the account for 15 minutes and return 423. An unknown email and a wrong password produce identical responses.',
+        'Ten consecutive failures lock the account for 15 minutes and return 423. An unknown email and a wrong password produce identical responses, including for a closed account. Only a correct password on a closed account is answered differently: 409 with a restore token inside the 30 day window, 410 after it. No session is created for a closed account.',
       requestBody: jsonBody({
         type: 'object',
         required: ['email', 'password'],
@@ -99,8 +99,45 @@ export const authPaths: Record<string, unknown> = {
         ...ok('Signed in', sessionData),
         '400': COMMON_ERRORS['400'],
         '401': COMMON_ERRORS['401'],
+        '409': {
+          description:
+            'ACCOUNT_PENDING_DELETION: the password is correct but the account is closed. `errors` carries `purgeAt` (ISO date-time, the end of the restore window) and `restoreToken` (single use, valid for 10 minutes) for POST /auth/restore.',
+          content: { 'application/json': { schema: ref('Error') } },
+        },
+        '410': {
+          description:
+            'ACCOUNT_PURGED: the password is correct but the account was closed more than 30 days ago and can no longer be restored.',
+          content: { 'application/json': { schema: ref('Error') } },
+        },
         '423': {
           description: 'Account temporarily locked after repeated failures',
+          content: { 'application/json': { schema: ref('Error') } },
+        },
+        ...RATE_LIMITED,
+      },
+    },
+  },
+  '/api/v1/auth/restore': {
+    post: {
+      tags: TAG,
+      summary: 'Restore a closed account and open a session',
+      description:
+        'Exchanges the restoreToken from a 409 ACCOUNT_PENDING_DELETION login for a session, exactly as a login would. Clears deletedAt, marks reminders that came due while the account was closed as sent, and mails a security notice. Sessions revoked at closure stay revoked. The token is single use; the claim checks it, its expiry and the 30 day window in one write.',
+      security: [],
+      requestBody: jsonBody({
+        type: 'object',
+        required: ['restoreToken'],
+        properties: { restoreToken: { type: 'string' } },
+      }),
+      responses: {
+        ...ok('Account restored and signed in', sessionData),
+        '400': {
+          description:
+            'VALIDATION_ERROR, INVALID_TOKEN (unknown or already used) or TOKEN_EXPIRED (older than 10 minutes). Signing in again issues a new token.',
+          content: { 'application/json': { schema: ref('Error') } },
+        },
+        '410': {
+          description: 'ACCOUNT_PURGED: the 30 day restore window has ended',
           content: { 'application/json': { schema: ref('Error') } },
         },
         ...RATE_LIMITED,
@@ -199,7 +236,7 @@ export const authPaths: Record<string, unknown> = {
       tags: TAG,
       summary: 'Close the account',
       description:
-        'Requires the current password. The account is soft deleted: access ends immediately and every session is revoked, and the data is permanently removed by a job 30 days later.',
+        'Requires the current password. The account is soft deleted: access ends immediately and every session is revoked. Signing in with the same password within 30 days offers a restore (see POST /auth/login and POST /auth/restore); after that a job permanently removes the account records. Uploaded files are not yet erased by that job (issue #34).',
       security: AUTHENTICATED,
       requestBody: jsonBody({
         type: 'object',
@@ -207,7 +244,17 @@ export const authPaths: Record<string, unknown> = {
         properties: { password: { type: 'string' } },
       }),
       responses: {
-        ...ok('The account is closed', objectOf({ deleted: { type: 'boolean' } })),
+        ...ok(
+          'The account is closed',
+          objectOf({
+            deleted: { type: 'boolean' },
+            purgeAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'The end of the restore window',
+            },
+          }),
+        ),
         '400': COMMON_ERRORS['400'],
         '401': COMMON_ERRORS['401'],
       },

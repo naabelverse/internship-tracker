@@ -71,6 +71,16 @@ export function localDateTimeLabel(instant: Date, timeZone: string): string {
   }).format(instant);
 }
 
+/** A full calendar date, e.g. `24 October 2026`, for a deadline a person must act by. */
+export function localLongDateLabel(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(instant);
+}
+
 /** A calendar day without the time, e.g. `11 Sep`. Used for week ranges. */
 export function localDateLabel(instant: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('en-GB', {

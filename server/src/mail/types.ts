@@ -1,6 +1,6 @@
 /**
  * The message vocabulary. Every email the application can send is one of these
- * six kinds, and each kind carries exactly the data its template needs, so a
+ * seven kinds, and each kind carries exactly the data its template needs, so a
  * template can never be rendered with a field the caller forgot to supply.
  */
 
@@ -9,6 +9,7 @@ export const MAIL_KINDS = [
   'password_reset',
   'password_changed',
   'account_deleted',
+  'account_restored',
   'reminder_digest',
   'weekly_summary',
 ] as const;
@@ -32,6 +33,7 @@ export const MAIL_CATEGORY: Record<MailKind, MailCategory> = {
   password_reset: 'security',
   password_changed: 'security',
   account_deleted: 'security',
+  account_restored: 'security',
   reminder_digest: 'optional',
   weekly_summary: 'optional',
 };
@@ -81,7 +83,12 @@ export interface PasswordChangedData {
 
 export interface AccountDeletedData {
   name: string;
-  purgeDays: number;
+  /** The last day the account can be restored, already formatted in the recipient's own timezone. */
+  purgeDate: string;
+}
+
+export interface AccountRestoredData {
+  name: string;
 }
 
 export interface DigestItem {
@@ -120,7 +127,8 @@ export type SecurityMessage =
   | { kind: 'verify_email'; data: VerifyEmailData }
   | { kind: 'password_reset'; data: PasswordResetData }
   | { kind: 'password_changed'; data: PasswordChangedData }
-  | { kind: 'account_deleted'; data: AccountDeletedData };
+  | { kind: 'account_deleted'; data: AccountDeletedData }
+  | { kind: 'account_restored'; data: AccountRestoredData };
 
 export type OptionalMessage =
   | { kind: 'reminder_digest'; data: ReminderDigestData }

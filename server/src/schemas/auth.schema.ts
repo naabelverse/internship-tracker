@@ -89,6 +89,8 @@ export const forgotPasswordSchema = z.object({ email }).strict();
 
 export const resetPasswordSchema = z.object({ token: singleUseToken, password }).strict();
 
+export const restoreAccountSchema = z.object({ restoreToken: singleUseToken }).strict();
+
 export const deleteAccountSchema = z
   .object({ password: z.string().min(1, 'is required').max(128) })
   .strict();
@@ -97,6 +99,7 @@ export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
+export type RestoreAccountInput = z.infer<typeof restoreAccountSchema>;
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
