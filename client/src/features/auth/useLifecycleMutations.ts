@@ -79,17 +79,18 @@ export function useLogoutEverywhere(): UseMutationResult<void, unknown, void> {
   });
 }
 
-export function useDeleteAccount(): UseMutationResult<void, unknown, string> {
+export function useDeleteAccount(): UseMutationResult<string, unknown, string> {
   const navigate = useNavigate();
 
   return useMutation({
     mutationFn: (password: string) => authApi.deleteAccount(password),
-    onSuccess: () => {
+    onSuccess: (purgeAt) => {
       // Deliberately no `clearAuthState()` here. Clearing it now would make
       // `ProtectedRoute` redirect to /login from the route we are still on,
       // before this navigation commits. `AccountClosedPage` clears it on mount,
       // which cannot happen before the page it belongs to is the page showing.
-      void navigate(paths.accountClosed, { replace: true });
+      // The purge date rides in route state so that page can name the deadline.
+      void navigate(paths.accountClosed, { replace: true, state: { purgeAt } });
     },
     onError: (error) => {
       toast.error(getErrorMessage(error, 'Your account could not be closed.'));

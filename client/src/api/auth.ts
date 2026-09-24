@@ -38,6 +38,17 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 }
 
 /**
+ * Exchanges the token a closed account's login answered with for a session.
+ * Through `authClient` for the same reason as login: it establishes a session.
+ */
+export async function restoreAccount(restoreToken: string): Promise<AuthSession> {
+  const { data } = await authClient.post<ApiSuccessBody<AuthSession>>('/auth/restore', {
+    restoreToken,
+  });
+  return data.data;
+}
+
+/**
  * Signs into the shared demo account. Sends no body at all — the server takes no
  * parameters here, which is what stops the route being aimed at another account.
  */
@@ -150,6 +161,11 @@ export async function logoutEverywhere(): Promise<void> {
 }
 
 /** Soft deletes the account. The password is re-checked server-side. */
-export async function deleteAccount(password: string): Promise<void> {
-  await apiClient.delete('/auth/me', { data: { password } });
+/** Closes the account and returns the end of its restore window, as an ISO instant. */
+export async function deleteAccount(password: string): Promise<string> {
+  const { data } = await apiClient.delete<ApiSuccessBody<{ deleted: true; purgeAt: string }>>(
+    '/auth/me',
+    { data: { password } },
+  );
+  return data.data.purgeAt;
 }
