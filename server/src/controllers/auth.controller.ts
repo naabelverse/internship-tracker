@@ -7,10 +7,12 @@ import type {
   LoginInput,
   RegisterInput,
   ResetPasswordInput,
+  RestoreAccountInput,
   UpdateMeInput,
   VerifyEmailInput,
 } from '@/schemas/auth.schema';
 import * as accountLifecycle from '@/services/accountLifecycle.service';
+import { restoreAccount } from '@/services/accountRestore.service';
 import * as authService from '@/services/auth.service';
 import { exportAccountData, exportFilename } from '@/services/dataExport.service';
 import * as sessionService from '@/services/session.service';
@@ -70,6 +72,21 @@ export const login = asyncHandler(async (req, res) => {
     res,
     { user: user.toJSON(), accessToken: session.accessToken },
     { message: 'Signed in' },
+  );
+});
+
+/** Exchanges the token a closed account's sign-in handed back for a session. */
+export const restore = asyncHandler(async (req, res) => {
+  const { user, session } = await restoreAccount(
+    (req.body as RestoreAccountInput).restoreToken,
+    sessionContext(req),
+  );
+
+  setRefreshCookie(res, session.refreshToken);
+  sendSuccess(
+    res,
+    { user: user.toJSON(), accessToken: session.accessToken },
+    { message: 'Your account is restored' },
   );
 });
 
@@ -224,7 +241,7 @@ export const revokeSession = asyncHandler(async (req, res) => {
 });
 
 export const deleteMe = asyncHandler(async (req, res) => {
-  await accountLifecycle.deleteAccount(
+  const purgeAt = await accountLifecycle.deleteAccount(
     getAuthenticatedUser(req)._id,
     (req.body as DeleteAccountInput).password,
   );
@@ -232,7 +249,7 @@ export const deleteMe = asyncHandler(async (req, res) => {
   clearRefreshCookie(res);
   sendSuccess(
     res,
-    { deleted: true },
-    { message: 'Your account is closed. Your data is removed permanently after 30 days.' },
+    { deleted: true, purgeAt: purgeAt.toISOString() },
+    { message: 'Your account is closed. Sign in within 30 days to restore it.' },
   );
 });

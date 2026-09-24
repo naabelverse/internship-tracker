@@ -14,6 +14,7 @@ import {
   register,
   resendVerification,
   resetPassword,
+  restore,
   revokeSession,
   updateMe,
   usage,
@@ -30,6 +31,7 @@ import {
   registerIpLimiter,
   resendVerificationLimiter,
   resetPasswordIpLimiter,
+  restoreIpLimiter,
 } from '@/middleware/rateLimit';
 import { changesEmail, rejectDemoAccount } from '@/middleware/rejectDemoAccount';
 import { requireAuth } from '@/middleware/requireAuth';
@@ -41,6 +43,7 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  restoreAccountSchema,
   updateMeSchema,
   verifyEmailSchema,
 } from '@/schemas/auth.schema';
@@ -58,6 +61,10 @@ router.post(
 );
 
 router.post('/login', loginIpLimiter, loginEmailLimiter, validateBody(loginSchema), login);
+
+// Unauthenticated on purpose: a closed account has no session. The token from
+// the login's 409 is the credential, and it is single use and short lived.
+router.post('/restore', restoreIpLimiter, validateBody(restoreAccountSchema), restore);
 
 // No body, and no `validateBody`: there is nothing to validate, which is
 // precisely what stops this route being pointed at any account but the seeded

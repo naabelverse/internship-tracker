@@ -2,6 +2,7 @@ import { renderHtml, renderText, type MailFooter } from '@/mail/layout';
 import { reminderDigestTemplate, weeklySummaryTemplate } from '@/mail/templates/digests';
 import {
   accountDeletedTemplate,
+  accountRestoredTemplate,
   passwordChangedTemplate,
   passwordResetTemplate,
   verifyEmailTemplate,
@@ -26,6 +27,8 @@ function contentFor(message: MailMessage): TemplateOutput {
       return passwordChangedTemplate(message.data);
     case 'account_deleted':
       return accountDeletedTemplate(message.data);
+    case 'account_restored':
+      return accountRestoredTemplate(message.data);
     case 'reminder_digest':
       return reminderDigestTemplate(message.data);
     case 'weekly_summary':

@@ -1,11 +1,12 @@
 import type { Types } from 'mongoose';
 import { env } from '@/config/env';
 import { logger } from '@/config/logger';
-import { PURGE_AFTER_MS } from '@/jobs/purgeDeletedUsersJob';
 import { User, type UserDocument } from '@/models/User';
+import { purgeAtFor } from '@/services/accountRestore.service';
 import { sendMail } from '@/services/mailer.service';
 import { revokeAllForUser } from '@/services/token.service';
 import { ApiError } from '@/utils/ApiError';
+import { localLongDateLabel } from '@/utils/dates';
 import {
   EMAIL_VERIFICATION_TTL_MS,
   PASSWORD_RESET_TTL_MS,
@@ -18,7 +19,6 @@ export const VERIFICATION_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 const MS_PER_MINUTE = 60 * 1000;
-const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 function verificationLink(token: string): string {
   return `${env.APP_URL}/verify-email?token=${token}`;
@@ -172,11 +172,13 @@ export async function resetPassword(token: string, password: string): Promise<Us
 }
 
 /**
- * Soft deletes the account. The document stays for 30 days so the purge job can
- * remove it and its data together; `requireAuth` and `login` both already refuse
- * a user with `deletedAt` set, so access ends immediately.
+ * Soft deletes the account and returns the instant it becomes unrestorable. The
+ * document stays for 30 days so the purge job can remove it and its data
+ * together. `requireAuth` refuses a user with `deletedAt` set, so access ends
+ * immediately; `login` answers a correct password with a restore prompt instead
+ * of a session (see `accountRestore.service`).
  */
-export async function deleteAccount(userId: Types.ObjectId, password: string): Promise<void> {
+export async function deleteAccount(userId: Types.ObjectId, password: string): Promise<Date> {
   const user = await User.findOne({ _id: userId, deletedAt: null }).select('+password');
 
   if (!user) {
@@ -189,6 +191,7 @@ export async function deleteAccount(userId: Types.ObjectId, password: string): P
 
   user.deletedAt = new Date();
   await user.save();
+  const purgeAt = purgeAtFor(user.deletedAt);
 
   await revokeAllForUser(user._id, 'account_deleted');
 
@@ -196,9 +199,11 @@ export async function deleteAccount(userId: Types.ObjectId, password: string): P
     to: user.email,
     message: {
       kind: 'account_deleted',
-      data: { name: user.name, purgeDays: PURGE_AFTER_MS / MS_PER_DAY },
+      data: { name: user.name, purgeDate: localLongDateLabel(purgeAt, user.timezone) },
     },
   });
 
   logger.info('Account soft deleted', { userId: user._id.toString() });
+
+  return purgeAt;
 }

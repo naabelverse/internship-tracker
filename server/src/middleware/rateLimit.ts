@@ -77,6 +77,15 @@ export const loginEmailLimiter = createAuthLimiter(
   emailLimiterExtras,
 );
 
+/**
+ * Restore takes a token, not an email, so it is keyed on IP alone. The token is
+ * only minted after a correct password, which the login limiters already cap.
+ */
+export const restoreIpLimiter = createAuthLimiter(
+  'RATE_LIMITED_IP',
+  'Too many restore attempts from this network. Try again in 15 minutes.',
+);
+
 export const registerIpLimiter = createAuthLimiter(
   'RATE_LIMITED_IP',
   'Too many sign-up attempts from this network. Try again in 15 minutes.',

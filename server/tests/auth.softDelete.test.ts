@@ -66,7 +66,11 @@ describe('DELETE /auth/me', () => {
 });
 
 describe('a soft deleted account is invisible', () => {
-  it('cannot log in afterwards, and fails the same way a wrong password does', async () => {
+  // Rewritten deliberately with the restore flow. This used to assert that the
+  // correct password got a 401; it now gets a restore prompt, and still no
+  // session. The wrong-password half of the old promise is kept in
+  // auth.restore.test.ts, which compares it byte for byte with an unknown email.
+  it('gets a restore prompt, not a session, for the correct password', async () => {
     const { payload, accessToken } = await registerUser(app);
     await closeAccount(accessToken, payload.password);
     resetAuthRateLimiters();
@@ -75,8 +79,10 @@ describe('a soft deleted account is invisible', () => {
       .post(`${AUTH_BASE}/login`)
       .send({ email: payload.email, password: payload.password });
 
-    expect(response.status).toBe(401);
-    expect(response.body.code).toBe('INVALID_CREDENTIALS');
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe('ACCOUNT_PENDING_DELETION');
+    expect(response.body.data).toBeUndefined();
+    expect(response.headers['set-cookie']).toBeUndefined();
   });
 
   it('cannot use an access token that was already issued', async () => {

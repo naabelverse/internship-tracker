@@ -299,7 +299,11 @@ describe('all six templates travel this path unchanged', () => {
       },
     },
     password_changed: { kind: 'password_changed', data: { name: 'Ada', via: 'settings' } },
-    account_deleted: { kind: 'account_deleted', data: { name: 'Ada', purgeDays: 30 } },
+    account_deleted: {
+      kind: 'account_deleted',
+      data: { name: 'Ada', purgeDate: '24 October 2026' },
+    },
+    account_restored: { kind: 'account_restored', data: { name: 'Ada' } },
     reminder_digest: {
       kind: 'reminder_digest',
       data: { name: 'Ada', items: [{ title: 'Follow up', dueLabel: 'Tomorrow, 9am' }] },

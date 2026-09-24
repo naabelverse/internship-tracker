@@ -15,6 +15,7 @@ import type {
   UpdateMeInput,
 } from '@/schemas/auth.schema';
 import { issueVerification } from '@/services/accountLifecycle.service';
+import { answerClosedAccount } from '@/services/accountRestore.service';
 import { findDemoAccount } from '@/services/demoAccount.service';
 import { sendMail } from '@/services/mailer.service';
 import { assertHumanSignup } from '@/services/signupGuard.service';
@@ -72,8 +73,14 @@ export async function register(input: RegisterInput, context: SessionContext): P
   return { user, session };
 }
 
+/**
+ * A closed account is looked up like any other, so a wrong password on it takes
+ * the same path, costs the same bcrypt comparison and gets the same 401 as a
+ * wrong password anywhere. Only a correct password reaches the closed-account
+ * branch, which answers with a restore prompt rather than a session.
+ */
 export async function login(input: LoginInput, context: SessionContext): Promise<AuthResult> {
-  const user = await User.findOne({ email: input.email, deletedAt: null }).select('+password');
+  const user = await User.findOne({ email: input.email }).select('+password');
 
   if (!user) {
     await bcrypt.compare(input.password, getDummyPasswordHash());
@@ -104,6 +111,9 @@ export async function login(input: LoginInput, context: SessionContext): Promise
 
   user.failedLoginAttempts = 0;
   user.lockedUntil = undefined;
+
+  if (user.deletedAt) throw await answerClosedAccount(user, now);
+
   user.lastLoginAt = now;
   await user.save();
 

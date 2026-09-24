@@ -2,20 +2,21 @@ import { APP_PRODUCT_NAME } from '@/config/app-info';
 import type { MailBlock } from '@/mail/layout';
 import type {
   AccountDeletedData,
+  AccountRestoredData,
   PasswordChangedData,
   PasswordResetData,
   VerifyEmailData,
 } from '@/mail/types';
 
 /**
- * The four security-critical templates. None of them carries an unsubscribe
+ * The five security-critical templates. None of them carries an unsubscribe
  * link, and none of them is subject to a preference: a person who cannot receive
  * these cannot verify an address, recover an account, or find out that either
  * was taken from them.
  *
  * A template produces content, never a shell. The layout is applied by the
  * registry, which is what keeps the masthead, the footer and the plain-text
- * projection identical across all six.
+ * projection identical across all seven.
  */
 
 export interface TemplateOutput {
@@ -102,13 +103,18 @@ export function passwordChangedTemplate(data: PasswordChangedData): TemplateOutp
   };
 }
 
+/**
+ * Files are named as the exception on purpose: the purge does not yet erase
+ * them from storage (issue #34), so saying "everything is removed" would be the
+ * claim this email used to make and could not keep.
+ */
 export function accountDeletedTemplate(data: AccountDeletedData): TemplateOutput {
-  const days = String(data.purgeDays);
+  const date = data.purgeDate;
 
   return {
     subject: 'Your account has been closed',
     heading: 'Your account has been closed',
-    preheader: `Your data is kept for ${days} days, then permanently removed.`,
+    preheader: `Your account can be restored until ${date}, then it is permanently removed.`,
     blocks: [
       greeting(data.name),
       {
@@ -117,11 +123,30 @@ export function accountDeletedTemplate(data: AccountDeletedData): TemplateOutput
       },
       {
         type: 'paragraph',
-        text: `Your applications, interviews and files are kept for ${days} days and then permanently removed. Nothing is recoverable after that.`,
+        text: `Your applications, interviews, notes and reminders are kept until ${date} and then permanently removed. Uploaded files are not removed at that point yet: they stay in storage, no longer linked to any account. To make sure a file is gone, restore the account, delete the file from its application, then close the account again.`,
       },
       {
         type: 'note',
-        text: `If you did not close this account, get in touch within those ${days} days. Once the data is purged there is nothing left to restore.`,
+        text: `Changed your mind? Sign in before ${date} to restore your account. Password reset won't work on a closed account, so you'll need your current password. If you did not close this account yourself, restore it the same way and then change your password.`,
+      },
+    ],
+  };
+}
+
+export function accountRestoredTemplate(data: AccountRestoredData): TemplateOutput {
+  return {
+    subject: 'Your account has been restored',
+    heading: 'Your account has been restored',
+    preheader: 'Your account is open again, with your data as you left it.',
+    blocks: [
+      greeting(data.name),
+      {
+        type: 'paragraph',
+        text: 'Your account has been restored and you are signed in on the device you used. Your applications, interviews, notes, files and reminders are back as you left them. Reminders that came due while the account was closed will not be sent.',
+      },
+      {
+        type: 'note',
+        text: 'If this was not you, change your password now. Devices that were signed in before the account was closed stay signed out.',
       },
     ],
   };
