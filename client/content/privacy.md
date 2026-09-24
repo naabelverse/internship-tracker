@@ -93,14 +93,15 @@ Data is disclosed otherwise only where a valid legal obligation requires it.
 
 ## How long it is kept
 
-| Data                         | Retention                                                                                                                                                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account and everything in it | Until you delete your account.                                                                                                                                                                                   |
-| Deleted accounts             | Soft-deleted immediately and invisible at once; **permanently purged after 30 days**, including uploaded files. The window exists so an accidental deletion can be undone; after it, nothing remains to restore. |
-| Session records              | Refresh tokens expire 7 days after issue. Signing out, changing your password or revoking a device removes them sooner.                                                                                          |
-| Password reset tokens        | 30 minutes, and single-use.                                                                                                                                                                                      |
-| Email verification tokens    | 24 hours, and single-use.                                                                                                                                                                                        |
-| Server logs                  | Retained by the hosting platform under its own policy, typically days rather than months.                                                                                                                        |
+| Data                         | Retention                                                                                                                                                                                                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Account and everything in it | Until you delete your account.                                                                                                                                                                                                                                                  |
+| Deleted accounts             | Closed immediately and invisible at once. For 30 days you can restore the account by signing in; after that the user record, every application, every reminder and every session are **permanently purged**. Uploaded files are the exception — see "Deleting your data" below. |
+| Session records              | Refresh tokens expire 7 days after issue. Signing out, changing your password or revoking a device removes them sooner.                                                                                                                                                         |
+| Account restore tokens       | 10 minutes, and single-use.                                                                                                                                                                                                                                                     |
+| Password reset tokens        | 30 minutes, and single-use.                                                                                                                                                                                                                                                     |
+| Email verification tokens    | 24 hours, and single-use.                                                                                                                                                                                                                                                       |
+| Server logs                  | Retained by the hosting platform under its own policy, typically days rather than months.                                                                                                                                                                                       |
 
 ## Getting your data out
 
@@ -112,18 +113,34 @@ not a summary.
 ## Deleting your data
 
 **Settings → Close my account** asks for your password and a typed confirmation, then
-soft-deletes the account. You are signed out everywhere immediately and the account can no
-longer be used to sign in. After 30 days a scheduled job permanently removes the user
-record, every application, every reminder, every session and every uploaded file.
+closes the account. You are signed out everywhere immediately and reminder and summary
+emails stop.
+
+For 30 days the account can be restored: sign in with your email and password and you will
+be asked whether to restore it. Password reset does not work for a closed account, so if you
+have forgotten your password the account cannot be restored and will be deleted when the 30
+days end.
+
+After 30 days a scheduled job permanently removes the user record, every application, every
+reminder and every session.
+
+**Uploaded files are not currently erased by that job.** This is a known defect, tracked as
+[issue #34](https://github.com/naabelverse/internship-tracker/issues/34). The files stay in
+object storage under their non-guessable names. No account or application refers to them any
+more and the app cannot produce a download link for them, so they cannot be reached through
+the service — but they have not been erased. The same is true of the files attached to an
+application you delete. Deleting an attachment from its application does erase the file
+immediately, so to make sure a file is gone, delete it that way before deleting the
+application or closing the account. This section will be updated when the fix ships.
 
 To delete your data sooner than that window allows, email **{{CONTACT_EMAIL}}**.
 
 ## Email you receive
 
-Four messages are sent regardless of your preferences, because each one is about the
+Five messages are sent regardless of your preferences, because each one is about the
 security of your account and suppressing it would be worse than sending it: address
-verification, password reset, a notice that your password changed, and confirmation that
-your account was closed.
+verification, password reset, a notice that your password changed, confirmation that your
+account was closed, and confirmation that a closed account was restored.
 
 Two are optional and carry a one-click unsubscribe link in every message: the deadline and
 interview reminder digest, and the opt-in weekly summary. Both can also be switched off in
@@ -131,9 +148,9 @@ Settings at any time.
 
 ## Security
 
-Passwords are hashed with bcrypt. Verification and reset tokens are stored as digests, so a
-copy of the database cannot be replayed against the app. Refresh tokens are hashed, rotated
-on every use, and an attempt to reuse a rotated token revokes that whole session family.
+Passwords are hashed with bcrypt. Verification, reset and account restore tokens are stored
+as digests, so a copy of the database cannot be replayed against the app. Refresh tokens are
+hashed, rotated on every use, and an attempt to reuse a rotated token revokes that whole session family.
 Access tokens are short-lived and held in memory rather than in browser storage. The API
 rate-limits sign-in, registration and password-reset attempts, and locks an account after
 repeated failures.

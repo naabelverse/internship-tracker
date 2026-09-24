@@ -30,7 +30,7 @@ const FAQ: QuestionAndAnswer[] = [
   {
     question: 'What happens to my data?',
     answer:
-      'It stays yours. It is never sold, shared, or used to train anything. You can export the lot as JSON from Settings at any moment, and deleting your account removes everything — including uploaded files — after a 30-day grace period in case you change your mind.',
+      'It stays yours. It is never sold, shared, or used to train anything. You can export the lot as JSON from Settings at any moment. Closing your account starts a 30-day grace period: sign in during it and you can restore everything as you left it. After 30 days the account and its data are permanently deleted. Password reset does not work for a closed account, so if you have forgotten your password, you will not be able to restore it yourself. The Privacy Policy explains exactly what happens to uploaded files when an account is closed.',
   },
   {
     question: 'Will it email me constantly?',
