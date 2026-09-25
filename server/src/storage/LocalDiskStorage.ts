@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { env } from '@/config/env';
 import { signDownload } from '@/storage/signing';
@@ -9,6 +9,7 @@ import {
   type PutObjectInput,
   type SignedUrlOptions,
   type StorageAdapter,
+  type StoredObjectInfo,
 } from '@/storage/StorageAdapter';
 
 function isMissing(error: unknown): boolean {
@@ -86,5 +87,33 @@ export class LocalDiskStorage implements StorageAdapter {
     if (options.downloadName) url.searchParams.set('name', options.downloadName);
 
     return Promise.resolve(url.toString());
+  }
+
+  /**
+   * Walks the whole upload root and keeps keys that start with the prefix, so
+   * a prefix matches the same way it does on S3: as a string, not a directory.
+   */
+  async list(prefix: string): Promise<StoredObjectInfo[]> {
+    let entries;
+    try {
+      entries = await readdir(this.root, { recursive: true, withFileTypes: true });
+    } catch (error) {
+      if (isMissing(error)) return [];
+      throw error;
+    }
+
+    const keys = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) =>
+        path.relative(this.root, path.join(entry.parentPath, entry.name)).split(path.sep).join('/'),
+      )
+      .filter((key) => key.startsWith(prefix));
+
+    return Promise.all(
+      keys.map(async (key) => {
+        const info = await stat(this.resolveKey(key));
+        return { key, size: info.size, lastModified: new Date(info.mtimeMs) };
+      }),
+    );
   }
 }

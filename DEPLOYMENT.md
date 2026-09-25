@@ -1250,6 +1250,27 @@ npm run stats -w server   # active users, soft-deleted users, applications, sign
 Run it with `railway run npm run stats -w server` against the live database. There is no admin web UI by design: no extra
 authentication surface, no route, no role model.
 
+#### Sweeping orphaned uploads (one-off, issue #42)
+
+Deletions before the #34 fix removed records but left their files in the bucket. `storage:sweep`
+finds them: keys under `attachments/` that no application references, that match the generated
+`attachments/<user>/<application>/<uuid>.<ext>` shape, and that are more than 24 hours old.
+
+```bash
+railway run npm run storage:sweep -w server                                   # dry run: counts, bytes, keys by user
+railway run npm run storage:sweep -w server -- --apply --expect <N>           # deletes exactly the N orphans the dry run listed
+```
+
+It is a dry run unless given `--apply`, and `--apply` refuses, deleting nothing, when:
+
+- `--expect` is missing, or does not match the orphan count found at that moment;
+- the database has no applications, which is what a wrong `MONGO_URI` looks like;
+- orphans are more than half of every listed file, unless `--allow-majority` is also passed.
+
+Keys it does not recognise are listed and never deleted. The R2 token from step 2 (Object Read &
+Write) already allows listing. On Windows, if `railway run` fails with `querySrv ECONNREFUSED`, run it
+from `railway shell` with the standard connection string, as for the seed in step 11.
+
 ---
 
 ## Step 11 — Seed the demo account

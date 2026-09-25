@@ -92,6 +92,65 @@ function contractSuite(name: string, getAdapter: () => StorageAdapter): void {
       expect(await storage.get('attachments/other.pdf')).toEqual(other);
     });
 
+    it('lists every object under a prefix with its size and modification time', async () => {
+      const storage = getAdapter();
+      const before = Date.now();
+
+      await storage.put({ key: KEY, body: TEXT, contentType: 'application/pdf' });
+      await storage.put({
+        key: 'attachments/64b7f0/app/nested.png',
+        body: BINARY,
+        contentType: 'image/png',
+      });
+      await storage.put({ key: 'exports/report.csv', body: TEXT, contentType: 'text/csv' });
+
+      const listed = await storage.list('attachments/');
+      const byKey = new Map(listed.map((object) => [object.key, object]));
+
+      expect([...byKey.keys()].sort()).toEqual([
+        'attachments/64b7f0/abc123.pdf',
+        'attachments/64b7f0/app/nested.png',
+      ]);
+      expect(byKey.get(KEY)?.size).toBe(TEXT.length);
+      expect(byKey.get('attachments/64b7f0/app/nested.png')?.size).toBe(BINARY.length);
+
+      const modified = byKey.get(KEY)?.lastModified;
+      expect(modified).toBeInstanceOf(Date);
+      // Filesystems round mtime, so allow a second either side of the write.
+      expect(modified?.getTime()).toBeGreaterThanOrEqual(before - 1000);
+      expect(modified?.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+    });
+
+    it('lists more objects than fit on one page', async () => {
+      const storage = getAdapter();
+      const keys = [1, 2, 3, 4, 5].map((n) => `attachments/user/app/file-${String(n)}.pdf`);
+
+      for (const key of keys) {
+        await storage.put({ key, body: TEXT, contentType: 'application/pdf' });
+      }
+
+      const listed = await storage.list('attachments/');
+
+      expect(listed.map((object) => object.key).sort()).toEqual(keys);
+    });
+
+    it('returns an empty list when nothing is stored under the prefix', async () => {
+      const storage = getAdapter();
+
+      await storage.put({ key: 'exports/report.csv', body: TEXT, contentType: 'text/csv' });
+
+      expect(await storage.list('attachments/')).toEqual([]);
+    });
+
+    it('stops listing an object once it is deleted', async () => {
+      const storage = getAdapter();
+
+      await storage.put({ key: KEY, body: TEXT, contentType: 'application/pdf' });
+      await storage.delete(KEY);
+
+      expect(await storage.list('attachments/')).toEqual([]);
+    });
+
     it('issues an absolute signed URL that names the object', async () => {
       const storage = getAdapter();
       await storage.put({ key: KEY, body: TEXT, contentType: 'application/pdf' });

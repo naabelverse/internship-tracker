@@ -915,6 +915,14 @@ _Dated notes on work outside the numbered phases. Not a checklist._
   `tokenContrast` 133 → 249 assertions, plus `statusConfig.test.ts` and `StatusDot.test.tsx`.
   Values measured against the gate, not picked; the CVD caveats are in `DECISIONS.md`.
 
+- **2026-09-25 — `storage:sweep` for files orphaned before the #34 fix (issue #42).** The storage
+  adapter gained a read-only `list(prefix)` (S3 `ListObjectsV2` with pagination, a recursive
+  `readdir` on local disk), covered by the shared contract suite for both drivers. The script is a
+  dry run by default and deletes only unreferenced, generated-shape keys older than 24 hours, behind
+  `--apply --expect <N>` plus empty-database and majority guards. **Not yet run in production** —
+  see the manual step below. No real R2 test bucket exists, so the S3 driver is proven against the
+  in-memory mock only.
+
 ## Manual steps waiting on me (the human)
 _The agent appends anything it cannot do itself here — DNS records, account signups, secrets to generate._
 
@@ -972,6 +980,10 @@ _The agent appends anything it cannot do itself here — DNS records, account si
       error tracker nobody has tested is an error tracker that is not working.
 - [ ] **Enable the deploy workflow** by setting the `DEPLOY_ENABLED` repository secret to
       `true` plus the two deploy-hook URLs. It is inert until you do.
+- [ ] **Run the orphaned-upload sweep once in production (issue #42).** After the PR merges:
+      `railway run npm run storage:sweep -w server` for the dry run, review the keys, then
+      `-- --apply --expect <N>` (plus `--allow-majority` if it says so). Record the before and
+      after counts in the #42 entry in `DECISIONS.md`. DEPLOYMENT.md §10.4.
 
 ## Deferred / known issues
 _Anything intentionally postponed, with the reason._

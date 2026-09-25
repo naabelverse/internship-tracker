@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Types } from 'mongoose';
 import { logger } from '@/config/logger';
 import { Application, type ApplicationDocument } from '@/models/Application';
-import { getStorage } from '@/storage';
+import { getStorage, type StorageAdapter } from '@/storage';
 import { assertAttachmentCapacity } from '@/services/usage.service';
 import { DEFAULT_SIGNED_URL_TTL_SECONDS } from '@/storage/StorageAdapter';
 import { ApiError } from '@/utils/ApiError';
@@ -167,8 +167,10 @@ const ERASE_BATCH_SIZE = 20;
  * already deleted, so a failed file is logged with its key, for manual removal,
  * and the remaining files are still erased.
  */
-export async function eraseStoredFiles(keys: string[]): Promise<FileErasureResult> {
-  const storage = getStorage();
+export async function eraseStoredFiles(
+  keys: string[],
+  storage: StorageAdapter = getStorage(),
+): Promise<FileErasureResult> {
   let failed = 0;
 
   for (let start = 0; start < keys.length; start += ERASE_BATCH_SIZE) {

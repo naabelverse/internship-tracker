@@ -16,6 +16,7 @@
     "mail:palette": "node scripts/generateMailPalette.mjs",
     "migrate": "tsx src/scripts/migrate.ts",
     "stats": "tsx src/scripts/stats.ts",
+    "storage:sweep": "tsx src/scripts/storageSweep.ts",
     "seed": "tsx src/scripts/seed.ts",
     "seed:reset": "tsx src/scripts/seed.ts --reset"
   },

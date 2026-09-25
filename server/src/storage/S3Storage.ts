@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   type S3Client,
 } from '@aws-sdk/client-s3';
@@ -12,6 +13,7 @@ import {
   type PutObjectInput,
   type SignedUrlOptions,
   type StorageAdapter,
+  type StoredObjectInfo,
 } from '@/storage/StorageAdapter';
 
 interface AwsErrorShape {
@@ -100,5 +102,34 @@ export class S3Storage implements StorageAdapter {
     return getSignedUrl(this.client, command, {
       expiresIn: options.expiresInSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS,
     });
+  }
+
+  async list(prefix: string): Promise<StoredObjectInfo[]> {
+    const objects: StoredObjectInfo[] = [];
+    let continuationToken: string | undefined;
+
+    // ListObjectsV2 returns at most 1000 keys a page, so follow the token to the end.
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+
+      for (const object of page.Contents ?? []) {
+        if (!object.Key) continue;
+        objects.push({
+          key: object.Key,
+          size: object.Size ?? 0,
+          lastModified: object.LastModified ?? new Date(0),
+        });
+      }
+
+      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return objects;
   }
 }

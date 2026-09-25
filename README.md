@@ -284,27 +284,28 @@ is a free-tier deployment, so errors are the point.
 
 Run from the repository root unless noted.
 
-| Script                  | What it does                                                        |
-| ----------------------- | ------------------------------------------------------------------- |
-| `npm run dev`           | API and client together with hot reload                             |
-| `npm run build`         | Type-checked build of both workspaces                               |
-| `npm run lint`          | ESLint with `--max-warnings 0`, then `prettier --check`             |
-| `npm run lint:fix`      | ESLint autofix                                                      |
-| `npm run format`        | Prettier write                                                      |
-| `npm run typecheck`     | `tsc --noEmit` in both workspaces                                   |
-| `npm run test`          | Jest (server), then Vitest (client)                                 |
-| `npm run test:coverage` | Server tests with the coverage report, enforcing the §10 target     |
-| `npm run verify`        | lint → typecheck → test → build. **Must pass before any commit**    |
-| `npm run seed`          | Create the demo account and its 64 applications                     |
-| `npm run seed:reset`    | Wipe the demo account's data and reseed                             |
-| `npm run migrate`       | Apply pending schema migrations (see below)                         |
-| `npm run stats`         | User, application and 7-day signup counts against the live database |
-| `npm run e2e:up`        | Build and start the isolated end-to-end stack (5174 / 5001)         |
-| `npm run test:e2e`      | Playwright: the eight SPEC §10 flows, axe, and the responsive sweep |
-| `npm run e2e:down`      | Stop that stack and drop its volume                                 |
-| `npm run e2e:logs`      | Tail the E2E API log, where mail tokens are printed                 |
-| `npm run analyze`       | `vite-bundle-visualizer` treemap of the client bundle               |
-| `npm run check:bundle`  | Route bundle sizes against the SPEC §12 budget                      |
+| Script                            | What it does                                                          |
+| --------------------------------- | --------------------------------------------------------------------- |
+| `npm run dev`                     | API and client together with hot reload                               |
+| `npm run build`                   | Type-checked build of both workspaces                                 |
+| `npm run lint`                    | ESLint with `--max-warnings 0`, then `prettier --check`               |
+| `npm run lint:fix`                | ESLint autofix                                                        |
+| `npm run format`                  | Prettier write                                                        |
+| `npm run typecheck`               | `tsc --noEmit` in both workspaces                                     |
+| `npm run test`                    | Jest (server), then Vitest (client)                                   |
+| `npm run test:coverage`           | Server tests with the coverage report, enforcing the §10 target       |
+| `npm run verify`                  | lint → typecheck → test → build. **Must pass before any commit**      |
+| `npm run seed`                    | Create the demo account and its 64 applications                       |
+| `npm run seed:reset`              | Wipe the demo account's data and reseed                               |
+| `npm run migrate`                 | Apply pending schema migrations (see below)                           |
+| `npm run stats`                   | User, application and 7-day signup counts against the live database   |
+| `npm run storage:sweep -w server` | Dry run of the one-off orphaned-upload sweep; see DEPLOYMENT.md §10.4 |
+| `npm run e2e:up`                  | Build and start the isolated end-to-end stack (5174 / 5001)           |
+| `npm run test:e2e`                | Playwright: the eight SPEC §10 flows, axe, and the responsive sweep   |
+| `npm run e2e:down`                | Stop that stack and drop its volume                                   |
+| `npm run e2e:logs`                | Tail the E2E API log, where mail tokens are printed                   |
+| `npm run analyze`                 | `vite-bundle-visualizer` treemap of the client bundle                 |
+| `npm run check:bundle`            | Route bundle sizes against the SPEC §12 budget                        |
 
 Plus `./scripts/backup.sh`, which is a shell script rather than an npm script on purpose: a backup
 has to run from cron on a host that has never installed this project's dependencies.

@@ -4008,3 +4008,44 @@ restore rather than withdrawing the promise.
 - **The harness now prints each run's exit code** (`ran [...] exit=N`), and the stub `railway`
   takes `SERVER_STATUS` and `DUPLICATE` to fail checks 2 and 3. The all-green and re-run cases still
   end in `DONE` with exit 0. A real read-only run against `4b4fa06` (PR #43) did the same.
+
+## Sweeping files orphaned before the #34 fix (issue #42, 25 Sep 2026)
+
+- **`list(prefix)` joins the adapter contract, read-only and for operator scripts only.** No request
+  path calls it. It returns an array rather than a stream: the free tier caps storage at 10 GB and
+  each account at 100 MB, so a full listing is thousands of entries, not millions. S3 follows
+  `ListObjectsV2` continuation tokens; the in-memory mock pages every two keys so the contract suite
+  crosses a page boundary on both drivers.
+- **Local disk matches the prefix as a string, like S3, not as a directory.** It walks the whole
+  upload root and filters, and keys always use forward slashes, so the same key reads the same on
+  Windows. `lastModified` is rebuilt from `mtimeMs` so it is an ordinary `Date` in every realm.
+- **An object must pass three tests to be deleted:** no application references it, its key has the
+  exact `attachments/<user>/<application>/<uuid-v4>.<allowed ext>` shape `buildStorageKey` makes,
+  and it is more than 24 hours old. A reference wins over every other test. A key in any other shape
+  is listed as unrecognised and never deleted, so a file put there by hand or by a future feature is
+  safe. An application id of 12 characters, which `ObjectId.isValid` also accepts, falls into that
+  group too: failing safe beats matching every shape the route could produce.
+- **24 hours, not the 1 hour the issue suggested.** `addAttachment` stores bytes before it saves the
+  document, so a live upload is briefly unreferenced. The orphans this is for are days to months old,
+  so a longer margin costs nothing.
+- **`--apply` re-plans and needs `--expect <N>` to match exactly.** There is no saved plan file: the
+  count ties the apply to the dry run the operator read, and any change in between, such as a failed
+  erasure creating a new orphan, refuses rather than deleting something unreviewed.
+- **An empty database is refused outright; a majority needs `--allow-majority`.** This departs from
+  the approved plan, where both guards were plain refusals. With no applications every file looks
+  orphaned, which is exactly what a wrong `MONGO_URI` looks like, so there is no override. A majority,
+  though, may be the truth: the nightly demo reset deleted a whole account's applications every day
+  before #34 and probably left more files than every live account holds. Without an override the
+  sweep could never run in that case.
+- **The referenced-key read is across all users**, the one deliberate exception to "every service
+  function takes `userId`", the same as the purge job and `stats`. It compares one whole bucket with
+  one whole database and reads only `attachments.filename` through a cursor.
+- **Deletion reuses `eraseStoredFiles`**, which now takes an optional adapter (it still defaults to
+  `getStorage()`). The sweep inherits its batching and its per-key error log, and exits 1 when any
+  file fails.
+- **Proven against local disk and the S3 mock only.** No R2 test bucket exists, so `ListObjectsV2` has
+  not been run against real R2. The production dry run is read-only, so it is also the first real
+  check of the listing.
+- **Issue #42 was closed as completed when PR #43 merged**, although that PR only mentioned it as a
+  follow-up. This work is what the issue asked for.
+- **Production run: not yet done.** Before and after counts go here once the sweep has run.
