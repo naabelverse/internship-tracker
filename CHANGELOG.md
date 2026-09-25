@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The landing page's dashboard screenshot matches the shipped dashboard.** It
+  shows all eight stat cards, including interview rate and time to first reply,
+  in the 4 x 2 grid. There is a light and a dark capture, and the page shows the
+  one matching the theme the visitor picked. A test now fails when the
+  dashboard's cards change without a recapture.
 - **The landing page's feature grid is six equal cells.** It runs 2 x 3 from
   640px and 3 x 2 from 1024px, replacing the 7/5, 4/4/4, 12 spans that left
   the shortest card alone in a full-width last row. Below 640px it is one
