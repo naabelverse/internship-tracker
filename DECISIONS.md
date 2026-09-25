@@ -3976,3 +3976,18 @@ restore rather than withdrawing the promise.
   false promise: accounts closed before this merge were told at the time that files would stay.
 - **The two #34 entries under the 24 Sep restore section are resolved** by this one. They are kept
   as the record of why the wording changed twice.
+
+## The deploy watcher fails when it cannot check triggers (25 Sep 2026)
+
+- **A trigger query with no `"data"` is an error, not an empty list.** On PR #43's check the server's
+  query hit a network error (`ECONNRESET`), the script printed it as the trigger list, and it still
+  said `DONE` and exited 0. `watch-deploy.sh` now reads each reply three ways: an empty `edges` list
+  passes, a trigger present fails, and a failed query or a reply without `"data"` is an error. A
+  failure or an error prints `FAILED` instead of `DONE` and exits 1.
+- **The response is matched with whitespace removed and printed with it kept**, so an error such as
+  "Not Authorized" stays readable in the output.
+- **The test stubs `node` only for `railway-query.mjs`.** Every other `node` call runs for real, so the
+  script needs no test hook. The three new cases fail against the old script (16 assertion failures)
+  and pass against the new one.
+- **Checks 1 to 3 still exit 0 when they fail.** That is unchanged and out of scope here. Read their
+  PASS and FAIL lines as before.
