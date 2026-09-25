@@ -46,6 +46,8 @@ export class ObjectNotFoundError extends Error {
  */
 export interface StorageAdapter {
   readonly driver: StorageDriver;
+  /** Where objects live, for operator output: the bucket name or the local root. */
+  readonly location: string;
   put(input: PutObjectInput): Promise<void>;
   get(key: string): Promise<Buffer>;
   delete(key: string): Promise<void>;

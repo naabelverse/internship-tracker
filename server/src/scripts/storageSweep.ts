@@ -59,9 +59,15 @@ const totalBytes = (objects: StoredObjectInfo[]): number =>
   objects.reduce((sum, object) => sum + object.size, 0);
 
 /** The human-readable report, printed on every run whether or not it deletes. */
-export function formatSweepReport(plan: SweepPlan, options: SweepOptions): string {
+export function formatSweepReport(
+  plan: SweepPlan,
+  options: SweepOptions,
+  storage: StorageAdapter,
+): string {
   const lines = [
     options.apply ? 'Storage sweep: APPLY' : 'Storage sweep: DRY RUN, nothing will be deleted',
+    // Named up front, so an empty listing can be told apart from listing the wrong place.
+    `Storage: ${storage.driver}, ${storage.location}`,
     '',
     `Listed under ${ATTACHMENT_PREFIX}:   ${String(plan.listed)}`,
     `Referenced (kept):          ${String(plan.referenced.length)}`,
@@ -127,7 +133,7 @@ export async function runStorageSweep(
   { storage = getStorage(), now = new Date() }: { storage?: StorageAdapter; now?: Date } = {},
 ): Promise<SweepRunResult> {
   const plan = await planSweep(storage, now);
-  const report = formatSweepReport(plan, options);
+  const report = formatSweepReport(plan, options, storage);
 
   if (!options.apply) return { plan, output: report };
 

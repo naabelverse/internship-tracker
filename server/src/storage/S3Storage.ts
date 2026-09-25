@@ -42,8 +42,11 @@ export class S3Storage implements StorageAdapter {
 
   private readonly bucket: string;
 
+  readonly location: string;
+
   constructor(bucket: string, client: S3Client) {
     this.bucket = bucket;
+    this.location = bucket;
     this.client = client;
   }
 

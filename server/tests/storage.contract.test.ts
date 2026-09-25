@@ -194,6 +194,10 @@ describe('storage adapters', () => {
     ).rejects.toThrow(/escapes the upload root/);
   });
 
+  it('names its upload root as its location', () => {
+    expect(localStorage.location).toBe(path.resolve(root));
+  });
+
   it('signs a local URL with an expiry and a signature', async () => {
     const url = new URL(await localStorage.signedUrl(KEY, { expiresInSeconds: 60 }));
 
@@ -212,6 +216,10 @@ describe('S3Storage', () => {
   const s3Storage = new S3Storage(TEST_BUCKET, client);
 
   contractSuite('S3Storage', () => s3Storage);
+
+  it('names its bucket as its location', () => {
+    expect(s3Storage.location).toBe(TEST_BUCKET);
+  });
 
   it('presigns with an expiry parameter', async () => {
     const url = new URL(await s3Storage.signedUrl(KEY, { expiresInSeconds: 120 }));
