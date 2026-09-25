@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`npm run storage:sweep -w server` finds uploaded files that no application
+  references** (issue #42), the ones left behind by deletions before the #34
+  fix. It is a dry run by default. `--apply --expect <N>` deletes exactly the
+  orphans the dry run counted, and refuses against an empty database or when
+  orphans are a majority of stored files. The storage adapter gains a
+  read-only `list(prefix)` for both drivers.
+
 ### Fixed
 
 - **Deleting an application or closing an account now erases its uploaded
