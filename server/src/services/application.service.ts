@@ -12,6 +12,7 @@ import type {
   StatusChangeInput,
   UpdateApplicationInput,
 } from '@/schemas/application.schema';
+import { attachmentKeysOf, eraseStoredFiles } from '@/services/attachment.service';
 import { assertApplicationCapacity } from '@/services/usage.service';
 import { ApiError } from '@/utils/ApiError';
 import { buildPaginationMeta, toSkip, type PageRequest } from '@/utils/pagination';
@@ -252,12 +253,19 @@ export async function updateApplication(
   return saveWithVersionCheck(userId, application);
 }
 
+/** Deletes the application, then erases its uploaded files (see `eraseStoredFiles`). */
 export async function deleteApplication(userId: Types.ObjectId, id: string): Promise<void> {
-  const result = await Application.deleteOne({ _id: id, user: userId });
+  // One atomic read-and-delete, so an attachment cannot slip in between reading
+  // the keys and removing the document.
+  const deleted = await Application.findOneAndDelete({ _id: id, user: userId }).select(
+    'attachments.filename',
+  );
 
-  if (result.deletedCount === 0) {
+  if (!deleted) {
     throw ApiError.notFound('Application not found', 'APPLICATION_NOT_FOUND');
   }
+
+  await eraseStoredFiles(attachmentKeysOf([deleted]));
 }
 
 export async function changeStatus(
@@ -289,7 +297,9 @@ export async function bulkAction(
   userId: Types.ObjectId,
   input: BulkActionInput,
 ): Promise<BulkActionResult> {
-  const owned = await Application.find({ _id: { $in: input.ids }, user: userId }).select('_id');
+  const owned = await Application.find({ _id: { $in: input.ids }, user: userId }).select(
+    '_id attachments.filename',
+  );
   const ownedIds = owned.map((document) => document._id);
   const ownedIdStrings = new Set(ownedIds.map((value) => value.toString()));
   const notFound = input.ids.filter((id) => !ownedIdStrings.has(id));
@@ -302,6 +312,7 @@ export async function bulkAction(
 
   if (input.action === 'delete') {
     const result = await Application.deleteMany(scope);
+    await eraseStoredFiles(attachmentKeysOf(owned));
     return { matched: ownedIds.length, modified: result.deletedCount, notFound };
   }
 

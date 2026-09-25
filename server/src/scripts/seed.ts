@@ -6,6 +6,7 @@ import { Application } from '@/models/Application';
 import { RefreshToken } from '@/models/RefreshToken';
 import { Reminder } from '@/models/Reminder';
 import { User, type UserDocument } from '@/models/User';
+import { attachmentKeysOf, eraseStoredFiles } from '@/services/attachment.service';
 import { buildDemoApplications } from '@/services/demoData.service';
 
 /**
@@ -54,11 +55,17 @@ export interface SeedResult {
  * a shared development database rather than one fixture account.
  */
 async function wipeAccountData(user: UserDocument): Promise<void> {
+  // The demo account accepts uploads, so every nightly reset also has files to
+  // erase; the keys are read before the documents that hold them are deleted.
+  const owned = await Application.find({ user: user._id }).select('attachments.filename').lean();
+
   await Promise.all([
     Application.deleteMany({ user: user._id }),
     Reminder.deleteMany({ user: user._id }),
     RefreshToken.deleteMany({ user: user._id }),
   ]);
+
+  await eraseStoredFiles(attachmentKeysOf(owned));
 }
 
 /**
