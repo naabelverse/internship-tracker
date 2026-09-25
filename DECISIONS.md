@@ -3747,7 +3747,8 @@ restore rather than withdrawing the promise.
   account, so the closed page, the Settings danger zone and the closure email no longer offer one.
   Signing in is the only route back. The privacy policy's "email us to delete sooner" line stays:
   that is a real, separate channel for early deletion, not a restore.
-- **No surface claims uploaded files are deleted any more, until issue #34 is fixed.** Mapping the
+- **Resolved 25 Sep 2026, see "Deleting an application or purging an account erases its files".**
+  **No surface claims uploaded files are deleted any more, until issue #34 is fixed.** Mapping the
   deletion found that the purge job, and deleting an application, remove documents but never call
   the storage adapter, so the files stay in storage unlinked. That is tracked as
   [issue #34](https://github.com/naabelverse/internship-tracker/issues/34), deliberately out of
@@ -3756,7 +3757,8 @@ restore rather than withdrawing the promise.
   files are not yet removed and how to delete one individually, which does erase it. **When #34
   ships, restore the files claim in the FAQ, privacy.md (the "Deleted accounts" row and "Deleting
   your data"), `DangerZoneSection` and `accountDeletedTemplate`, and update this entry.**
-- **The deletion claim says "your account and its records", not "your data".** "Data" includes
+- **Reverted 25 Sep 2026 with the #34 fix; the surfaces say "data" again.**
+  **The deletion claim says "your account and its records", not "your data".** "Data" includes
   uploaded files, which #34 means are not erased, so "your data is kept until {date}, then
   permanently deleted" promised more than the purge does. "Your account and its records" names only
   what the purge removes: the user record, applications with their interviews and notes, reminders
@@ -3928,3 +3930,49 @@ restore rather than withdrawing the promise.
   the toast's icon-theme comment in `client/src/main.tsx` was about.
 - **Scope: every audit in `axe.spec.ts`,** not only the dashboard. The create-application modal and
   any future toast would race the same way. Chromium-only, like the suite's one project.
+
+## Deleting an application or purging an account erases its files (issue #34, 25 Sep 2026)
+
+- **The cause was a missing call, not a swallowed error.** Neither the purge job nor application
+  deletion ever called the storage adapter, and no version of them ever had. Only
+  `removeAttachment` erased a file.
+- **Four paths now erase files:** the purge, `DELETE /applications/:id`, the bulk `delete` action,
+  and the demo reset's `wipeAccountData`. Each reads `attachments.filename` with its usual
+  user-scoped query, deletes the documents, then passes the keys to `eraseStoredFiles` in
+  `attachment.service.ts`. The single delete uses `findOneAndDelete`, so it reads and deletes in
+  one step and nothing can be attached in between.
+- **The demo reset goes beyond the issue.** #34 named only the purge and application deletion, but
+  the demo account accepts uploads and is shared by every "Try the demo" visitor. Every nightly
+  reset wiped its applications and left their files behind, which probably made it the busiest
+  source of orphans. It uses the same helper, so it adds a few lines.
+- **Documents first, files second, same as `removeAttachment`.** A crash or a storage outage between
+  the two steps leaves an orphaned object, never a record pointing at bytes that are gone. The cost
+  is that a failed file cannot be retried by the next purge run, because its key is no longer
+  stored. That is why each failure is logged at error level with its key.
+- **A storage failure never blocks the deletion.** `eraseStoredFiles` never throws. It logs each
+  refused key and carries on. The HTTP delete still answers 200, and the purge still deletes every
+  account in the run. The purge result gains `filesErased` and `filesFailed`, which appear in its
+  daily log line. Deletes run in batches of 20, so an account with many files does not open
+  hundreds of storage requests at once.
+- **`removeAttachment` is unchanged.** It still lets a storage error reach the caller, because a
+  user deleting one file is told when that delete fails. The two new helpers sit beside it rather
+  than inside it.
+- **The helpers take keys, not a `userId`.** The rule that user-data service functions take
+  `userId` first is about scoping queries. `eraseStoredFiles` runs no query, and it only receives
+  keys each caller has already read through its own user-scoped query. The purge covers many users
+  at once, so a single `userId` would not fit it.
+- **The wording is restored.** The FAQ, `DangerZoneSection`, `AccountClosedPage`,
+  `accountDeletedTemplate` and privacy.md say "data" again and name uploaded files as deleted. The
+  "not yet removed" sentences and their workarounds are gone. The `DELETE /auth/me` OpenAPI text
+  also no longer cites #34, and the application delete and bulk endpoints now say they erase files.
+  The copy describes deletions from this merge on, and those are now true.
+- **The privacy policy's date moves to 25 September 2026.** Its "Changes" section says the date
+  always reflects the current version, but the closure-wording edits of 24 and 25 September left it
+  at 5 September. The new date covers those edits and this one. This change widens what is erased
+  rather than narrowing it, so no advance email to users is needed for it.
+- **Files orphaned before this fix are a separate problem.** They stay in storage until a one-off
+  sweep removes them. The sweep needs a `list` method the adapter does not have, so it is tracked
+  as [issue #42](https://github.com/naabelverse/internship-tracker/issues/42). It is not a live
+  false promise: accounts closed before this merge were told at the time that files would stay.
+- **The two #34 entries under the 24 Sep restore section are resolved** by this one. They are kept
+  as the record of why the wording changed twice.

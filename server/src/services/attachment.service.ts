@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Types } from 'mongoose';
+import { logger } from '@/config/logger';
 import { Application, type ApplicationDocument } from '@/models/Application';
 import { getStorage } from '@/storage';
 import { assertAttachmentCapacity } from '@/services/usage.service';
@@ -137,4 +138,53 @@ export async function removeAttachment(
   await getStorage().delete(removed.filename);
 
   return application;
+}
+
+/** Storage keys of every attachment on the given applications, read before they are deleted. */
+export function attachmentKeysOf(
+  applications: { attachments: { filename: string }[] }[],
+): string[] {
+  return applications.flatMap((application) =>
+    application.attachments.map((attachment) => attachment.filename),
+  );
+}
+
+export interface FileErasureResult {
+  erased: number;
+  failed: number;
+}
+
+/** Enough to finish a purge quickly without opening hundreds of storage requests at once. */
+const ERASE_BATCH_SIZE = 20;
+
+/**
+ * Erases the stored files of applications that have already been deleted.
+ *
+ * Callers delete the documents first and pass the keys they read beforehand,
+ * the same order `removeAttachment` uses: a crash or a storage outage in
+ * between can only leave an orphaned object, never a record pointing at bytes
+ * that are gone. For the same reason this never throws. The documents are
+ * already deleted, so a failed file is logged with its key, for manual removal,
+ * and the remaining files are still erased.
+ */
+export async function eraseStoredFiles(keys: string[]): Promise<FileErasureResult> {
+  const storage = getStorage();
+  let failed = 0;
+
+  for (let start = 0; start < keys.length; start += ERASE_BATCH_SIZE) {
+    const batch = keys.slice(start, start + ERASE_BATCH_SIZE);
+    const outcomes = await Promise.allSettled(batch.map((key) => storage.delete(key)));
+
+    outcomes.forEach((outcome, index) => {
+      if (outcome.status === 'fulfilled') return;
+
+      failed += 1;
+      logger.error('Stored file could not be erased', {
+        key: batch[index],
+        reason: outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
+      });
+    });
+  }
+
+  return { erased: keys.length - failed, failed };
 }

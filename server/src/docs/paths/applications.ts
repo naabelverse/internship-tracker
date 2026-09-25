@@ -187,7 +187,7 @@ export const applicationPaths: Record<string, unknown> = {
       tags: TAG,
       summary: 'Apply one action to many records',
       description:
-        'Every id is re-checked against the caller. Ids owned by another account come back in notFound and are never acted on.',
+        'Every id is re-checked against the caller. Ids owned by another account come back in notFound and are never acted on. The delete action also erases the uploaded files of every application it removes.',
       security: AUTHENTICATED,
       requestBody: jsonBody({
         type: 'object',
@@ -236,6 +236,8 @@ export const applicationPaths: Record<string, unknown> = {
     delete: {
       tags: TAG,
       summary: 'Delete an application',
+      description:
+        'Deletes the application with its interviews, notes and status history, and erases its uploaded files from storage.',
       security: AUTHENTICATED,
       parameters: idParam,
       responses: { ...ok('Deleted', objectOf({ deleted: { type: 'boolean' } })), ...COMMON_ERRORS },

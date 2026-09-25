@@ -49,8 +49,7 @@ export function AccountClosedPage(): JSX.Element {
     >
       <div className="space-y-3 text-sm text-content">
         <p role="status">
-          You have been signed out everywhere. Your account and its records are kept {until}, then
-          permanently deleted.
+          You have been signed out everywhere. Your data is kept {until}, then permanently deleted.
         </p>
         <p>
           Changed your mind? Sign in with your email and password {before}. You will be asked
@@ -58,7 +57,7 @@ export function AccountClosedPage(): JSX.Element {
         </p>
         <p className="rounded-control border border-warning/50 bg-warning/10 p-3 font-medium">
           If you have forgotten your password, you cannot restore this account yourself. Password
-          reset does not work for a closed account, so your account and its records will be
+          reset does not work for a closed account, so the account and all its data will be
           permanently deleted {on}.
         </p>
       </div>

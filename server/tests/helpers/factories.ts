@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { createApp } from '@/app';
 import { resetAuthRateLimiters } from '@/middleware/rateLimit';
+import { Application } from '@/models/Application';
 import { REFRESH_COOKIE_NAME } from '@/utils/cookies';
 
 export const AUTH_BASE = '/api/v1/auth';
@@ -123,6 +124,38 @@ export async function createApplicationFor(
     version: application.version as number,
     application,
   };
+}
+
+/**
+ * Uploads a small PDF to an application through the real route and returns the
+ * storage key it landed under, which the API never exposes, so tests can check
+ * the bytes in storage directly.
+ */
+export async function attachFileTo(
+  app: Express,
+  accessToken: string,
+  applicationId: string,
+): Promise<string> {
+  sequence += 1;
+
+  const response = await request(app)
+    .post(`${APPLICATIONS_BASE}/${applicationId}/attachments`)
+    .set('Authorization', `Bearer ${accessToken}`)
+    .attach('file', Buffer.from(`%PDF-1.7\nfixture ${String(sequence)}\n`, 'utf8'), {
+      filename: `file-${String(sequence)}.pdf`,
+      contentType: 'application/pdf',
+    });
+
+  if (response.status !== 201) {
+    throw new Error(`Attach failed: ${String(response.status)} ${response.text}`);
+  }
+
+  const application = await Application.findById(applicationId);
+  const key = application?.attachments.at(-1)?.filename;
+
+  if (!key) throw new Error('Attach succeeded but no storage key was recorded');
+
+  return key;
 }
 
 /**
