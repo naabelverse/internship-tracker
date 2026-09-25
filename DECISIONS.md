@@ -4048,4 +4048,12 @@ restore rather than withdrawing the promise.
   check of the listing.
 - **Issue #42 was closed as completed when PR #43 merged**, although that PR only mentioned it as a
   follow-up. This work is what the issue asked for.
-- **Production run: not yet done.** Before and after counts go here once the sweep has run.
+- **Production run, 26 Sep 2026: 0 files before, 0 after; production had no attachments and an empty
+  bucket.** The dry run listed nothing, so `--apply` was never needed. A listing of 0 could also have
+  meant the script was looking in the wrong place, so it was checked read-only: all 128 applications
+  have empty `attachments`, and a direct `ListObjectsV2` of the `internship-tracker` bucket with no
+  prefix returned 0 objects. No test file was uploaded to production to exercise `list` against
+  real R2; that belongs on a separate test bucket if it is ever needed.
+- **The report now names the storage it listed** (`Storage: s3, internship-tracker`), through a new
+  `location` on the adapter: the bucket name, or the local upload root. The zero result above took a
+  separate check to trust because the report did not say which driver or bucket it had read.

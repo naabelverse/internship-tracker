@@ -26,8 +26,11 @@ export class LocalDiskStorage implements StorageAdapter {
 
   private readonly root: string;
 
+  readonly location: string;
+
   constructor(root: string = path.resolve(process.cwd(), env.UPLOAD_DIR)) {
     this.root = path.resolve(root);
+    this.location = this.root;
   }
 
   /** Resolves a key inside the root, refusing anything that escapes it. */

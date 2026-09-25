@@ -249,6 +249,14 @@ describe('runStorageSweep', () => {
     expect(await storedKeys()).toEqual(before);
   });
 
+  it('names the storage driver and location it listed', async () => {
+    await seedMixedBucket();
+
+    const result = await runStorageSweep({ apply: false, allowMajority: false }, { storage });
+
+    expect(result.output).toContain(`Storage: local, ${path.resolve(root)}`);
+  });
+
   it('deletes only unreferenced generated keys older than 24 hours with --apply', async () => {
     const seeded = await seedMixedBucket();
 
