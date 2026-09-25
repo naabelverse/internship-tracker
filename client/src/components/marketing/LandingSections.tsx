@@ -8,6 +8,9 @@
  * convention.
  */
 
+// Written by `scripts/captureScreenshot.mjs` alongside the images it describes.
+import dashboardScreenshot from '@/components/marketing/dashboardScreenshot.json';
+
 interface Feature {
   title: string;
   body: string;
@@ -99,6 +102,14 @@ export function FeatureCards(): JSX.Element {
   );
 }
 
+const SCREENSHOT_ALT =
+  'The Internship Tracker dashboard, showing stat cards for applications, interviews and offers, response rate, interview rate and time to first reply, a chart of applications over time, and a list of upcoming interviews and deadlines.';
+
+const SCREENSHOTS = [
+  { theme: 'light', className: 'block dark:hidden' },
+  { theme: 'dark', className: 'hidden dark:block' },
+] as const;
+
 export function ScreenshotSection(): JSX.Element {
   return (
     <section aria-labelledby="screenshot-heading" className="border-y border-border bg-surface">
@@ -116,16 +127,26 @@ export function ScreenshotSection(): JSX.Element {
           </p>
         </div>
 
+        {/*
+          One capture per theme, swapped by `dark:`, which keys off the same
+          `data-theme` attribute the theme control sets — so the picture follows
+          the visitor's explicit choice, not only their OS setting. The hidden
+          one is `display: none`, and a lazy image that is never rendered is
+          never fetched, so a visitor downloads one screenshot, not two.
+        */}
         <figure className="mt-10">
-          <img
-            src="/screenshot-dashboard.png"
-            alt="The Internship Tracker dashboard, showing stat cards for applications sent, response rate and interviews, a status funnel, and a list of upcoming deadlines."
-            width={2400}
-            height={1400}
-            loading="lazy"
-            decoding="async"
-            className="w-full rounded-panel border border-border"
-          />
+          {SCREENSHOTS.map(({ theme, className }) => (
+            <img
+              key={theme}
+              src={`/screenshot-dashboard-${theme}.png`}
+              alt={SCREENSHOT_ALT}
+              width={dashboardScreenshot.width}
+              height={dashboardScreenshot.height}
+              loading="lazy"
+              decoding="async"
+              className={`${className} w-full rounded-panel border border-border`}
+            />
+          ))}
         </figure>
       </div>
     </section>
