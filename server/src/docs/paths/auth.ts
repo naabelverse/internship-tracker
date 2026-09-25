@@ -236,7 +236,7 @@ export const authPaths: Record<string, unknown> = {
       tags: TAG,
       summary: 'Close the account',
       description:
-        'Requires the current password. The account is soft deleted: access ends immediately and every session is revoked. Signing in with the same password within 30 days offers a restore (see POST /auth/login and POST /auth/restore); after that a job permanently removes the account records. Uploaded files are not yet erased by that job (issue #34).',
+        'Requires the current password. The account is soft deleted: access ends immediately and every session is revoked. Signing in with the same password within 30 days offers a restore (see POST /auth/login and POST /auth/restore); after that a job permanently removes the account and its data, uploaded files included.',
       security: AUTHENTICATED,
       requestBody: jsonBody({
         type: 'object',

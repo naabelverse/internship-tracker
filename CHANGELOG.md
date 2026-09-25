@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Deleting an application or closing an account now erases its uploaded
+  files** (issue #34). The 30-day purge, deleting an application (one at a
+  time or in bulk) and the demo account's nightly reset all remove the files
+  from storage once the records are gone. A file storage refuses is logged,
+  and the deletion completes anyway. This supersedes the account-closure
+  entry below: the FAQ, danger zone, closure email, closed page and privacy
+  policy say "data" again and include uploaded files. Files left behind by
+  deletions before this fix are tracked separately in issue #42.
+
 ### Changed
 
 - **The landing page's dashboard screenshot matches the shipped dashboard.** It

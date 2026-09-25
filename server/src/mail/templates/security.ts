@@ -104,9 +104,8 @@ export function passwordChangedTemplate(data: PasswordChangedData): TemplateOutp
 }
 
 /**
- * Files are named as the exception on purpose: the purge does not yet erase
- * them from storage (issue #34), so saying "everything is removed" would be the
- * claim this email used to make and could not keep.
+ * Names uploaded files explicitly because the purge erases them from storage
+ * along with the records, which is the claim readers most want confirmed.
  */
 export function accountDeletedTemplate(data: AccountDeletedData): TemplateOutput {
   const date = data.purgeDate;
@@ -123,7 +122,7 @@ export function accountDeletedTemplate(data: AccountDeletedData): TemplateOutput
       },
       {
         type: 'paragraph',
-        text: `Your account and its records (applications, interviews, notes and reminders) are kept until ${date} and then permanently removed. Uploaded files are not removed at that point yet: they stay in storage, no longer linked to any account. To make sure a file is gone, restore the account, delete the file from its application, then close the account again.`,
+        text: `Your account and its data (applications, interviews, notes, reminders and uploaded files) are kept until ${date} and then permanently removed.`,
       },
       {
         type: 'note',

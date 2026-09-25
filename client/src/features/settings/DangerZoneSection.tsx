@@ -33,8 +33,8 @@ type DeleteValues = z.infer<typeof deleteSchema>;
  * The copy says what actually happens rather than what would be reassuring.
  * Signing in with the same password inside the 30 days offers a restore, but
  * forgot-password filters out closed accounts, so a forgotten password cannot
- * get one back. Uploaded files are named as the exception because the purge
- * does not yet erase them (issue #34).
+ * get one back. Uploaded files are named because the purge erases them with the
+ * rest of the account.
  */
 export function DangerZoneSection(): JSX.Element {
   const [isConfirming, setIsConfirming] = useState(false);
@@ -95,10 +95,9 @@ export function DangerZoneSection(): JSX.Element {
     >
       <div className="space-y-2 text-sm text-content">
         <p>
-          Your account and its records (applications, interviews, notes and reminders) are kept for
-          30 days and then deleted for good, and your email address stays reserved for that window.
-          Uploaded files are not yet removed with them: to make sure a file is gone, delete it from
-          its application before you close the account.
+          Your account and its data (applications, interviews, notes, reminders and uploaded files)
+          are kept for 30 days and then deleted for good, and your email address stays reserved for
+          that window.
         </p>
         <p className="text-content-muted">
           You can restore the account by signing in within those 30 days. Password reset does not

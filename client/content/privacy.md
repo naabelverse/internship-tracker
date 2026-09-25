@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 5 September 2026**
+**Last updated: 25 September 2026**
 
 This policy describes exactly what Internship Tracker stores, why it stores it, and how
 long it keeps it. It describes this application specifically — every field listed below is
@@ -93,15 +93,15 @@ Data is disclosed otherwise only where a valid legal obligation requires it.
 
 ## How long it is kept
 
-| Data                         | Retention                                                                                                                                                                                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account and everything in it | Until you delete your account.                                                                                                                                                                                                                                                                                |
-| Deleted accounts             | Closed immediately and invisible at once. For 30 days you can restore the account by signing in; after that the account and its records (the user record, every application, every reminder and every session) are **permanently purged**. Uploaded files are the exception — see "Deleting your data" below. |
-| Session records              | Refresh tokens expire 7 days after issue. Signing out, changing your password or revoking a device removes them sooner.                                                                                                                                                                                       |
-| Account restore tokens       | 10 minutes, and single-use.                                                                                                                                                                                                                                                                                   |
-| Password reset tokens        | 30 minutes, and single-use.                                                                                                                                                                                                                                                                                   |
-| Email verification tokens    | 24 hours, and single-use.                                                                                                                                                                                                                                                                                     |
-| Server logs                  | Retained by the hosting platform under its own policy, typically days rather than months.                                                                                                                                                                                                                     |
+| Data                         | Retention                                                                                                                                                                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Account and everything in it | Until you delete your account.                                                                                                                                                                                                                               |
+| Deleted accounts             | Closed immediately and invisible at once. For 30 days you can restore the account by signing in; after that the account and its data (the user record, every application, every reminder, every session and every uploaded file) are **permanently purged**. |
+| Session records              | Refresh tokens expire 7 days after issue. Signing out, changing your password or revoking a device removes them sooner.                                                                                                                                      |
+| Account restore tokens       | 10 minutes, and single-use.                                                                                                                                                                                                                                  |
+| Password reset tokens        | 30 minutes, and single-use.                                                                                                                                                                                                                                  |
+| Email verification tokens    | 24 hours, and single-use.                                                                                                                                                                                                                                    |
+| Server logs                  | Retained by the hosting platform under its own policy, typically days rather than months.                                                                                                                                                                    |
 
 ## Getting your data out
 
@@ -122,16 +122,10 @@ have forgotten your password the account cannot be restored and will be deleted 
 days end.
 
 After 30 days a scheduled job permanently removes the user record, every application, every
-reminder and every session.
+reminder, every session and every uploaded file.
 
-**Uploaded files are not currently erased by that job.** This is a known defect, tracked as
-[issue #34](https://github.com/naabelverse/internship-tracker/issues/34). The files stay in
-object storage under their non-guessable names. No account or application refers to them any
-more and the app cannot produce a download link for them, so they cannot be reached through
-the service — but they have not been erased. The same is true of the files attached to an
-application you delete. Deleting an attachment from its application does erase the file
-immediately, so to make sure a file is gone, delete it that way before deleting the
-application or closing the account. This section will be updated when the fix ships.
+Deleting an application erases the files attached to it at the same time, and deleting a
+single attachment erases that file immediately.
 
 To delete your data sooner than that window allows, email **{{CONTACT_EMAIL}}**.
 
