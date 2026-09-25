@@ -1426,6 +1426,12 @@ It prints a PASS or FAIL line for each check:
    the one the Deploy run logged. A second record, even a `SKIPPED` one, means something other than
    this workflow is deploying. Usually that is a trigger that has come back.
 
+A red CI makes Deploy skip itself, and the script does not take that as the result. It says so and
+keeps watching the same commit, because re-running CI starts a new Deploy run. It waits up to
+`RERUN_WAIT_MINUTES` (default 360) for that re-run. Set `RERUN_WAIT_MINUTES=0` to report the skip at
+once. `bash scripts/deploy-checks/test-watch-deploy.sh` replays the skip-then-re-run sequence with
+stubbed `gh` and `railway`.
+
 It ends by printing each service's deployment triggers, which should be empty. It needs `gh` and the
 Railway CLI, both logged in (`railway whoami` refreshes an expired session). The trigger check uses
 `scripts/deploy-checks/railway-query.mjs`, which calls Railway's GraphQL API with the CLI's login.

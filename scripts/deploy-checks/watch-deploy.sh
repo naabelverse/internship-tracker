@@ -15,6 +15,11 @@
 #      means something other than deploy.yml is deploying.
 # Finally it re-checks that neither service has grown a deployment trigger back.
 #
+# A Deploy run skipped because CI was red is not treated as the result: the script keeps watching
+# the same commit for a re-run's Deploy. DEPLOY_WAIT_MINUTES (default 60) bounds the wait for the
+# first Deploy result; RERUN_WAIT_MINUTES (default 360) bounds the wait after a skip. Set
+# RERUN_WAIT_MINUTES=0 to report a skip at once. test-watch-deploy.sh covers this.
+#
 # Needs git, gh (logged in), node and the Railway CLI (`railway login`; `railway whoami`
 # refreshes an expired session). The ids below are this project's production ids. They are
 # identifiers, not credentials; override them with the environment variables for another project.
@@ -68,12 +73,26 @@ for d in client server; do
   if git diff --quiet "$sha^1" "$sha" -- "$d"; then echo "  touches $d/: no"; else echo "  touches $d/: YES"; fi
 done
 
-# Wait up to 60 minutes for CI and then the Deploy run to finish.
+# Wait for CI and then a Deploy run that actually ran. A red CI makes Deploy skip itself, but that
+# is not the final word: re-running CI on the same commit starts a new Deploy run. So a skipped run
+# only resets the deadline, to RERUN_WAIT_MINUTES, and the wait continues for a run that ran.
+deploy_wait=${DEPLOY_WAIT_MINUTES:-60}
+rerun_wait=${RERUN_WAIT_MINUTES:-360}
+deadline=$(( $(date +%s) + deploy_wait * 60 ))
 run=""
-for _ in $(seq 1 120); do
-  run=$(gh run list -R "$REPO" --workflow deploy.yml --limit 10 --json databaseId,headSha,status \
-    --jq ".[] | select(.headSha==\"$sha\" and .status==\"completed\") | .databaseId" | head -1)
+skipped=""
+while :; do
+  runs=$(gh run list -R "$REPO" --workflow deploy.yml --limit 20 --json databaseId,headSha,status,conclusion \
+    --jq ".[] | select(.headSha==\"$sha\" and .status==\"completed\") | \"\(.databaseId) \(.conclusion)\"")
+  run=$(echo "$runs" | awk '$2 != "skipped" && $1 != "" { print $1; exit }')
   [ -n "$run" ] && break
+  s=$(echo "$runs" | awk '$2 == "skipped" { print $1; exit }')
+  if [ -n "$s" ] && [ -z "$skipped" ]; then
+    skipped=$s
+    echo "Deploy run $s was skipped (CI was not green). Waiting up to $rerun_wait min for a re-run to deploy..."
+    deadline=$(( $(date +%s) + rerun_wait * 60 ))
+  fi
+  [ "$(date +%s)" -ge "$deadline" ] && break
   sleep 30
 done
 ci=$(gh run list -R "$REPO" --workflow ci.yml --limit 10 --json headSha,conclusion,event \
@@ -82,8 +101,10 @@ echo "CI conclusion: ${ci:-not found}"
 
 # deploy.yml logs "Railway queued deployment <id> of the web service|API service at <sha>."
 queued=""
-if [ -z "$run" ]; then
-  echo "CHECK 1 FAIL: no completed Deploy run for $sha within 60 min"
+if [ -z "$run" ] && [ -n "$skipped" ]; then
+  echo "CHECK 1 FAIL: Deploy run $skipped was skipped because CI was not green, and no re-run deployed within $rerun_wait min"
+elif [ -z "$run" ]; then
+  echo "CHECK 1 FAIL: no completed Deploy run for $sha within $deploy_wait min"
 else
   echo "DEPLOY RUN $run conclusion=$(gh run view -R "$REPO" "$run" --json conclusion --jq .conclusion)"
   queued=$(gh run view -R "$REPO" "$run" --log | grep -E 'Railway queued deployment|Railway API error|No service|skipping' \

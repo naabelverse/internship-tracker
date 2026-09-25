@@ -3884,3 +3884,20 @@ restore rather than withdrawing the promise.
 - **Check 3 counts every record, `SKIPPED` included.** With the push triggers deleted, `deploy.yml`
   should be the only thing creating deployments. So any second record at the merge commit is a
   failure, not a note.
+
+## The deploy watcher waits through a skipped Deploy run (25 Sep 2026)
+
+- **A skipped Deploy run is no longer the watcher's final answer.** On the PR #39 merge (`3a9a2d0`)
+  the e2e job hit the issue #31 toast flake, so CI was red and Deploy skipped itself.
+  `watch-deploy.sh` took that skipped run as the result and reported three FAILs. A re-run of CI
+  would have started a second Deploy run on the same commit, and the script would never have seen
+  it. It now notes the skip and keeps polling for a Deploy run on that commit that was not skipped.
+- **The wait after a skip is 6 hours by default (`RERUN_WAIT_MINUTES`).** A re-run waits on a person
+  noticing the red CI, so it can come much later than the 60 minutes CI plus Deploy normally take.
+  `RERUN_WAIT_MINUTES=0` reports the skip at once, which suits checking an old commit.
+- **The regression test is a shell script with stubs,** `scripts/deploy-checks/test-watch-deploy.sh`.
+  It replaces `gh`, `railway` and `sleep` on `PATH` and replays three histories: green, skip then
+  re-run, and skip with no re-run. It runs by hand, not in `npm run test`. The watcher is a
+  bash-only operator tool, and wiring bash stubs into the Node suites would couple CI to bash on
+  every platform for a script CI never runs.
+- **Issue #31 itself is untouched.** The flaky colour-contrast audit stays a separate open issue.
