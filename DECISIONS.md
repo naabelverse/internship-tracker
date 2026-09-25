@@ -3901,3 +3901,30 @@ restore rather than withdrawing the promise.
   bash-only operator tool, and wiring bash stubs into the Node suites would couple CI to bash on
   every platform for a script CI never runs.
 - **Issue #31 itself is untouched.** The flaky colour-contrast audit stays a separate open issue.
+
+## Accessibility audits run on a settled frame (issue #31, 25 Sep 2026)
+
+- **The flake was the toast's exit, not its entrance.** Issue #31 blamed the "Welcome back" toast's
+  fade-in. Measured locally, the entrance cannot produce the failure. It starts at 0.5 opacity with
+  the toast below the viewport, and axe skips off-screen elements. The #31 report also had about
+  0.42 effective opacity, below where the entrance starts. The toast's fade-out can produce it.
+  react-hot-toast dismisses a success toast after 2 s with a 0.4 s fade from 1 to 0, and on a slow
+  runner the dashboard audit can land inside it. A violation also needs the toast fully on screen
+  while half faded. That happens when it sits higher than its lowest slot, as it does when stacked.
+  Why CI's toast sat higher is not known. The fix does not depend on it.
+- **Reproduced before fixing.** A throwaway spec lifted the toaster 140 px and started the audit once
+  the toast's exit had passed 0.5 opacity. Unfixed, 7 of 10 runs failed with the same rule on the
+  same element (`color-contrast` on `.go3958317564`, 3.17:1). Freezing the animation clock mid-exit
+  failed every time. With the fix, 10 of 10 passed started mid-exit and 10 of 10 on arrival.
+- **The fix is in the audit helper, not in a longer wait.** `e2e/support/motion.ts`
+  `withAnimationsSettled` first waits until no finite CSS animation has run for five consecutive
+  frames. Several frames are needed because a toast mounts invisible and starts its entrance a frame
+  or two later. It then stops Chromium's animation clock, through the DevTools Animation domain,
+  while axe runs. A wait alone only moves the race, because the toast's dismiss timer can start the
+  fade during the audit. With the clock stopped, an animation that starts mid-audit stays on its
+  first frame, which for an exit is fully opaque and in place.
+- **The toast is still audited.** Settling does not remove it. If the toast is at rest when the audit
+  starts, axe checks it at full opacity. This is the colour pair a user actually reads, and the one
+  the toast's icon-theme comment in `client/src/main.tsx` was about.
+- **Scope: every audit in `axe.spec.ts`,** not only the dashboard. The create-application modal and
+  any future toast would race the same way. Chromium-only, like the suite's one project.

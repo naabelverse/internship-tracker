@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 import type { Result } from 'axe-core';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
+import { withAnimationsSettled } from '../support/motion';
 import { testForClient } from '../support/network';
 import { signIn } from '../support/ui';
 
@@ -43,9 +44,10 @@ function report(label: string, violations: Result[]): void {
 }
 
 async function audit(page: Page, label: string): Promise<void> {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-    .analyze();
+  // Axe reads colours off whatever frame it lands on, so it must land on a settled one (issue #31).
+  const results = await withAnimationsSettled(page, () =>
+    new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze(),
+  );
 
   report(label, results.violations);
 
