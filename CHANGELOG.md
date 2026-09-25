@@ -23,10 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   files** (issue #34). The 30-day purge, deleting an application (one at a
   time or in bulk) and the demo account's nightly reset all remove the files
   from storage once the records are gone. A file storage refuses is logged,
-  and the deletion completes anyway. This supersedes the account-closure
-  entry below: the FAQ, danger zone, closure email, closed page and privacy
-  policy say "data" again and include uploaded files. Files left behind by
-  deletions before this fix are tracked separately in issue #42.
+  and the deletion completes anyway. Files left behind by deletions before
+  this fix are tracked separately in issue #42.
 
 ### Changed
 
@@ -50,9 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Settings danger zone, the closure email, the FAQ and the privacy policy now
   describe restoring by signing in, say plainly that a forgotten password rules
   it out, and no longer offer "contact support", which could not reopen an
-  account. None of them claims uploaded files are erased any more: the purge
-  does not yet delete them from storage (issue #34), and the privacy policy
-  explains exactly what is and is not removed.
+  account. The data they say the purge deletes includes uploaded files (issue
+  #34, above); the danger zone, closure email, FAQ and privacy policy name the
+  files explicitly.
 
 - **The theme control's selected state is a thumb that slides.** One filled
   thumb moves between light, dark and system on the tokenised 150 ms ease-out
