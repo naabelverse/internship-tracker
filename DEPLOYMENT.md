@@ -1407,6 +1407,32 @@ never deployed, and nothing reported it.
 After changing a service's source settings, check that no trigger has come back. Turning on Wait
 for CI gave both triggers new ids, so a settings change can recreate one.
 
+### Checking a deploy
+
+Merged to `main` is not the same as live. `scripts/deploy-checks/watch-deploy.sh` checks a merge
+end to end and only reads: it never deploys or changes a setting.
+
+```bash
+scripts/deploy-checks/watch-deploy.sh                # wait for the next merge touching client/ or server/
+scripts/deploy-checks/watch-deploy.sh --since <sha>  # the first such merge after <sha>
+scripts/deploy-checks/watch-deploy.sh --sha <sha>    # a merge that has already landed
+```
+
+It prints a PASS or FAIL line for each check:
+
+1. The Deploy run for that commit logged a queued deployment for both services.
+2. Each service has a Railway deployment at that commit that ended in `SUCCESS`.
+3. Each service has **exactly one** deployment record at that commit, of any status, and its id is
+   the one the Deploy run logged. A second record, even a `SKIPPED` one, means something other than
+   this workflow is deploying. Usually that is a trigger that has come back.
+
+It ends by printing each service's deployment triggers, which should be empty. It needs `gh` and the
+Railway CLI, both logged in (`railway whoami` refreshes an expired session). The trigger check uses
+`scripts/deploy-checks/railway-query.mjs`, which calls Railway's GraphQL API with the CLI's login.
+The CLI cannot list triggers itself. The script defaults to this project's production ids. Set
+`RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT_ID`, `RAILWAY_CLIENT_SERVICE_ID` and
+`RAILWAY_SERVER_SERVICE_ID` to point it at another project.
+
 ---
 
 ## Pre-launch checklist
