@@ -4057,3 +4057,37 @@ restore rather than withdrawing the promise.
 - **The report now names the storage it listed** (`Storage: s3, internship-tracker`), through a new
   `location` on the adapter: the bucket name, or the local upload root. The zero result above took a
   separate check to trust because the report did not say which driver or bucket it had read.
+
+## npm audit: qs patched, react-router v7 deferred (26 Sep 2026)
+
+`npm audit --omit=dev` reported five moderate entries. They are four advisories: two in `qs` and two
+in `react-router`. express, body-parser and react-router-dom were listed only because they depend on
+those two. Each advisory was checked against how this app actually uses the code, not triaged by its
+severity label.
+
+- **`qs` array-limit bypass (GHSA-x5fp-wj9c-mxmx) was not reachable.** It needs `qs.parse` with
+  `comma: true`. Express's extended query parser passes `{ allowPrototypes, arrayLimit: 1000 }`, and
+  body-parser's `urlencoded({ extended: true })` (`app.ts`) passes depth and array limits. Neither
+  sets `comma`, and the server never imports `qs` itself.
+- **`qs` `isBuffer` crash (GHSA-4mjr-xmp4-gh2g) was not reachable.** It needs a parsed object with a
+  `constructor` key to go back through `qs.stringify`. Express's `allowPrototypes: true` does keep
+  such keys, so half the precondition holds, but nothing in the server calls `qs.stringify`, and
+  Express does not call it internally.
+- **Patched anyway, because the patch is lockfile-only.** `npm update express body-parser qs` moves
+  express 4.22.2 → 4.22.3, body-parser 1.20.6 → 1.20.8 and qs 6.15.3 → 6.16.0, all inside the
+  existing `^4.21.2` range. `npm audit fix` was rejected: its dry run also removed and re-resolved
+  unrelated dev dependencies (vitest, typescript-eslint, `@vitejs/plugin-react`).
+- **react-router open redirect via backslash (GHSA-wrjc-x8rr-h8h6) was not reachable.** Only three
+  navigation targets are built from variables. `UpcomingRow` always gets
+  `paths.applicationDetail(id)`, the sidebar maps a fixed list, and the post-login redirect is
+  `location.pathname + search`, which `ProtectedRoute` stores in router state. A crafted link cannot
+  write router state, and a browser turns `\` into `/` before `pathname` exists, so
+  `/\evil.com` arrives as `//evil.com`, which `readRedirectTarget` already rejects.
+- **react-router SSR constructor injection (GHSA-337j-9hxr-rhxg) does not apply.** The advisory
+  excludes Declarative Mode. The app uses `<BrowserRouter>` and has no SSR.
+- **The v7 upgrade is deferred.** The fix exists only in react-router 7.18.0, and the v6 line gets no
+  patch. Both future flags that apply to `<BrowserRouter>` (`v7_startTransition`,
+  `v7_relativeSplatPath`) are already on, so the upgrade should be modest. It is still a major
+  version touching every route to fix nothing reachable today. Revisit it when there is another
+  reason to touch the router's major version, or if the post-login redirect ever starts reading from
+  somewhere an attacker controls, such as a `?next=` parameter.

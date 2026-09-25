@@ -195,6 +195,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   database.
 - Measured Lighthouse scores, bundle sizes and API latency in the README.
 
+### Security
+
+- **`qs` is patched to 6.16.0** through express 4.22.3 and body-parser 1.20.8,
+  clearing GHSA-x5fp-wj9c-mxmx and GHSA-4mjr-xmp4-gh2g. Neither was reachable
+  here: the server never parses with `comma: true` and never calls
+  `qs.stringify`. The two react-router advisories remain and are not reachable
+  either; DECISIONS.md records why the v7 upgrade that fixes them is deferred.
+
 ## [1.0.0] - 2026-09-05
 
 First public release: a full-stack internship application tracker with a Kanban
