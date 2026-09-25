@@ -3842,3 +3842,26 @@ restore rather than withdrawing the promise.
   lists the eight cards' metrics, the applications-over-time chart and the upcoming list.
 - **The feature card's copy was left as it is.** Response rate, interview rate and time to first
   reply are all in frame now. The funnel and sources are further down the same dashboard.
+
+## deploy.yml is the only deploy path; Railway's push trigger stays deleted (25 Sep 2026)
+
+- **Railway's deployment trigger must be deleted on both services and stay deleted while
+  `DEPLOY_ENABLED` is on.** It is not harmless next to `deploy.yml`, even with Wait for CI on. Wait
+  for CI only moves Railway's deploy to the moment CI passes, which is when `deploy.yml` deploys.
+  PR #37 (`f95f30b`) proved it. The trigger's client deployment `50b00294` was created 2 s after the
+  push, waited for CI, built a full image and started a container. The workflow's `87fe61ec` built
+  the same commit at the same time. Railway then removed `50b00294`, and `87fe61ec` stayed live. The
+  server trigger only logged `SKIPPED`, because #37 touched no server paths. It had the same config,
+  so a server change would have double-deployed too.
+- **The workflow was kept rather than the trigger because it fails loudly.** On 24 Sep the trigger
+  dropped the pushes for `cfd9775` and `ef71371` without any record. The workflow logs the commit and
+  the deployment id it queued, and turns red on any API error.
+- **The repo connection stays.** `serviceInstanceDeployV2` builds from the service's connected repo,
+  so DEPLOYMENT.md now separates "repo connection" (keep) from "deployment trigger" (delete). It
+  also replaces the earlier advice to turn on Wait for CI, which did not prevent the duplicate.
+- **A settings change can recreate the trigger.** The trigger ids changed when Wait for CI was
+  turned on (client `9a871108` became `acaf7071`, server `be1ba518` became `045235a4`). A future
+  change to a service's source settings should be followed by a check that
+  `deploymentTriggers(projectId, environmentId, serviceId)` is empty.
+- **Known gap, not addressed here:** `deploy.yml` deploys both services on every green run, even
+  when only one changed. #37 changed only client files and still rebuilt the server.

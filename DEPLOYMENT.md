@@ -1386,12 +1386,26 @@ cannot touch anything else in your account. Do not use a personal account token.
 With `DEPLOY_ENABLED` unset the workflow still runs and reports a green skip, which is the intended
 resting state: CI keeps guarding `main` and nothing deploys.
 
-**Turn off Railway's own GitHub auto-deploy if you want the gate to mean anything.** Railway deploys
-on every push to the connected branch by default, which happens _before_ CI has finished and
-regardless of whether it passes. **Do not disconnect the repo** to stop that: the workflow's deploy
-builds from the connected repo, so it needs the connection. Turn on the service's **Wait for CI**
-setting instead, or accept that the workflow is redundant. An ungated push deploy racing a gated
-one is the worst of the two.
+**Railway's own push trigger must stay off while this workflow is enabled.** Railway connects a
+service to GitHub in two separate parts:
+
+- The **repo connection** (the service's source). The workflow's deploy builds from it, so keep it.
+  **Do not disconnect the repo.**
+- The **deployment trigger** (the branch connected to `production`, with its **Wait for CI**
+  option). This is what deploys on every push. It has no on/off switch. The only way to stop push
+  deploys is to delete it: service → **Settings → Source**, disconnect the branch, or call
+  `deploymentTriggerDelete` in the API.
+
+**"Wait for CI" does not stop the duplicate.** It only delays Railway's deploy until CI passes, and
+that is exactly when this workflow deploys too. On PR #37 (`f95f30b`, 25 Sep 2026) the client was
+built and started twice from the same commit, once by the trigger and once by the workflow. The
+two builds raced, and only one survived. With the trigger deleted, the only deploy path is this
+workflow. Every deploy then has a run log naming its commit and a deployment id to match in
+Railway, and a failure turns the run red. The trigger failed silently on 24 Sep: two pushes were
+never deployed, and nothing reported it.
+
+After changing a service's source settings, check that no trigger has come back. Turning on Wait
+for CI gave both triggers new ids, so a settings change can recreate one.
 
 ---
 
