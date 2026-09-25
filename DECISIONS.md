@@ -3989,5 +3989,22 @@ restore rather than withdrawing the promise.
 - **The test stubs `node` only for `railway-query.mjs`.** Every other `node` call runs for real, so the
   script needs no test hook. The three new cases fail against the old script (16 assertion failures)
   and pass against the new one.
-- **Checks 1 to 3 still exit 0 when they fail.** That is unchanged and out of scope here. Read their
+- **Resolved by issue #45, below.** **Checks 1 to 3 still exit 0 when they fail.** That is unchanged and out of scope here. Read their
   PASS and FAIL lines as before.
+
+## The deploy watcher fails when any check fails (issue #45, 25 Sep 2026)
+
+- **Reproduced first.** New harness cases failed check 1 (Deploy skipped, no re-run), check 2 (the
+  server's deployment `FAILED`) and check 3 (a second client record at the same commit), one at a
+  time. On the old script each one printed its `CHECK n FAIL` line, then `DONE`, and exited 0. The
+  cause: checks 1 to 3 only printed their failures. The trigger-problem exit from #44 and the usage
+  errors (exit 2) were the only `exit` statements after argument parsing.
+- **One `fail` helper for every check.** Every `CHECK n FAIL` and `TRIGGERS ... FAIL|ERROR` line goes
+  through `fail`, which prints the line and counts it. A single summary at the end prints
+  `FAILED: N check(s) did not pass` and exits 1, or prints `DONE`. #44's trigger-specific counter and
+  message were folded into it, and its three test patterns were updated to the shared wording.
+- **Every check still runs after a failure,** so a failed deploy is reported in full rather than
+  stopping at the first problem.
+- **The harness now prints each run's exit code** (`ran [...] exit=N`), and the stub `railway`
+  takes `SERVER_STATUS` and `DUPLICATE` to fail checks 2 and 3. The all-green and re-run cases still
+  end in `DONE` with exit 0. A real read-only run against `4b4fa06` (PR #43) did the same.

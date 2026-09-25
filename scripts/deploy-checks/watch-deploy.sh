@@ -13,8 +13,9 @@
 #   3. Each service has exactly one deployment record, of any status, at that commit, and its id
 #      is the one deploy.yml logged. Railway's push trigger is deleted, so even a SKIPPED record
 #      means something other than deploy.yml is deploying.
-# Finally it re-checks that neither service has grown a deployment trigger back. A trigger found, or
-# a trigger query that fails (no "data" in the reply), prints FAILED instead of DONE and exits 1.
+# Finally it re-checks that neither service has grown a deployment trigger back; a trigger query that
+# fails (no "data" in the reply) counts as a failure too. Every check still runs so the report is
+# complete, but any FAIL or ERROR ends in FAILED instead of DONE, with exit 1. Usage errors exit 2.
 #
 # A Deploy run skipped because CI was red is not treated as the result: the script keeps watching
 # the same commit for a re-run's Deploy. DEPLOY_WAIT_MINUTES (default 60) bounds the wait for the
@@ -47,6 +48,13 @@ case "${1:-}" in
   "") git fetch -q origin main && base=$(git rev-parse origin/main) || exit 2 ;;
   *) echo "usage: $0 [--since <sha> | --sha <sha>]" >&2; exit 2 ;;
 esac
+
+# Every failed check goes through here, so none of them can print FAIL and still end in DONE.
+failures=0
+fail() {
+  echo "$1"
+  failures=$((failures + 1))
+}
 
 # Prints "createdAt status id reason" for each recent deployment of commit $2 on service $1.
 # A CLI failure is printed, not hidden, so an expired login cannot pass for "no deployments".
@@ -103,9 +111,9 @@ echo "CI conclusion: ${ci:-not found}"
 # deploy.yml logs "Railway queued deployment <id> of the web service|API service at <sha>."
 queued=""
 if [ -z "$run" ] && [ -n "$skipped" ]; then
-  echo "CHECK 1 FAIL: Deploy run $skipped was skipped because CI was not green, and no re-run deployed within $rerun_wait min"
+  fail "CHECK 1 FAIL: Deploy run $skipped was skipped because CI was not green, and no re-run deployed within $rerun_wait min"
 elif [ -z "$run" ]; then
-  echo "CHECK 1 FAIL: no completed Deploy run for $sha within $deploy_wait min"
+  fail "CHECK 1 FAIL: no completed Deploy run for $sha within $deploy_wait min"
 else
   echo "DEPLOY RUN $run conclusion=$(gh run view -R "$REPO" "$run" --json conclusion --jq .conclusion)"
   queued=$(gh run view -R "$REPO" "$run" --log | grep -E 'Railway queued deployment|Railway API error|No service|skipping' \
@@ -113,7 +121,7 @@ else
   echo "$queued"
   n=$(echo "$queued" | grep -c "Railway queued deployment .* at $sha\.")
   if [ "$n" -eq 2 ]; then echo "CHECK 1 PASS: both services queued at $sha"
-  else echo "CHECK 1 FAIL: $n of 2 services queued at $sha"; fi
+  else fail "CHECK 1 FAIL: $n of 2 services queued at $sha"; fi
 fi
 
 # Let Railway's builds settle before judging.
@@ -130,19 +138,18 @@ for pair in "$CLIENT_SERVICE:web service" "$SERVER_SERVICE:API service"; do
   echo "RAILWAY $svc deployments at $sha:"; echo "${rows:-  (none)}" | sed 's/^/  /'
   want=$(echo "$queued" | sed -nE "s/^Railway queued deployment ([0-9a-f-]+) of the $label at .*/\1/p")
   if echo "$rows" | grep -q " SUCCESS "; then echo "CHECK 2 PASS: $svc SUCCESS at $sha"
-  else echo "CHECK 2 FAIL: $svc has no SUCCESS deployment at $sha"; fi
+  else fail "CHECK 2 FAIL: $svc has no SUCCESS deployment at $sha"; fi
   count=$(echo "$rows" | grep -c . || true)
   if [ "$count" -eq 1 ] && [ -n "$want" ] && echo "$rows" | grep -q " $want "; then
     echo "CHECK 3 PASS: $svc has exactly one deployment, id $want, the one deploy.yml queued"
   else
-    echo "CHECK 3 FAIL: $svc has $count deployment record(s); deploy.yml queued id '${want:-none}'"
+    fail "CHECK 3 FAIL: $svc has $count deployment record(s); deploy.yml queued id '${want:-none}'"
   fi
 done
 
 # A failed query must never read as "no triggers": a network error or an expired session prints no
 # "data", and treating that like an empty list is how a returning trigger would go unnoticed.
 TQ='query($p:String!,$e:String!,$s:String!){ deploymentTriggers(projectId:$p, environmentId:$e, serviceId:$s){ edges{ node{ id } } } }'
-trigger_problems=0
 for pair in "client:$CLIENT_SERVICE_ID" "server:$SERVER_SERVICE_ID"; do
   name=${pair%%:*}
   out=$(node "$SCRIPT_DIR/railway-query.mjs" "$TQ" "{\"p\":\"$PROJECT\",\"e\":\"$ENV_ID\",\"s\":\"${pair#*:}\"}" 2>&1)
@@ -151,18 +158,16 @@ for pair in "client:$CLIENT_SERVICE_ID" "server:$SERVER_SERVICE_ID"; do
   flat=$(echo "$out" | tr -d ' \n')
   shown=$(echo "$out" | tr '\n' ' ' | tr -s ' ')
   if [ "$rc" -ne 0 ] || ! echo "$flat" | grep -qF '"data":{"deploymentTriggers":{"edges":'; then
-    echo "TRIGGERS $name ERROR: query failed (exit $rc), so triggers could not be checked. Response: $shown"
-    trigger_problems=$((trigger_problems + 1))
+    fail "TRIGGERS $name ERROR: query failed (exit $rc), so triggers could not be checked. Response: $shown"
   elif echo "$flat" | grep -qF '"edges":[]'; then
     echo "TRIGGERS $name PASS: none"
   else
-    echo "TRIGGERS $name FAIL: a deployment trigger is back, so something besides deploy.yml can deploy. Response: $shown"
-    trigger_problems=$((trigger_problems + 1))
+    fail "TRIGGERS $name FAIL: a deployment trigger is back, so something besides deploy.yml can deploy. Response: $shown"
   fi
 done
 
-if [ "$trigger_problems" -gt 0 ]; then
-  echo "FAILED: $trigger_problems trigger check(s) did not pass; see the TRIGGERS lines above"
+if [ "$failures" -gt 0 ]; then
+  echo "FAILED: $failures check(s) did not pass; see the FAIL and ERROR lines above"
   exit 1
 fi
 echo "DONE"
