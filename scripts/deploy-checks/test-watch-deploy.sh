@@ -14,6 +14,9 @@
 # It also replays the server's trigger query (TRIGGERS=...): an empty list passes, while a trigger,
 # a reply with no "data" and a network error each fail with exit 1. The last two are the bug from
 # PR #43's check, where an ECONNRESET was printed and the script still said DONE.
+#
+# Checks 2 and 3 are failed one at a time (SERVER_STATUS=FAILED, DUPLICATE=client), and no-rerun
+# fails check 1. Each must end in FAILED with exit 1, which they did not before issue #45.
 
 set -u
 
@@ -45,11 +48,20 @@ case "$args" in
 esac
 EOF
 
-# railway: one SUCCESS deployment per service, with the id the Deploy log names.
+# railway: one SUCCESS deployment per service, with the id the Deploy log names. SERVER_STATUS
+# replaces the server's status (check 2), and DUPLICATE=client adds a second client record at the
+# same commit, as a deploy from outside deploy.yml would (check 3).
 cat > "$WORK/bin/railway" <<'EOF'
 #!/usr/bin/env bash
-case "$*" in *client*) id=aaaa-0001 ;; *) id=bbbb-0002 ;; esac
-echo "[{\"id\":\"$id\",\"status\":\"SUCCESS\",\"createdAt\":\"2026-09-25T00:00:00Z\",\"meta\":{\"commitHash\":\"$SHA\",\"reason\":\"deploy\"}}]"
+case "$*" in
+  *client*) svc=client id=aaaa-0001 status=SUCCESS ;;
+  *) svc=server id=bbbb-0002 status=${SERVER_STATUS:-SUCCESS} ;;
+esac
+extra=""
+if [ "${DUPLICATE:-}" = "$svc" ]; then
+  extra=",{\"id\":\"cccc-0003\",\"status\":\"SKIPPED\",\"createdAt\":\"2026-09-25T00:00:01Z\",\"meta\":{\"commitHash\":\"$SHA\",\"reason\":\"deploy\"}}"
+fi
+echo "[{\"id\":\"$id\",\"status\":\"$status\",\"createdAt\":\"2026-09-25T00:00:00Z\",\"meta\":{\"commitHash\":\"$SHA\",\"reason\":\"deploy\"}}$extra]"
 EOF
 
 # node: only railway-query.mjs is faked. Every other call (the deployment list parser) runs the real
@@ -93,7 +105,7 @@ expect() {
       echo "$out" | grep -qF -- "$pattern" || { echo "FAIL [$scenario]: missing '$pattern'"; failures=$((failures + 1)); }
     fi
   done
-  echo "ran [$scenario${env:+ $env}]"
+  echo "ran [$scenario${env:+ $env}] $(echo "$out" | tail -1)"
 }
 
 expect green "" \
@@ -105,17 +117,30 @@ expect rerun "" \
   "CHECK 3 PASS: @internship-tracker/client" "CHECK 3 PASS: @internship-tracker/server" \
   "DONE" "exit=0"
 expect no-rerun "RERUN_WAIT_MINUTES=0" \
-  "Deploy run 111 was skipped" "CHECK 1 FAIL: Deploy run 111 was skipped" "!DEPLOY RUN"
+  "Deploy run 111 was skipped" "CHECK 1 FAIL: Deploy run 111 was skipped" "!DEPLOY RUN" \
+  "FAILED:" "!DONE" "exit=1"
+
+# Checks 2 and 3, each failing on its own while every other check passes.
+expect green "SERVER_STATUS=FAILED" \
+  "CHECK 1 PASS" "CHECK 2 PASS: @internship-tracker/client" \
+  "CHECK 2 FAIL: @internship-tracker/server has no SUCCESS deployment" \
+  "CHECK 3 PASS: @internship-tracker/client" "CHECK 3 PASS: @internship-tracker/server" \
+  "TRIGGERS server PASS: none" "FAILED: 1 check(s) did not pass" "!DONE" "exit=1"
+expect green "DUPLICATE=client" \
+  "CHECK 1 PASS" "CHECK 2 PASS: @internship-tracker/client" \
+  "CHECK 3 FAIL: @internship-tracker/client has 2 deployment record(s)" \
+  "CHECK 3 PASS: @internship-tracker/server" \
+  "TRIGGERS server PASS: none" "FAILED: 1 check(s) did not pass" "!DONE" "exit=1"
 
 # A reply with no "data" exits 0 from the query itself, so only the content check can catch it.
 expect green "TRIGGERS=no-data" \
   "TRIGGERS client PASS: none" "TRIGGERS server ERROR: query failed (exit 0)" "Not Authorized" \
-  "FAILED: 1 trigger check(s) did not pass" "!DONE" "exit=1"
+  "FAILED: 1 check(s) did not pass" "!DONE" "exit=1"
 expect green "TRIGGERS=econnreset" \
   "TRIGGERS server ERROR: query failed (exit 1)" "ECONNRESET" \
-  "FAILED: 1 trigger check(s) did not pass" "!DONE" "exit=1"
+  "FAILED: 1 check(s) did not pass" "!DONE" "exit=1"
 expect green "TRIGGERS=present" \
   "TRIGGERS server FAIL: a deployment trigger is back" "trig-0001" \
-  "FAILED: 1 trigger check(s) did not pass" "!DONE" "exit=1"
+  "FAILED: 1 check(s) did not pass" "!DONE" "exit=1"
 
 if [ "$failures" -eq 0 ]; then echo "PASS: all scenarios"; else echo "$failures failure(s)"; exit 1; fi
