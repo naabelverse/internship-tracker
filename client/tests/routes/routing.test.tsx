@@ -187,4 +187,22 @@ describe('post-login redirect target', () => {
     expect(readRedirectTarget({ from: '//evil.example' })).toBe(paths.dashboard);
     expect(readRedirectTarget({ from: 'https://evil.example' })).toBe(paths.dashboard);
   });
+
+  // Each of these starts with "/" and not "//", so a prefix check lets it
+  // through, yet the browser's URL parser resolves it to another host: it reads
+  // a backslash as a slash and drops tabs and newlines before parsing.
+  it.each([
+    ['a leading backslash', '/\\evil.example'],
+    ['two leading backslashes', '/\\\\evil.example'],
+    ['a backslash then a slash', '/\\/evil.example'],
+    ['a tab between the slashes', '/\t/evil.example'],
+    ['a newline between the slashes', '/\n/evil.example'],
+  ])('refuses a path with %s, which resolves to another origin', (_label, from) => {
+    expect(readRedirectTarget({ from })).toBe(paths.dashboard);
+  });
+
+  it('keeps a same-origin path that merely contains a backslash', () => {
+    expect(readRedirectTarget({ from: '/applications?q=a\\b' })).toBe('/applications?q=a\\b');
+    expect(readRedirectTarget({ from: '/%5Cevil.example' })).toBe('/%5Cevil.example');
+  });
 });
