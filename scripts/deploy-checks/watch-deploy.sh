@@ -13,7 +13,8 @@
 #   3. Each service has exactly one deployment record, of any status, at that commit, and its id
 #      is the one deploy.yml logged. Railway's push trigger is deleted, so even a SKIPPED record
 #      means something other than deploy.yml is deploying.
-# Finally it re-checks that neither service has grown a deployment trigger back.
+# Finally it re-checks that neither service has grown a deployment trigger back. A trigger found, or
+# a trigger query that fails (no "data" in the reply), prints FAILED instead of DONE and exits 1.
 #
 # A Deploy run skipped because CI was red is not treated as the result: the script keeps watching
 # the same commit for a re-run's Deploy. DEPLOY_WAIT_MINUTES (default 60) bounds the wait for the
@@ -138,9 +139,30 @@ for pair in "$CLIENT_SERVICE:web service" "$SERVER_SERVICE:API service"; do
   fi
 done
 
+# A failed query must never read as "no triggers": a network error or an expired session prints no
+# "data", and treating that like an empty list is how a returning trigger would go unnoticed.
 TQ='query($p:String!,$e:String!,$s:String!){ deploymentTriggers(projectId:$p, environmentId:$e, serviceId:$s){ edges{ node{ id } } } }'
+trigger_problems=0
 for pair in "client:$CLIENT_SERVICE_ID" "server:$SERVER_SERVICE_ID"; do
-  out=$(node "$SCRIPT_DIR/railway-query.mjs" "$TQ" "{\"p\":\"$PROJECT\",\"e\":\"$ENV_ID\",\"s\":\"${pair#*:}\"}" 2>&1 | tr -d ' \n')
-  echo "TRIGGERS ${pair%%:*}: $out"
+  name=${pair%%:*}
+  out=$(node "$SCRIPT_DIR/railway-query.mjs" "$TQ" "{\"p\":\"$PROJECT\",\"e\":\"$ENV_ID\",\"s\":\"${pair#*:}\"}" 2>&1)
+  rc=$?
+  # Matched with whitespace removed, printed with only newlines folded so error text stays readable.
+  flat=$(echo "$out" | tr -d ' \n')
+  shown=$(echo "$out" | tr '\n' ' ' | tr -s ' ')
+  if [ "$rc" -ne 0 ] || ! echo "$flat" | grep -qF '"data":{"deploymentTriggers":{"edges":'; then
+    echo "TRIGGERS $name ERROR: query failed (exit $rc), so triggers could not be checked. Response: $shown"
+    trigger_problems=$((trigger_problems + 1))
+  elif echo "$flat" | grep -qF '"edges":[]'; then
+    echo "TRIGGERS $name PASS: none"
+  else
+    echo "TRIGGERS $name FAIL: a deployment trigger is back, so something besides deploy.yml can deploy. Response: $shown"
+    trigger_problems=$((trigger_problems + 1))
+  fi
 done
+
+if [ "$trigger_problems" -gt 0 ]; then
+  echo "FAILED: $trigger_problems trigger check(s) did not pass; see the TRIGGERS lines above"
+  exit 1
+fi
 echo "DONE"
