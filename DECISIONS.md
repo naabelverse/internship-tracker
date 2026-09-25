@@ -3869,3 +3869,18 @@ restore rather than withdrawing the promise.
   both still had `source.repo` set to `naabelverse/internship-tracker`.
 - **Known gap, not addressed here:** `deploy.yml` deploys both services on every green run, even
   when only one changed. #37 changed only client files and still rebuilt the server.
+
+## Deploy checks live in `scripts/deploy-checks/` (25 Sep 2026)
+
+- **The watcher that verified PRs #37 and #38 is now in the repo** as
+  `scripts/deploy-checks/watch-deploy.sh`, with `railway-query.mjs` for the one query the Railway CLI
+  cannot make (listing a service's deployment triggers). Before this it lived in a session's
+  scratch folder and had to be rebuilt every time. DEPLOYMENT.md "Checking a deploy" documents it.
+- **It is a shell script, not an npm script,** for the same reason as `scripts/backup.sh`: it is an
+  operator tool that drives `git`, `gh` and the Railway CLI. It uses none of the app's dependencies.
+- **This project's Railway ids are defaults in the script.** Project, environment and service ids
+  are identifiers, not credentials. Every call still needs a logged-in CLI. Environment variables
+  override them, so a fork can point the script at its own project.
+- **Check 3 counts every record, `SKIPPED` included.** With the push triggers deleted, `deploy.yml`
+  should be the only thing creating deployments. So any second record at the merge commit is a
+  failure, not a note.
