@@ -3863,5 +3863,9 @@ restore rather than withdrawing the promise.
   turned on (client `9a871108` became `acaf7071`, server `be1ba518` became `045235a4`). A future
   change to a service's source settings should be followed by a check that
   `deploymentTriggers(projectId, environmentId, serviceId)` is empty.
+- **Both triggers were deleted on 25 Sep 2026**, outside the repo. `deploymentTriggerDelete` was
+  called for `acaf7071` and `045235a4` from Railway's GraphQL playground with a short-lived account
+  token, which was deleted after use. A re-query then showed no triggers on either service, and
+  both still had `source.repo` set to `naabelverse/internship-tracker`.
 - **Known gap, not addressed here:** `deploy.yml` deploys both services on every green run, even
   when only one changed. #37 changed only client files and still rebuilt the server.
