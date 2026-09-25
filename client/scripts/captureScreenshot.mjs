@@ -1,14 +1,21 @@
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 /**
- * Captures the dashboard screenshot the landing page shows.
+ * Captures the dashboard screenshots the landing page shows, one per theme.
  *
- * It is a real screenshot of the real app signed into the real demo account,
+ * They are real screenshots of the real app signed into the real demo account,
  * taken against a production build — not a mock-up. That matters: the landing
  * page claims "the same view the demo account opens on", and a hand-drawn
  * approximation would make that claim false the moment the UI changed.
+ *
+ * Alongside the images it writes `dashboardScreenshot.json`: the pixel size the
+ * landing page's <img> declares, and the stat-card labels read off the page at
+ * capture time. `tests/marketing/dashboardScreenshot.test.tsx` compares those
+ * labels with what `StatCards` renders today, so a change to the dashboard's
+ * cards fails the suite until the screenshots are recaptured.
  *
  * Run it with the stack up:
  *   npm run seed:reset -w server
@@ -17,46 +24,83 @@ import { chromium } from 'playwright';
  */
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const outputPath = path.join(here, '..', 'public', 'screenshot-dashboard.png');
+const publicDir = path.join(here, '..', 'public');
+const manifestPath = path.join(
+  here,
+  '..',
+  'src',
+  'components',
+  'marketing',
+  'dashboardScreenshot.json',
+);
 
 const appUrl = process.env.SCREENSHOT_URL ?? 'http://localhost:4173';
+
+/*
+  1280 is Tailwind's `xl`, where the stat cards go from 2 x 4 to 4 x 2. Any
+  narrower and the eight cards take four rows, pushing the chart and the
+  upcoming list out of frame.
+*/
+const viewport = { width: 1280, height: 760 };
+// Retina density, so the image stays crisp at its rendered width on the landing page.
+const deviceScaleFactor = 2;
+
+const THEMES = [
+  { name: 'light', control: 'Light theme' },
+  { name: 'dark', control: 'Dark theme' },
+];
 
 const browser = await chromium.launch({ channel: 'msedge' });
 
 try {
-  const context = await browser.newContext({
-    viewport: { width: 1200, height: 700 },
-    // Retina density, so the image stays crisp at its rendered width on the
-    // landing page. The <img> declares 2400x1400 to match.
-    deviceScaleFactor: 2,
-    colorScheme: 'dark',
-  });
-
+  const context = await browser.newContext({ viewport, deviceScaleFactor });
   const page = await context.newPage();
 
   await page.goto(appUrl, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Try the demo' }).click();
   await page.waitForURL('**/dashboard');
+  await page.getByRole('heading', { name: 'Dashboard' }).waitFor();
+
+  // The sign-in toast would otherwise sit in the first frame.
+  await page.waitForTimeout(5000);
 
   /*
-    Pick the theme through the control rather than through `colorScheme`.
+    Pick each theme through the control rather than through `colorScheme`.
 
     `colorScheme` only decides what `system` resolves to, and the demo account
     carries its own stored preference which wins the moment the session loads --
     so the context setting alone produced whichever theme that account happened
     to hold, and the capture was not reproducible. Clicking the control makes it
-    explicit. Dark, because that is the theme the app boots into.
+    explicit, and leaves the matching segment selected in each frame.
   */
-  await page.getByRole('radio', { name: 'Dark theme' }).click();
-  await page.waitForSelector("html[data-theme='dark']");
+  for (const theme of THEMES) {
+    await page.getByRole('radio', { name: theme.control }).click();
+    await page.waitForSelector(`html[data-theme='${theme.name}']`);
+    // The charts read their colours at paint time and animate in; let them settle.
+    await page.waitForTimeout(2500);
 
-  // The charts animate in, so wait for them to settle rather than racing them.
-  await page.getByRole('heading', { name: 'Dashboard' }).waitFor();
-  await page.waitForTimeout(2500);
+    const outputPath = path.join(publicDir, `screenshot-dashboard-${theme.name}.png`);
+    await page.screenshot({ path: outputPath });
+    console.log(`Screenshot written to ${outputPath}`);
+  }
 
-  await page.screenshot({ path: outputPath });
+  // Each stat card is a direct child of the grid, and its first paragraph is its label.
+  const statCards = await page
+    .locator('main p', { hasText: /^Total$/ })
+    .first()
+    .evaluate((total) => {
+      const grid = total.closest('.grid');
+      if (!grid) throw new Error('Could not find the stat-card grid on the dashboard.');
+      return [...grid.children].map((card) => card.querySelector('p')?.textContent?.trim() ?? '');
+    });
 
-  console.log(`Screenshot written to ${outputPath}`);
+  const manifest = {
+    width: viewport.width * deviceScaleFactor,
+    height: viewport.height * deviceScaleFactor,
+    statCards,
+  };
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  console.log(`Manifest written to ${manifestPath}`);
 } finally {
   await browser.close();
 }

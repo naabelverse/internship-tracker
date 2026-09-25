@@ -105,12 +105,30 @@ describe('the landing page', () => {
     installMockApi({});
 
     renderWithProviders(<App />, { route: paths.landing });
-    const image = await screen.findByRole('img', { name: /dashboard/i });
+    const images = await screen.findAllByRole('img', { name: /dashboard/i });
 
-    expect(image).toHaveAttribute('src', '/screenshot-dashboard.png');
-    expect(image.getAttribute('alt')?.length ?? 0).toBeGreaterThan(40);
-    // Below the fold, so it must not compete with the hero for bandwidth.
-    expect(image).toHaveAttribute('loading', 'lazy');
+    expect(images.map((image) => image.getAttribute('src'))).toEqual([
+      '/screenshot-dashboard-light.png',
+      '/screenshot-dashboard-dark.png',
+    ]);
+    for (const image of images) {
+      expect(image.getAttribute('alt')?.length ?? 0).toBeGreaterThan(40);
+      // Below the fold, so it must not compete with the hero for bandwidth.
+      expect(image).toHaveAttribute('loading', 'lazy');
+    }
+  });
+
+  it('shows the screenshot matching the active theme, keyed off data-theme', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    const [light, dark] = await screen.findAllByRole('img', { name: /dashboard/i });
+
+    // jsdom applies no CSS, so this pins the class contract: `dark:` resolves
+    // against `[data-theme="dark"]` (tailwind.config.ts), which the theme
+    // control sets, so exactly one of the pair is displayed in either theme.
+    expect(light).toHaveClass('block', 'dark:hidden');
+    expect(dark).toHaveClass('hidden', 'dark:block');
   });
 });
 

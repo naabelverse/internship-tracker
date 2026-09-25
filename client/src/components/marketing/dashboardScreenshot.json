@@ -1,0 +1,14 @@
+{
+  "width": 2560,
+  "height": 1520,
+  "statCards": [
+    "Total",
+    "Active",
+    "Interviews",
+    "Offers",
+    "Response rate",
+    "Interview rate",
+    "Time to first reply",
+    "Weekly goal"
+  ]
+}

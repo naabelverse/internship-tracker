@@ -3811,3 +3811,34 @@ restore rather than withdrawing the promise.
   for CI" setting instead.
 - **`DEPLOY_ENABLED` stays unset.** Turning it on waits until the Railway GitHub App connection is
   confirmed working again.
+
+## The landing screenshot shows the dashboard as it ships, in the visitor's theme (25 Sep 2026)
+
+- **The screenshot was recaptured because PR #33 left it stale.** Taken on 11 Sep, it showed six
+  stat cards in a 3 x 2 grid. PR #33 added "Interview rate" and "Time to first reply" and changed
+  the grid to 2 x 4 / 4 x 2, so no layout the app could produce matched it. The feature card
+  beside it named both new metrics, and the section claims "the same view the demo account opens
+  on". The capture was a real one; nothing re-ran it.
+- **The capture viewport went from 1200 x 700 to 1280 x 760.** 1280 is Tailwind's `xl`, where the
+  cards go 4 x 2. At 1200 the eight cards take four rows and push the chart and upcoming list out
+  of frame. The extra 60px shows the chart's date axis, which the old frame cut off.
+- **There is one capture per theme, swapped with `dark:`.** The paragraph says "Dark and light both
+  ship", and the old frame showed dark only. `dark:` keys off `[data-theme="dark"]`, the attribute
+  the theme control and the boot script set. The picture therefore follows the visitor's explicit
+  choice. A `<picture>` with `prefers-color-scheme` would follow only the OS and ignore that choice.
+- **Visitors fetch one image, not two.** Measured in Edge against a production build, for stored
+  light, dark and system under both OS schemes: the page fetched only the shown image, because a
+  lazy `<img>` with `display: none` is never loaded. Switching theme live fetches the other image
+  on demand.
+- **`dashboardScreenshot.json` records what was captured, and a test compares it with the app.**
+  The capture script writes the image size and the stat-card labels it read off the page.
+  `LandingSections` takes `width`/`height` from it, so the declared size cannot drift from the
+  files. `tests/marketing/dashboardScreenshot.test.tsx` renders `StatCards` and fails if its labels
+  differ from the record, naming the script to re-run. A manifest cut back to the old six cards
+  made it fail, listing the two missing labels.
+- **The test covers the stat cards only.** The upcoming list's dates are relative to the capture
+  day and age regardless (26 Sep – 18 Oct in this capture); no test tries to catch that.
+- **The alt text was corrected.** It described "a status funnel", which was never in frame. It now
+  lists the eight cards' metrics, the applications-over-time chart and the upcoming list.
+- **The feature card's copy was left as it is.** Response rate, interview rate and time to first
+  reply are all in frame now. The funnel and sources are further down the same dashboard.
