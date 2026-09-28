@@ -18,6 +18,11 @@ export interface User {
   weeklySummaryEnabled: boolean;
   emailVerified: boolean;
   /**
+   * The shared demo account. Its stored theme is never applied, because it holds
+   * whatever the last visitor picked rather than this visitor's preference.
+   */
+  isDemo: boolean;
+  /**
    * An address the user has asked to move to, held until they confirm it. The
    * server keeps the current address live for signing in until then.
    */

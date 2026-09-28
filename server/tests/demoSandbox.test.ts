@@ -52,6 +52,19 @@ describe('signing in to the demo account', () => {
     expect(typeof response.body.data.accessToken).toBe('string');
   });
 
+  it('still reports the account as the demo after a refresh restores it through /auth/me', async () => {
+    // The client keeps a demo visitor's own theme only while it can tell the
+    // session is the demo, and a page refresh rebuilds the session from here.
+    const token = await demoSession();
+
+    const response = await request(app)
+      .get(`${AUTH_BASE}/me`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.user.isDemo).toBe(true);
+  });
+
   it('lands on an account that already holds the fixture data', async () => {
     const token = await demoSession();
 
@@ -192,6 +205,8 @@ describe('the nightly reset', () => {
     const restored = await User.findById(user._id);
     expect(restored?.name).toBe('Demo Student');
     expect(restored?.isDemo).toBe(true);
+    // A theme a visitor saved on the shared account does not outlive the night.
+    expect(restored?.theme).toBe('system');
   });
 
   it('skips quietly when the deployment has no demo account', async () => {
