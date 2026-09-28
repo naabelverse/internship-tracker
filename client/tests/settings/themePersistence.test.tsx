@@ -4,82 +4,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '@/App';
 import { paths } from '@/routes/paths';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import {
-  THEME_STORAGE_KEY,
-  readStoredPreference,
-  resolveTheme,
-  useThemeStore,
-} from '@/store/themeStore';
+import { THEME_STORAGE_KEY, useThemeStore } from '@/store/themeStore';
+import { dashboardRoutes } from '../utils/dashboardRoutes';
 import { errorBody, makeSession, makeUser, successBody } from '../utils/factories';
-import { installMockApi, type Responder } from '../utils/mockAdapter';
+import { installMockApi } from '../utils/mockAdapter';
 import { renderWithProviders, resetClientState, signIn } from '../utils/render';
+import { bootThemeStoreFromStorage } from '../utils/themeHarness';
 
 const REFRESH = 'POST /auth/refresh';
 const ME = 'GET /auth/me';
 const PATCH_ME = 'PATCH /auth/me';
-
-/**
- * Puts the theme store back to what a cold page load would produce, which is
- * whatever `index.html` found in local storage. The store is a module singleton
- * built once at import, so without this a second "boot" in the same file would
- * inherit the previous test's in-memory preference and prove nothing.
- */
-function bootThemeStoreFromStorage(): void {
-  const preference = readStoredPreference();
-  useThemeStore.setState({ preference, resolved: resolveTheme(preference) });
-  document.documentElement.setAttribute('data-theme', resolveTheme(preference));
-}
-
-/** The dashboard's requests, so mounting the whole App at `/` can settle. */
-const dashboardRoutes: Record<string, Responder> = {
-  'GET /analytics/summary': () => ({
-    status: 200,
-    data: successBody({
-      total: 0,
-      active: 0,
-      applied: 0,
-      responded: 0,
-      interviewed: 0,
-      offers: 0,
-      responseRate: 0,
-      interviewRate: 0,
-      offerRate: 0,
-      avgDaysToFirstResponse: null,
-      currentStreakDays: 0,
-      weeklyGoal: { target: 5, completed: 0, percentage: 0, previousCompleted: 0 },
-      period: {
-        days: 30,
-        current: {
-          created: 0,
-          active: 0,
-          applied: 0,
-          responded: 0,
-          interviewed: 0,
-          offers: 0,
-          responseRate: 0,
-        },
-        previous: {
-          created: 0,
-          active: 0,
-          applied: 0,
-          responded: 0,
-          interviewed: 0,
-          offers: 0,
-          responseRate: 0,
-        },
-      },
-    }),
-  }),
-  'GET /analytics/status-breakdown': () => ({ status: 200, data: successBody({ breakdown: [] }) }),
-  'GET /analytics/timeline': () => ({
-    status: 200,
-    data: successBody({ granularity: 'day', range: '90d', points: [] }),
-  }),
-  'GET /analytics/by-source': () => ({ status: 200, data: successBody({ sources: [] }) }),
-  'GET /analytics/funnel': () => ({ status: 200, data: successBody({ stages: [] }) }),
-  'GET /analytics/top-companies': () => ({ status: 200, data: successBody({ companies: [] }) }),
-  'GET /calendar': () => ({ status: 200, data: successBody({ events: [] }) }),
-};
 
 beforeEach(() => {
   resetClientState();

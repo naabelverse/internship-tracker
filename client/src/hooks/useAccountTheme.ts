@@ -17,13 +17,20 @@ import { useThemeStore } from '@/store/themeStore';
  *
  * Signing out and back in as somebody else therefore lands on their theme, not
  * on whatever the previous person left on the machine.
+ *
+ * The demo account is the exception. It is one login shared by every visitor,
+ * so its stored theme is whatever the last of them picked, not a preference of
+ * the person looking at it now. Adopting it would repaint their screen and
+ * overwrite the choice cached on their device. A demo session keeps the theme
+ * the visitor arrived with instead, on every load, since `/auth/me` reports
+ * `isDemo` just as the demo sign-in does.
  */
 export function useAccountTheme(): void {
   const { user } = useSession();
   const adoptAccountPreference = useThemeStore((state) => state.adoptAccountPreference);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.isDemo) return;
 
     adoptAccountPreference(user.theme);
   }, [user, adoptAccountPreference]);

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders, resetClientState } from '../utils/render';
+import { stubMatchMedia } from '../utils/themeHarness';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   DEFAULT_THEME_PREFERENCE,
@@ -10,22 +11,6 @@ import {
   resolveTheme,
   useThemeStore,
 } from '@/store/themeStore';
-
-function stubMatchMedia(prefersLight: boolean): void {
-  vi.stubGlobal(
-    'matchMedia',
-    vi.fn((query: string) => ({
-      matches: query.includes('prefers-color-scheme: light') ? prefersLight : !prefersLight,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  );
-}
 
 beforeEach(() => {
   window.localStorage.clear();

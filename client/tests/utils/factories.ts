@@ -35,6 +35,7 @@ export function makeUser(overrides: Partial<User> = {}): User {
     // `role="alert"` collides with the alerts those tests query for. Cases that
     // exercise verification set this explicitly.
     emailVerified: true,
+    isDemo: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

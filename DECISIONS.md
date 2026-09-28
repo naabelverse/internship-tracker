@@ -4091,3 +4091,29 @@ severity label.
   version touching every route to fix nothing reachable today. Revisit it when there is another
   reason to touch the router's major version, or if the post-login redirect ever starts reading from
   somewhere an attacker controls, such as a `?next=` parameter.
+
+## A demo session keeps the visitor's own theme (28 Sep 2026)
+
+"Try the demo" opened the dashboard in dark for a visitor who had picked light on the landing page.
+
+- **Root cause: `useAccountTheme` applied the stored theme of every signed-in account, the shared demo
+  account included.** Once the demo session arrived, `adoptAccountPreference(user.theme)` repainted the
+  page and wrote the account's value over the visitor's `internship-tracker.theme` in local storage,
+  so the landing page stayed on it after signing out too. Two paths led to dark. A freshly reset
+  account holds `system`, which replaced an explicit light choice and resolved to dark on a dark OS.
+  And the theme toggle writes to the account while signed in, which `PATCH /auth/me` deliberately
+  allows for the demo, so one visitor clicking Dark set dark for every later visitor until the reset.
+- **Fix: `useAccountTheme` skips a user with `isDemo: true`.** The demo account's stored theme is the
+  last visitor's choice, not this visitor's preference, so a demo session keeps whatever the device
+  already had: light, dark, or `system` following the OS. The server already sends `isDemo` from both
+  `POST /auth/demo` and `/auth/me`, so a refresh inside a demo session behaves the same. The client
+  `User` type now declares it. A real account's stored theme still wins and is still written back.
+- **Not changed: the toggle's server write for demo sessions.** It is harmless once the stored value
+  is never read, and the demo intentionally shows theme changes working.
+- **Ruled out: the nightly reset leaving a stale value.** `seedDemoAccount({ reset: true })` already
+  restores `theme: 'system'` through `DEMO_PROFILE`. The reset test now asserts it. The screenshot
+  capture script also leaves the demo account on dark, since its loop ends on the Dark control, but
+  it has only run against local databases, so production needs no one-off data change. The stored
+  value no longer matters after this fix.
+- **`dashboardRoutes`, `bootThemeStoreFromStorage` and `stubMatchMedia` moved to `client/tests/utils`.**
+  The new demo theme tests need all three, and copying them would have left two definitions of each.

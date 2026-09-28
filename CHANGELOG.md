@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **"Try the demo" keeps the theme the visitor already picked.** The demo
+  dashboard opened in the shared demo account's stored theme, often dark,
+  whatever the visitor had chosen, and signing out left the landing page on it.
+  A demo session now keeps the visitor's light, dark or system choice, including
+  after a refresh and after signing out. Signing in to your own account still
+  applies your saved theme.
 - **Deleting an application or closing an account now erases its uploaded
   files** (issue #34). The 30-day purge, deleting an application (one at a
   time or in bulk) and the demo account's nightly reset all remove the files
