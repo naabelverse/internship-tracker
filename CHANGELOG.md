@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The app's logo sits at the top of the sidebar and links to the dashboard.**
+  The mark and "Internship Tracker" wordmark, as on the landing and sign-in
+  pages, replace the plain text that sat in a bordered strip, which read as the
+  left end of the top bar. It now lines up with the navigation items below it.
+  On a phone it is the drawer's first item, beside the close button, and
+  following it closes the drawer. The top bar keeps only the theme control, your
+  name and sign out.
 - **The landing page's dashboard screenshot matches the shipped dashboard.** It
   shows all eight stat cards, including interview rate and time to first reply,
   in the 4 x 2 grid. There is a light and a dark capture, and the page shows the

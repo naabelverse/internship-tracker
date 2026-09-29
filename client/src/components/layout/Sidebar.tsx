@@ -1,9 +1,11 @@
 import { useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/cn';
+import { BrandMark } from '@/components/marketing/MarketingChrome';
 import { CloseIcon } from '@/components/ui/icons';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { NAV_ITEMS } from '@/routes/navItems';
+import { paths } from '@/routes/paths';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -56,10 +58,34 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
           isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-4">
-          <span className="text-sm font-semibold tracking-tight text-content">
-            Internship Tracker
-          </span>
+        {/*
+          The lockup opens the navigation block rather than closing off a header
+          band. It used to sit in an `h-16` strip with a bottom border that met the
+          topbar's at the same line, so from `lg` up the two read as one bar with
+          the wordmark at its left end. Without the border the strip is simply the
+          top of the rail, and `h-16` keeps the lockup level with the topbar's
+          controls.
+
+          The row's `px-3` and the link's `px-3 py-2` are the nav's own `p-3` and
+          `navLinkClass` box, so the mark starts on the nav icons' 24px line, the
+          link's 36px box and focus ring match a nav item's, and the close button
+          lines up with the nav links' right edge.
+
+          It points at the dashboard, not the landing page the auth pages' lockup
+          targets: `/` redirects a signed-in visitor there anyway, so this skips the
+          hop. `onClose` for the same reason the nav links carry it: from the
+          dashboard the pathname does not change, so the route effect would leave
+          the drawer open.
+        */}
+        <div className="flex h-16 items-center justify-between gap-2 px-3">
+          <Link
+            to={paths.dashboard}
+            onClick={onClose}
+            className="group flex items-center gap-2.5 whitespace-nowrap rounded-control px-3 py-2 text-sm font-semibold tracking-tight text-content transition-colors hover:text-content-muted"
+          >
+            <BrandMark className="h-4 w-4 shrink-0 text-primary transition-colors group-hover:text-content-muted" />
+            <span className="stretch-wide">Internship Tracker</span>
+          </Link>
           <button
             type="button"
             onClick={onClose}
