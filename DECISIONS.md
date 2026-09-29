@@ -4117,3 +4117,38 @@ severity label.
   value no longer matters after this fix.
 - **`dashboardRoutes`, `bootThemeStoreFromStorage` and `stubMatchMedia` moved to `client/tests/utils`.**
   The new demo theme tests need all three, and copying them would have left two definitions of each.
+
+## The logo moves to the top of the sidebar and links to the dashboard (29 Sep 2026)
+
+The brief was to move the logo from the top header into the sidebar, above the nav items.
+
+- **The header never held the logo.** `Topbar` renders only the drawer toggle, a spacer, the theme
+  control, the user's initials and name, and sign out. The wordmark was already in `Sidebar`, as plain
+  text in an `h-16` strip with `border-b`. Next to the topbar's own `h-16` and `border-b` on the same
+  `surface` ground, the two joined into one band from `lg` up, with the wordmark at its left end. That
+  was the "logo in the header" the brief described. The change is to the sidebar only. `Topbar` is
+  untouched because its controls were already pushed right by the `flex-1` spacer.
+- **The strip loses its border and keeps `h-16`.** Without the border it reads as the top of the rail.
+  Keeping the height keeps the lockup level with the topbar's controls, and nav items start at the
+  same y as before, 76px.
+- **The spacing is the nav's, not new values.** The row is `px-3`, the nav's `p-3`, and the link is
+  `px-3 py-2`, `navLinkClass`'s box. So the mark starts on the nav icons' 24px line (the text was at
+  16px), the link's 36px box and focus ring match a nav item's, and the drawer's close button now lines
+  up with the nav links' right edge. Its right inset goes from 16px to 12px.
+- **The lockup's styling is the auth pages' `BrandLink`:** `BrandMark` at `h-4 w-4` in `text-primary`,
+  `gap-2.5`, the wordmark in `stretch-wide`, and a hover that swaps both halves to `content-muted`
+  rather than tinting a background. The auth link's `after:` hit-area band is not copied. That band
+  exists because padding would have disturbed the aside's `justify-between`. Here the padding is the
+  nav item's own box, which already gives a 36px target.
+- **The link targets `paths.dashboard`, not `paths.landing` as the auth lockup does.** `MarketingRoute`
+  redirects an authenticated visitor from `/` to `/dashboard`, so linking there directly lands in the
+  same place without the hop. `BrandLink` stays on `/` because a signed-out visitor has no dashboard.
+- **The link calls `onClose` on click**, as the nav links do. From the dashboard the pathname does not
+  change, so `AppLayout`'s route effect would leave the drawer open over the page on a phone.
+- **`BrandMark` is imported from `MarketingChrome`, not moved.** `AuthSplitLayout` already imports it
+  from there, and the brief asked for the shared component to stay put.
+- **Tests:** `client/tests/components/sidebarBrandLink.test.tsx` covers the target, both halves inside
+  one link, the order before the nav, reaching the dashboard, a single lockup with none in the banner,
+  and the drawer closing from the dashboard. All five fail against the old sidebar. The drawer test
+  alone fails when only the link's `onClose` is removed. The "no `border-b`" assertion is a class
+  contract, since jsdom applies no CSS. The rendered result was measured in a real browser for the PR.
