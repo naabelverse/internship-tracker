@@ -32,6 +32,12 @@ export function useFocusTrap(
     focusables()[0]?.focus();
 
     const onKeyDown = (event: KeyboardEvent): void => {
+      // An option holds focus only while its select's panel is open, and with
+      // `appearance: base-select` that panel is part of the page, so its Escape
+      // arrives here. The browser closes the panel; closing the dialog too
+      // would discard the form behind it.
+      if (event.key === 'Escape' && event.target instanceof HTMLOptionElement) return;
+
       if (event.key === 'Escape') {
         event.stopPropagation();
         onEscape();

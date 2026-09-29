@@ -40,7 +40,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
         className={cn(
-          'h-11 w-full rounded-control border bg-surface px-3 text-sm text-content',
+          'select-control h-11 w-full rounded-control border bg-surface px-3 text-sm text-content',
           error ? 'border-danger' : 'border-border',
           className,
         )}

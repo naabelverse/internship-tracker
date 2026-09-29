@@ -4152,3 +4152,55 @@ The brief was to move the logo from the top header into the sidebar, above the n
   and the drawer closing from the dashboard. All five fail against the old sidebar. The drawer test
   alone fails when only the link's `onClose` is removed. The "no `border-b`" assertion is a class
   contract, since jsdom applies no CSS. The rendered result was measured in a real browser for the PR.
+
+## Every dropdown opens as a styled panel (29 Sep 2026)
+
+The brief was to restyle the select menus app-wide: rounded, elevated, padded options, a soft
+accent tint for the selected row, a distinct hover, no overlap with the fields below, and a small
+gap under the field.
+
+- **All 13 dropdowns were already native `<select>`s, drawn by two components.** `Select` renders
+  ten: New application ×5, Add interview ×2, Settings ×2, and the bulk bar's "Set status…".
+  `StatusSelect` is the inline pill in the other three: the table, the phone card list and the
+  detail header. The filter and column menus are `Popover`s holding
+  checkboxes, not selects. The implementation was consistent. The problem was that a native
+  select's open list is drawn by the browser, and no CSS reaches it.
+- **`appearance: base-select`, not a custom listbox.** It opts the same native element into a panel
+  the page can style, so keyboard handling, screen-reader semantics, `react-hook-form`'s `register`
+  and the plain `change` event all stay native, and no call site changed. A hand-built ARIA listbox
+  would have looked identical in every browser, at the cost of a keyboard model, a portal, a
+  `Controller` at every form field, and the mobile platform picker `StatusSelect` exists to keep.
+  The user chose this option when offered both.
+- **Two guards make it a pure enhancement.** `@supports (appearance: base-select)` leaves browsers
+  without it (Firefox, and Safari unless it has shipped support since) on their classic picker.
+  `@media (pointer: fine)` leaves phones and tablets on the platform picker. A touch-emulated
+  context was measured at `appearance: auto`, and a desktop context at `base-select`.
+- **Every value is an existing token.** The panel is the popover menus' card: `rounded-card`,
+  `border-border`, `bg-surface`, `shadow-float`, `p-1`, and `my-1` for a 4px gap from the field.
+  Rows are `rounded-control` (the card radius less the inset, so the corners stay concentric) and
+  `px-2 py-2.5`, which puts each label on the field's own text line in a 40px row. Selected and
+  hovered are the sidebar's `primary/10` and the board's `primary/5`. The accent is neutral, so the
+  tint reads as a soft wash of the ink colour, not a hue. The panel is in the top layer, so it
+  needs no z-index and no field can paint over it. `max-h-96` fits all eight statuses without a
+  scrollbar, and longer lists (Timezone, 35 zones) scroll thinly.
+- **Measured before building, in both themes.** Body text on the selected row is 15.68:1 light and
+  9.98:1 dark, on the hovered row 17.44:1 and 11.52:1, and the checkmark is 14.22:1 and 8.83:1. The
+  tint alone separates selected from hovered by only 1.11–1.15:1, so the selected row also carries
+  the platform checkmark and medium weight and is not marked by colour alone.
+- **Two side effects of the switch, fixed here.** Base-select stretches the field's label and arrow
+  instead of centring them, so the rule sets `items-center`. Its arrow is a filled triangle, heavier
+  than every other icon, so it is replaced by `ChevronDownIcon`'s path as a mask in `currentColor`,
+  sized in `em` so it fits the smaller pill too.
+- **Escape inside an open panel no longer closes the modal (regression found in verification).**
+  The classic picker swallowed Escape. The base-select panel is part of the page, so its Escape
+  reached `useFocusTrap`'s document listener and closed the dialog, discarding the form. While a
+  panel is open, focus sits on an `<option>` (measured in Edge 154), and at no other time, so the
+  trap now ignores an Escape whose target is an option and lets the browser close the panel.
+- **Tests:** `tests/components/selectPanel.test.tsx` holds the class contract (both components opt
+  in) and the stylesheet contract (guards, tokens, concentric radii). `tokenContrast.test.ts` reads
+  the two tint alphas from `index.css` and gates text and checkmark contrast in both themes.
+  `focusTrap.test.tsx` gains the Escape regression case, which fails without the guard. Removing
+  the class from `Select`, or making the selected tint equal the hover tint, turns the new cases
+  red. jsdom renders no panel, so the look was checked in a real browser (Edge 154) at every
+  location in both themes, together with keyboard and click selection, form submission and the
+  table pill's status change.

@@ -350,6 +350,97 @@
       rgb(var(--atmos-glaze) / 0) 38%
     );
   }
+
+  /*
+   * The open panel of every `<select>` in the app, which is `Select` and
+   * `StatusSelect` — both carry this class, so there is one panel design.
+   *
+   * A classic `<select>` hands its open list to the browser, which draws it
+   * outside the page: square, unshadowed, flush against the field, and
+   * highlighted with a hard grey block that ignores the theme. No CSS reaches
+   * it. `appearance: base-select` opts the same native element into a panel the
+   * page can style, keeping what made a native select the right choice in the
+   * first place — its keyboard model, its screen-reader semantics, and a plain
+   * `change` event, so `react-hook-form`'s `register` is untouched.
+   *
+   * Two guards keep that a pure enhancement. `@supports` leaves a browser
+   * without base-select on its classic picker. `pointer: fine` leaves phones
+   * and tablets on the platform picker, which is the reason `StatusSelect` is
+   * native at all.
+   *
+   * The panel is the popover card the filter menus already use — `rounded-card`,
+   * `shadow-float` — and it renders in the top layer, so no z-index is needed:
+   * nothing on the page, the modal's own fields included, can paint over it or
+   * clip it. The option rows are `rounded-control`, the card radius less the
+   * panel's inset, so the corners stay concentric, and their horizontal inset
+   * puts an option's label exactly under the field's own text.
+   *
+   * Selected and hovered reuse existing tints: the sidebar's active item,
+   * `primary/10`, for the current option, and the board column's lighter
+   * `primary/5` for the one under the pointer.
+   * `tokenContrast.test.ts` reads both alphas from this rule and gates the text
+   * on each. The selected row also carries the platform checkmark, so it is not
+   * marked by a tint alone.
+   */
+  @supports (appearance: base-select) {
+    @media (pointer: fine) {
+      .select-control,
+      .select-control::picker(select) {
+        appearance: base-select;
+      }
+
+      /* Base-select stretches the label and the arrow rather than centring them. */
+      .select-control {
+        @apply items-center;
+      }
+
+      /*
+       * Base-select's own arrow is a filled triangle, heavier than every other
+       * icon here. This is `ChevronDownIcon`'s path and stroke from `icons.tsx`,
+       * used as a mask so it paints in the text colour. Sized in `em` so it
+       * scales with the text of the field and of the smaller status pill alike.
+       */
+      .select-control::picker-icon {
+        @apply bg-current text-content-muted transition-transform;
+        content: '';
+        inline-size: 1.15em;
+        block-size: 1.15em;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")
+          center / contain no-repeat;
+      }
+
+      .select-control:open::picker-icon {
+        rotate: 180deg;
+      }
+
+      .select-control::picker(select) {
+        @apply my-1 max-h-96 rounded-card border border-border bg-surface p-1 text-content shadow-float;
+        scrollbar-width: thin;
+      }
+
+      .select-control option {
+        @apply rounded-control px-2 py-2.5 text-sm transition-colors;
+      }
+
+      .select-control option:hover {
+        @apply bg-primary/5;
+      }
+
+      .select-control option:checked {
+        @apply bg-primary/10 font-medium;
+      }
+
+      /* Inset, because the global ring's offset would be clipped by the panel. */
+      .select-control option:focus-visible {
+        @apply ring-inset ring-offset-0;
+      }
+
+      .select-control option::checkmark {
+        @apply ml-auto text-primary;
+        order: 1;
+      }
+    }
+  }
 }
 
 /*

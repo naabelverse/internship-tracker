@@ -409,3 +409,52 @@ describe('the hero grade', () => {
     ).toContain('var(--atmos-deep-peak)');
   });
 });
+
+/*
+ * The dropdown panel's option rows (`.select-control` in `index.css`). Selected
+ * and hovered are both `primary` tints over the panel's `surface`, and the
+ * accent flips from near-black to near-white between themes, so a pair that
+ * reads well in one theme is not evidence for the other. The alphas are read
+ * from the stylesheet, so a tint edited there is measured here rather than a
+ * copy of it.
+ *
+ * Measured at the values this ships: body text on the selected row is 15.68:1
+ * light and 9.98:1 dark; the checkmark, drawn in `primary`, 14.22:1 and 8.83:1.
+ */
+describe.each(['light', 'dark'] as const)('%s theme dropdown options', (theme) => {
+  const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+  const tokens = readThemeTokens(theme);
+  const token = (name: string): Rgb => {
+    const value = tokens[`color-${name}`];
+    if (!value) throw new Error(`Missing token --color-${name} in the ${theme} block`);
+    return value;
+  };
+
+  /** The `bg-primary/<n>` alpha a `.select-control option<state>` rule applies. */
+  const tintAlpha = (state: ':hover' | ':checked'): number => {
+    const rule = new RegExp(`\\.select-control option${state}\\s*\\{[^}]*bg-primary/(\\d+)`);
+    const percent = rule.exec(css)?.[1];
+    if (!percent) throw new Error(`.select-control option${state} no longer tints with bg-primary`);
+    return Number(percent) / 100;
+  };
+
+  const rows = {
+    selected: composite(token('primary'), token('surface'), tintAlpha(':checked')),
+    hovered: composite(token('primary'), token('surface'), tintAlpha(':hover')),
+  };
+
+  it.each(Object.keys(rows) as (keyof typeof rows)[])(
+    'keeps option text readable when %s',
+    (row) => {
+      expect(contrastRatio(token('text'), rows[row])).toBeGreaterThanOrEqual(AA_TEXT);
+    },
+  );
+
+  it('keeps the selected checkmark visible on its row', () => {
+    expect(contrastRatio(token('primary'), rows.selected)).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
+  it('tints the selected row more strongly than a hovered one', () => {
+    expect(tintAlpha(':checked')).toBeGreaterThan(tintAlpha(':hover'));
+  });
+});
