@@ -34,7 +34,7 @@ export function StatusSelect({
         event.stopPropagation();
       }}
       className={cn(
-        'rounded-full border-0 px-2.5 py-1 text-xs font-medium',
+        'select-control rounded-full border-0 px-2.5 py-1 text-xs font-medium',
         'disabled:cursor-progress disabled:opacity-70',
         STATUS_CONFIG[value].pill,
       )}

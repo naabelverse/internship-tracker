@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -98,6 +98,26 @@ describe('Application form modal', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+
+  /*
+   * The selects render their panel in the page (`appearance: base-select` in
+   * `index.css`), so an Escape that closes an open panel now reaches the trap's
+   * document listener. Focus sits on an option only while a panel is open, and
+   * in a real browser that Escape is dispatched from it. Closing the modal as
+   * well threw away everything typed into the form.
+   */
+  it('stays open when Escape only closes a dropdown panel', () => {
+    renderWithProviders(
+      <PageBehind>{(close) => <ApplicationFormModal isOpen onClose={close} />}</PageBehind>,
+    );
+
+    const status = within(screen.getByRole('dialog')).getByLabelText<HTMLSelectElement>('Status');
+    const focusedOption = status.options[1];
+    if (!focusedOption) throw new Error('the Status select rendered no options');
+    fireEvent.keyDown(focusedOption, { key: 'Escape' });
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
 
