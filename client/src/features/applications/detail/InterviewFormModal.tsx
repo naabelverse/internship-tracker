@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { TextArea } from '@/components/ui/TextArea';
@@ -12,13 +13,19 @@ import * as interviewsApi from '@/api/interviews';
 import { getErrorMessage } from '@/api/errors';
 import { queryKeys } from '@/api/queryKeys';
 import { commitCachedApplication } from '@/features/applications/optimisticCache';
+import { DATE_RANGE_MESSAGE, isDateInputInRange } from '@/lib/dateInput';
 import { INTERVIEW_MODE_LABELS, INTERVIEW_TYPE_LABELS } from '@/lib/statusConfig';
 import { INTERVIEW_MODES, INTERVIEW_TYPES, type Application } from '@/types/application';
 
 const interviewFormSchema = z.object({
   type: z.enum(INTERVIEW_TYPES),
   mode: z.enum(INTERVIEW_MODES),
-  scheduledAt: z.string().min(1, 'Pick a date and time'),
+  // Without the range check a year like 111111 reached `toISOString()` in the
+  // submit handler, which threw, so nothing was sent and nothing was shown.
+  scheduledAt: z
+    .string()
+    .min(1, 'Pick a date and time')
+    .refine(isDateInputInRange, DATE_RANGE_MESSAGE),
   interviewer: z.string().trim().max(120).optional(),
   round: z.string().optional(),
   link: z.string().trim().optional(),
@@ -114,9 +121,9 @@ export function InterviewFormModal({
         <div className="grid gap-4 sm:grid-cols-2">
           <Select label="Type" options={TYPE_OPTIONS} {...register('type')} />
           <Select label="Mode" options={MODE_OPTIONS} {...register('mode')} />
-          <TextField
+          <DateField
             label="Scheduled at"
-            type="datetime-local"
+            withTime
             error={errors.scheduledAt?.message}
             {...register('scheduledAt')}
           />

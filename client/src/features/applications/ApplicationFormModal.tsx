@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { FormError } from '@/components/ui/FormError';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
@@ -45,7 +46,16 @@ interface ApplicationFormModalProps {
   onSaved?: (application: Application) => void;
 }
 
-const SERVER_FIELDS = ['company', 'role', 'location', 'companyWebsite', 'jobUrl', 'notes'] as const;
+const SERVER_FIELDS = [
+  'company',
+  'role',
+  'location',
+  'companyWebsite',
+  'jobUrl',
+  'appliedDate',
+  'deadline',
+  'notes',
+] as const;
 
 function options<T extends string>(
   values: readonly T[],
@@ -181,15 +191,13 @@ export function ApplicationFormModal({
               error={errors.location?.message}
               {...register('location')}
             />
-            <TextField
+            <DateField
               label="Applied date"
-              type="date"
               error={errors.appliedDate?.message}
               {...register('appliedDate')}
             />
-            <TextField
+            <DateField
               label="Deadline"
-              type="date"
               error={errors.deadline?.message}
               {...register('deadline')}
             />

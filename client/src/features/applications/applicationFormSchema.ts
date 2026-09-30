@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ApplicationPayload } from '@/api/applications';
+import { DATE_RANGE_MESSAGE, isDateInputInRange } from '@/lib/dateInput';
 import {
   APPLICATION_STATUSES,
   EMPLOYMENT_TYPES,
@@ -32,6 +33,7 @@ const optionalUrl = z
 const optionalDate = z
   .string()
   .optional()
+  .refine((value) => value === undefined || isDateInputInRange(value), DATE_RANGE_MESSAGE)
   .transform((value) => (value === '' ? undefined : value));
 
 /**

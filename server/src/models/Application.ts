@@ -47,6 +47,15 @@ export type InterviewOutcome = (typeof INTERVIEW_OUTCOMES)[number];
 export const MAX_NOTES_LENGTH = 10_000;
 
 /**
+ * The calendar years an applied date, deadline or interview may fall in. Nothing
+ * an internship search tracks predates 2000 or runs past 2099; the lower bound
+ * also catches a two-digit year typed into a native date input, which the
+ * browser reads as year 0026.
+ */
+export const MIN_DATE_YEAR = 2000;
+export const MAX_DATE_YEAR = 2099;
+
+/**
  * The shape version every new application document is written at. See
  * `CURRENT_USER_SCHEMA_VERSION` for how this is meant to be changed.
  */
