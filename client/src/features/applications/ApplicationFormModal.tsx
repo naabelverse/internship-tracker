@@ -22,6 +22,7 @@ import {
 import { applyServerErrors } from '@/features/auth/serverErrors';
 import {
   EMPLOYMENT_TYPE_LABELS,
+  PRIORITY_CONFIG,
   SOURCE_LABELS,
   STATUS_CONFIG,
   WORK_MODE_LABELS,
@@ -57,7 +58,10 @@ const STATUS_OPTIONS = APPLICATION_STATUSES.map((status) => ({
   value: status,
   label: STATUS_CONFIG[status].label,
 }));
-const PRIORITY_OPTIONS = PRIORITIES.map((priority) => ({ value: priority, label: priority }));
+const PRIORITY_OPTIONS = PRIORITIES.map((priority) => ({
+  value: priority,
+  label: PRIORITY_CONFIG[priority].label,
+}));
 
 export function ApplicationFormModal({
   isOpen,
