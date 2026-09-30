@@ -220,7 +220,7 @@ export function ApplicationFormModal({
             />
             <TextField
               label="Tags"
-              hint="Comma separated"
+              hint="Comma separated, e.g. remote, urgent, fintech."
               error={errors.tagsText?.message}
               {...register('tagsText')}
             />
@@ -229,7 +229,7 @@ export function ApplicationFormModal({
           <TextArea
             label="Notes"
             rows={4}
-            hint="Markdown is supported."
+            hint="Markdown is supported, e.g. **bold**, *italic*, - lists."
             error={errors.notes?.message}
             {...register('notes')}
           />
