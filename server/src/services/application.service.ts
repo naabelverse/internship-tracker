@@ -200,6 +200,15 @@ export async function listApplications(
   return { items, meta: buildPaginationMeta(total, page) };
 }
 
+/**
+ * `sourceOther` says what "Other" was, so it means nothing once the source is
+ * anything else. Clearing it here, rather than trusting each caller to send a
+ * blank, is what stops a stale "Glints" riding along after a switch to LinkedIn.
+ */
+function applySourceRules(application: ApplicationDocument): void {
+  if (application.source !== 'other') application.set('sourceOther', undefined);
+}
+
 export async function createApplication(
   userId: Types.ObjectId,
   input: CreateApplicationInput,
@@ -217,6 +226,7 @@ export async function createApplication(
     statusHistory: [{ from: null, to: status, changedAt: new Date() }],
   });
 
+  applySourceRules(application);
   application.set('nextActionDate', computeNextActionDate(application));
   await application.save();
 
@@ -241,6 +251,7 @@ export async function updateApplication(
   await assertVersion(userId, application, version);
 
   application.set(fields);
+  applySourceRules(application);
 
   if (status !== undefined) applyStatusChange(application, status);
 

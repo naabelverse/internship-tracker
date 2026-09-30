@@ -114,9 +114,13 @@ const TAG_POOL = [
 ] as const;
 
 const DEMO_SOURCES: readonly Source[] = [
+  'jobstreet',
+  'jobstreet',
   'linkedin',
   'linkedin',
-  'internshala',
+  'hiredly',
+  'maukerja',
+  'myfuturejobs',
   'indeed',
   'company_site',
   'company_site',
@@ -124,6 +128,9 @@ const DEMO_SOURCES: readonly Source[] = [
   'career_fair',
   'other',
 ];
+
+/** What an "Other" demo row says it was, so the specify text is visible in the demo. */
+const DEMO_SOURCE_OTHERS = ['Glints', 'University career portal', 'Instagram post'] as const;
 
 const DEMO_WORK_MODES: readonly WorkMode[] = ['remote', 'hybrid', 'onsite'];
 const DEMO_PRIORITIES: readonly Priority[] = ['low', 'medium', 'medium', 'high'];
@@ -238,6 +245,7 @@ function buildOne(
   picker: Picker,
 ): DemoApplication {
   const company = picker.from(COMPANIES);
+  const source = picker.from(DEMO_SOURCES);
   // Weighted towards the recent half of the window, which is how a real search
   // ramps up, and what makes the timeline chart show a trend rather than noise.
   const daysAgo = Math.round(DEMO_WINDOW_DAYS * picker.next() ** 1.4);
@@ -283,7 +291,8 @@ function buildOne(
     employmentType: picker.from(DEMO_EMPLOYMENT_TYPES),
     status,
     priority: picker.from(DEMO_PRIORITIES),
-    source: picker.from(DEMO_SOURCES),
+    source,
+    sourceOther: source === 'other' ? picker.from(DEMO_SOURCE_OTHERS) : undefined,
     jobUrl: `${company.website}/careers/${String(1000 + index)}`,
     appliedDate: appliedEntry?.changedAt,
     deadline,

@@ -40,7 +40,7 @@ test('export the applications CSV and get the expected header row', async ({ pag
 
   // The exact column list the server exports, in order.
   expect(header).toBe(
-    'company,role,status,priority,source,workMode,employmentType,location,jobUrl,' +
+    'company,role,status,priority,source,sourceOther,workMode,employmentType,location,jobUrl,' +
       'companyWebsite,appliedDate,deadline,tags,notes,resumeVersion,stipendAmount,' +
       'stipendCurrency,stipendPeriod,contactName,contactEmail,archived,createdAt',
   );

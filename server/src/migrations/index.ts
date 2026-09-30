@@ -1,4 +1,5 @@
 import { migration as backfillSchemaVersion } from '@/migrations/001-backfill-schema-version';
+import { migration as retireLegacySources } from '@/migrations/002-retire-legacy-sources';
 import type { Migration } from '@/migrations/runner';
 
 /**
@@ -9,7 +10,7 @@ import type { Migration } from '@/migrations/runner';
  * ascending, so appending in the wrong place fails at startup rather than
  * halfway through a production deploy.
  */
-export const migrations: Migration[] = [backfillSchemaVersion];
+export const migrations: Migration[] = [backfillSchemaVersion, retireLegacySources];
 
 export { runMigrations, assertSequential } from '@/migrations/runner';
 export type { Migration, MigrationRunResult, AppliedMigration } from '@/migrations/runner';

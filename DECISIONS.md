@@ -4358,3 +4358,45 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   report as a clean run), `conclusion:2`, `ci:2` and `log:2`. All four failed against the old
   script, and `conclusion:1` reproduced the blank exactly. The eight earlier cases are unchanged
   and still pass.
+
+## Malaysia-focused sources, with "Other" stored as `source` plus `sourceOther` (1 Oct 2026)
+
+- **The list:** JobStreet, LinkedIn, Indeed, Hiredly, Maukerja, MYFutureJobs, Company site,
+  Referral, Career fair, Other. Each platform was checked as active before it went in. WOBB is not
+  listed because it rebranded to Hiredly in June 2021, and would have been the same platform twice.
+  MYFutureJobs is SOCSO's (PERKESO's) government portal, with 96,700 live listings in June 2026,
+  internships included. Glints was left out; it counts as Other. SPEC section 4's enum is updated to
+  match.
+- **Why a second field, not free text in `source`:** `source` stays a closed enum, so the filter,
+  the URL state, CSV validation and the chart's `$group` keep working unchanged. One `other` bucket
+  also stays one bar, instead of splitting into "Instagram", "instagram" and "IG". `sourceOther`
+  holds up to 60 characters, and `applySourceRules` in the service clears it whenever `source` is
+  not `other`, so stale text cannot outlive a switch to LinkedIn.
+- **Required in the form only:** the form refuses Other without the text, because Other alone is
+  the entry nobody can decode later. The API and CSV import accept Other without it, so imports and
+  older clients are not blocked.
+- **Existing Internshala rows:** production had 20 on 1 Oct 2026 (a read-only count): 10 on the
+  demo account and 10 on one real account. No other value falls outside the new list. Migration
+  002 rewrites them to `other` + `sourceOther: 'Internshala'`. It filters on the old value, so a
+  re-run matches nothing, and it passes `timestamps: false` so no one's "recently updated" order
+  moves. The result is a shape the previous release already reads, so the migration can run before
+  the deploy. It is run by hand, like 001: the runner is not part of server boot (DEPLOYMENT.md
+  4.4).
+- **Why the model still accepts `internshala`:** Mongoose re-validates every path it loaded on
+  `save()`. Without the legacy entry, a row the migration has not reached returns 400 on any edit
+  or board drag. The regression test confirms this: it returned 400 when the entry was removed. The
+  API's zod enum does not accept the retired value, so nothing new can be written with it.
+  `LEGACY_SOURCE_LABELS` is the one list both the migration and the CSV import read, so an old
+  export's Internshala rows import as Other: Internshala too.
+- **Display safety net:** `formatSource`/`sourceLabel` show an unknown stored value as stored,
+  rather than as a blank in the table and detail page or as "Unspecified" on the chart. The form
+  opens such a row as Other with the old value as the specify text, so saving it moves the row onto
+  the current shape.
+- **"By source" is one colour** (`color-chart-1` at 0.85, the same as top companies). Each bar is
+  named on the axis, so a colour per bar carried no information. Ten sources plus Unspecified is
+  eleven bars against eight series tokens, which would have brought back the repeated-colour bug
+  that `tokenContrast.test.ts` guards. With one colour, that cannot happen however long the list
+  gets.
+- **Not changed:** `sourceOther` is not in the text-search index, because changing that index
+  means rebuilding it on production. `schemaVersion` stays at 1, because the field is additive and
+  optional, and the migration's own filter makes it idempotent.

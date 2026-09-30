@@ -14,14 +14,30 @@ export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const;
 export const EMPLOYMENT_TYPES = ['internship', 'part-time', 'full-time'] as const;
 export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const SOURCES = [
+  'jobstreet',
   'linkedin',
-  'internshala',
   'indeed',
+  'hiredly',
+  'maukerja',
+  'myfuturejobs',
   'company_site',
   'referral',
   'career_fair',
   'other',
 ] as const;
+
+/**
+ * Sources the API no longer accepts, each with the text migration 002 moves into
+ * `sourceOther` when it rewrites the row to `other`. The model still accepts
+ * them so a stored row stays saveable if a deploy ever lands before that
+ * migration has run: every save re-validates the paths it loaded, so dropping a
+ * value here would make each such row fail on its next status change.
+ */
+export const LEGACY_SOURCE_LABELS = { internshala: 'Internshala' } as const;
+export type LegacySource = keyof typeof LEGACY_SOURCE_LABELS;
+
+/** The free-text "Other: please specify" field, sized for a platform or event name. */
+export const MAX_SOURCE_OTHER_LENGTH = 60;
 export const STIPEND_PERIODS = ['month', 'year', 'hour'] as const;
 export const INTERVIEW_TYPES = [
   'oa',
@@ -117,7 +133,9 @@ export interface ApplicationAttributes {
   stipend?: Stipend;
   status: ApplicationStatus;
   priority: Priority;
-  source?: Source;
+  source?: Source | LegacySource;
+  /** What "Other" actually was. Only kept while `source` is `other`. */
+  sourceOther?: string;
   jobUrl?: string;
   appliedDate?: Date;
   deadline?: Date;
@@ -230,7 +248,8 @@ const applicationSchema = new Schema<ApplicationAttributes, ApplicationModelType
     stipend: { type: stipendSchema },
     status: { type: String, enum: APPLICATION_STATUSES, default: 'saved', required: true },
     priority: { type: String, enum: PRIORITIES, default: 'medium' },
-    source: { type: String, enum: SOURCES },
+    source: { type: String, enum: [...SOURCES, ...Object.keys(LEGACY_SOURCE_LABELS)] },
+    sourceOther: { type: String, trim: true, maxlength: MAX_SOURCE_OTHER_LENGTH },
     jobUrl: { type: String, maxlength: 2048 },
     appliedDate: { type: Date },
     deadline: { type: Date },

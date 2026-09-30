@@ -12,14 +12,20 @@ export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const;
 export const EMPLOYMENT_TYPES = ['internship', 'part-time', 'full-time'] as const;
 export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const SOURCES = [
+  'jobstreet',
   'linkedin',
-  'internshala',
   'indeed',
+  'hiredly',
+  'maukerja',
+  'myfuturejobs',
   'company_site',
   'referral',
   'career_fair',
   'other',
 ] as const;
+
+/** Mirrors the server's cap on the "Other: please specify" text. */
+export const MAX_SOURCE_OTHER_LENGTH = 60;
 export const STIPEND_PERIODS = ['month', 'year', 'hour'] as const;
 export const INTERVIEW_TYPES = [
   'oa',
@@ -104,7 +110,13 @@ export interface Application {
   stipend?: Stipend;
   status: ApplicationStatus;
   priority: Priority;
+  /**
+   * Typed as the current list, but a row written before a value was retired can
+   * still carry the old one, so display code goes through `formatSource`.
+   */
   source?: Source;
+  /** What "Other" actually was; only present while `source` is `other`. */
+  sourceOther?: string;
   jobUrl?: string;
   appliedDate?: string;
   deadline?: string;

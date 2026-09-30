@@ -1,5 +1,10 @@
 import type { Types } from 'mongoose';
-import { Application, type ApplicationDocument } from '@/models/Application';
+import {
+  Application,
+  LEGACY_SOURCE_LABELS,
+  type ApplicationDocument,
+  type LegacySource,
+} from '@/models/Application';
 import {
   createApplicationSchema,
   MAX_IMPORT_ROWS,
@@ -16,6 +21,7 @@ export const EXPORT_COLUMNS = [
   'status',
   'priority',
   'source',
+  'sourceOther',
   'workMode',
   'employmentType',
   'location',
@@ -44,6 +50,7 @@ function toExportRow(application: ApplicationDocument): Record<string, CsvCell> 
     status: application.status,
     priority: application.priority,
     source: application.source ?? '',
+    sourceOther: application.sourceOther ?? '',
     workMode: application.workMode ?? '',
     employmentType: application.employmentType,
     location: application.location ?? '',
@@ -114,6 +121,25 @@ function cell(row: Record<string, string>, key: string): string | undefined {
   return value ? value : undefined;
 }
 
+const isLegacySource = (value: string): value is LegacySource =>
+  Object.hasOwn(LEGACY_SOURCE_LABELS, value);
+
+/**
+ * A file exported before a source was retired still names it. Rather than skip
+ * those rows, read them the way migration 002 rewrote the stored ones: `other`,
+ * with the platform kept as the "please specify" text.
+ */
+function sourceCells(row: Record<string, string>): { source?: string; sourceOther?: string } {
+  const source = cell(row, 'source');
+  const sourceOther = cell(row, 'sourceOther');
+
+  if (source !== undefined && isLegacySource(source)) {
+    return { source: 'other', sourceOther: sourceOther ?? LEGACY_SOURCE_LABELS[source] };
+  }
+
+  return { source, sourceOther };
+}
+
 /**
  * Maps one CSV row onto the create schema shape. Everything arrives as a string,
  * so numbers, booleans and lists are converted before validation, which lets the
@@ -125,7 +151,7 @@ function rowToInput(row: Record<string, string>): Record<string, unknown> {
     role: cell(row, 'role'),
     status: cell(row, 'status'),
     priority: cell(row, 'priority'),
-    source: cell(row, 'source'),
+    ...sourceCells(row),
     workMode: cell(row, 'workMode'),
     employmentType: cell(row, 'employmentType'),
     location: cell(row, 'location'),

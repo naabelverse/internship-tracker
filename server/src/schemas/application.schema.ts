@@ -8,6 +8,7 @@ import {
   INTERVIEW_TYPES,
   MAX_DATE_YEAR,
   MAX_NOTES_LENGTH,
+  MAX_SOURCE_OTHER_LENGTH,
   MIN_DATE_YEAR,
   PRIORITIES,
   SOURCES,
@@ -101,6 +102,15 @@ const applicationFields = {
   status: z.enum(APPLICATION_STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),
   source: z.enum(SOURCES).optional(),
+  // Optional here even though the form requires it with "Other": an import or an
+  // API client may know only that the source was something else. A blank value
+  // clears it; `applySourceRules` drops it whenever the source is not `other`.
+  sourceOther: z
+    .string()
+    .trim()
+    .max(MAX_SOURCE_OTHER_LENGTH)
+    .optional()
+    .transform((value) => (value === '' ? undefined : value)),
   jobUrl: optionalUrl,
   appliedDate: boundedDate.optional(),
   deadline: boundedDate.optional(),
