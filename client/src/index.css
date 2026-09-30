@@ -472,6 +472,156 @@
    * purpose: Chromium parses a `::-webkit-datetime-edit-*-field:focus` rule
    * but paints its own highlight over it, `!important` and an id included.
    */
+
+  /*
+   * Where the app's calendar replaces the browser's. `DateField` always renders
+   * its `date-picker-trigger`; it is shown, and the platform button hidden, only
+   * where both hold — the select panel's two guards, restated for dates:
+   *
+   * - `@supports selector(::-webkit-calendar-picker-indicator)`: the platform
+   *   button can be hidden at all. Firefox draws its own with no selector to
+   *   reach it, so it keeps that one alone rather than showing two.
+   * - `pointer: fine`: phones and tablets keep the platform's picker, which
+   *   beats any grid drawn at thumb size.
+   *
+   * Elsewhere the trigger is hidden and the field gives back the room
+   * `TextField` reserved for it, so the platform button sits where it always did.
+   */
+  .date-picker-trigger {
+    display: none;
+  }
+
+  @supports selector(::-webkit-calendar-picker-indicator) {
+    @media (pointer: fine) {
+      .date-picker-trigger {
+        display: inline-flex;
+      }
+
+      .date-control::-webkit-calendar-picker-indicator {
+        display: none;
+      }
+    }
+  }
+
+  @supports not selector(::-webkit-calendar-picker-indicator) {
+    .date-control.date-control {
+      @apply pr-3;
+    }
+  }
+
+  @media not (pointer: fine) {
+    .date-control.date-control {
+      @apply pr-3;
+    }
+  }
+
+  /*
+   * The calendar itself, `DatePickerCalendar`, a `react-day-picker` month in
+   * `Popover`'s card (`rounded-card`, `shadow-float`). The library's own
+   * stylesheet is not loaded: these rules, on its stable `rdp-*` class names,
+   * are the whole look, and every value is an existing token.
+   *
+   * Days speak the select panel's language. A day is a `rounded-control` cell,
+   * concentric with the card's inset like an option row. The one under the
+   * pointer takes the board's `primary/5`, the chosen one the sidebar's
+   * `primary/10` and a semibold numeral, plus a hairline `primary` ring — the
+   * calendar's stand-in for the option's checkmark, so selection is never a
+   * tint alone. Today is a dot under the numeral in `primary`, the lightest
+   * mark that still reads on both tints, so it never competes with the
+   * selection the way the Calendar page's filled circle would.
+   * `tokenContrast.test.ts` reads both alphas from these rules and gates text,
+   * ring and dot in both themes.
+   */
+  .date-calendar {
+    @apply relative text-sm text-content;
+  }
+
+  .date-calendar .rdp-nav {
+    @apply pointer-events-none absolute inset-x-0 top-0 flex h-9 items-center justify-between;
+  }
+
+  .date-calendar .rdp-button_previous,
+  .date-calendar .rdp-button_next {
+    @apply pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-control text-content-muted transition-colors;
+  }
+
+  /*
+   * The library marks an arrow at the 2000 or 2099 bound with `aria-disabled`,
+   * not `disabled`, so it stays in the accessibility tree; `:disabled` would
+   * never match and the dead arrow would still take the hover wash.
+   */
+  .date-calendar .rdp-button_previous:not([aria-disabled='true']):hover,
+  .date-calendar .rdp-button_next:not([aria-disabled='true']):hover {
+    @apply bg-surface-muted text-content;
+  }
+
+  .date-calendar .rdp-button_previous[aria-disabled='true'],
+  .date-calendar .rdp-button_next[aria-disabled='true'] {
+    @apply cursor-not-allowed opacity-40;
+  }
+
+  .date-calendar .rdp-chevron {
+    @apply h-4 w-4;
+  }
+
+  .date-calendar .rdp-month_caption {
+    @apply flex h-9 items-center justify-center;
+  }
+
+  .date-calendar .rdp-caption_label {
+    @apply font-semibold;
+  }
+
+  .date-calendar .rdp-month_grid {
+    @apply mt-2 border-collapse;
+  }
+
+  .date-calendar .rdp-weekday {
+    @apply h-8 w-9 p-0 text-xs font-medium text-content-subtle;
+  }
+
+  .date-calendar .rdp-day {
+    @apply p-0 text-center;
+  }
+
+  .date-calendar .rdp-day_button {
+    @apply relative inline-flex h-9 w-9 items-center justify-center rounded-control text-content transition-colors;
+  }
+
+  .date-calendar .rdp-day_button:hover {
+    @apply bg-primary/5;
+  }
+
+  .date-calendar .rdp-outside .rdp-day_button {
+    @apply text-content-subtle;
+  }
+
+  .date-calendar .rdp-selected .rdp-day_button {
+    @apply bg-primary/10 font-semibold text-content ring-1 ring-inset ring-primary;
+  }
+
+  /*
+   * After the selected rule, so the day under keyboard focus always carries the
+   * full 2px ring, even when it is the selected day and its hairline would
+   * otherwise win. Inset, because the global ring's offset is the canvas
+   * colour, not the card's.
+   */
+  .date-calendar .rdp-day_button:focus-visible {
+    @apply ring-2 ring-inset ring-primary ring-offset-0;
+  }
+
+  .date-calendar .rdp-today .rdp-day_button::after {
+    @apply absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary;
+    content: '';
+  }
+
+  .date-calendar .rdp-disabled .rdp-day_button {
+    @apply cursor-not-allowed bg-transparent text-content-subtle opacity-40;
+  }
+
+  .date-calendar .rdp-hidden {
+    @apply invisible;
+  }
 }
 
 /*
