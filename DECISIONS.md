@@ -4322,3 +4322,17 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   browser (Chromium, both themes), axe found no violations in the open calendar. The keyboard
   path, Escape layering, scroll-following, the 11111111111 typed-year rejection with zero POSTs,
   Feb 30 yielding no value, and form submission all passed (24/24).
+
+## The Tags and Notes hints show an example (30 Sep 2026)
+
+- **Inline, not a tooltip.** Measured in the real modal (Chromium, both themes) at 375, 414, 640,
+  768, 1024 and 1440px, both new hints render on one line with nothing clipped. The tightest point
+  is 640px, not 375px: that is where the form turns two-column and the Tags column is 291px, and
+  the Tags hint (250px) still has 41px to spare. At 375px, Tags has 83px spare and Notes 61px.
+  The app has no tooltip or info-icon pattern, so there was nothing to follow and no reason to
+  add one.
+- **Tags ends with a full stop,** unlike the old "Comma separated". Every other hint in the app,
+  Notes included, is a sentence ending in one, and the two hints now sit together.
+- **Text only.** `parseTags` and `renderMarkdown` are untouched. The Tags example parses to the
+  three tags it names, and the Notes example uses only syntax `marked` (GFM) renders and
+  `DOMPurify` keeps: `strong`, `em`, `ul`/`li`.
