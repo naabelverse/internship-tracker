@@ -6,7 +6,9 @@ import {
   INTERVIEW_MODES,
   INTERVIEW_OUTCOMES,
   INTERVIEW_TYPES,
+  MAX_DATE_YEAR,
   MAX_NOTES_LENGTH,
+  MIN_DATE_YEAR,
   PRIORITIES,
   SOURCES,
   STIPEND_PERIODS,
@@ -33,6 +35,42 @@ export const MAX_IMPORT_ROWS = 1_000;
 const objectId = z.string().refine((value) => Types.ObjectId.isValid(value), 'must be a valid id');
 
 const optionalUrl = z.string().trim().url('must be a valid URL').max(2048).optional();
+
+const ISO_DAY_PREFIX = /^[+-]?(\d{4,6})-(\d{2})-(\d{2})/;
+
+/**
+ * `new Date` rolls an ISO day that does not exist into the next month, so
+ * `2026-02-30` would be stored as 2 March. Any other string shape is left for
+ * the date coercion to accept or reject.
+ */
+function isRealCalendarDay(value: unknown): boolean {
+  if (typeof value !== 'string') return true;
+
+  const match = ISO_DAY_PREFIX.exec(value);
+  if (!match) return true;
+
+  const [year, month, day] = match.slice(1).map(Number) as [number, number, number];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+}
+
+/**
+ * A user-entered date, bounded to `MIN_DATE_YEAR`–`MAX_DATE_YEAR` in UTC.
+ * `z.coerce.date()` alone accepted anything `new Date` could read, so a direct
+ * API call could store `+111111-11-11`, `11/11/111111` or `0001-01-01`.
+ */
+const boundedDate = z
+  .unknown()
+  .refine(isRealCalendarDay, 'must be a real calendar date')
+  .pipe(
+    z.coerce.date().refine(
+      (date) => {
+        const year = date.getUTCFullYear();
+        return year >= MIN_DATE_YEAR && year <= MAX_DATE_YEAR;
+      },
+      `must be between ${String(MIN_DATE_YEAR)} and ${String(MAX_DATE_YEAR)}`,
+    ),
+  );
 
 const stipendSchema = z.object({
   amount: z.number().nonnegative(),
@@ -64,8 +102,8 @@ const applicationFields = {
   priority: z.enum(PRIORITIES).optional(),
   source: z.enum(SOURCES).optional(),
   jobUrl: optionalUrl,
-  appliedDate: z.coerce.date().optional(),
-  deadline: z.coerce.date().optional(),
+  appliedDate: boundedDate.optional(),
+  deadline: boundedDate.optional(),
   contact: contactSchema.optional(),
   resumeVersion: z.string().trim().max(120).optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
@@ -112,7 +150,7 @@ export const bulkActionSchema = z
 
 export const interviewFields = {
   type: z.enum(INTERVIEW_TYPES),
-  scheduledAt: z.coerce.date(),
+  scheduledAt: boundedDate,
   durationMins: z.number().int().min(1).max(1440).optional(),
   mode: z.enum(INTERVIEW_MODES),
   link: optionalUrl,

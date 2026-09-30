@@ -45,6 +45,10 @@ export type InterviewOutcome = (typeof INTERVIEW_OUTCOMES)[number];
 /** SPEC section 4: notes are markdown, capped server-side at 10k characters. */
 export const MAX_NOTES_LENGTH = 10_000;
 
+/** Mirrors `server/src/models/Application.ts`: the years any entered date may fall in. */
+export const MIN_DATE_YEAR = 2000;
+export const MAX_DATE_YEAR = 2099;
+
 export interface Stipend {
   amount: number;
   currency: string;

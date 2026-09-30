@@ -4204,3 +4204,49 @@ gap under the field.
   red. jsdom renders no panel, so the look was checked in a real browser (Edge 154) at every
   location in both themes, together with keyboard and click selection, form submission and the
   table pill's status change.
+
+## Entered dates are bounded to 2000–2099, client and server (30 Sep 2026)
+
+"11/11/111111" could be typed into Applied date. There was no validation anywhere: the three date
+inputs (Applied date, Deadline, an interview's Scheduled at) had no `min` or `max`, the form schema
+took any string, and the API's `z.coerce.date()` took anything `new Date` could read.
+
+- **Bounds: 2000-01-01 to 2099-12-31, inclusive, in UTC on the server.** Nothing an internship
+  search tracks predates 2000 or is due 70 years out. 2000 rather than the suggested 1970 because it
+  also catches the likeliest typo: a two-digit year typed into a native date input is read as year 0026. `MIN_DATE_YEAR`/`MAX_DATE_YEAR` live in `server/src/models/Application.ts`, mirrored in
+  `client/src/types/application.ts` like `MAX_NOTES_LENGTH`.
+- **The API accepted and stored absurd years.** `+111111-11-11T…`, `11/11/111111`, `0001-01-01` and
+  `9999-12-31` all saved, and `2026-02-30` was stored as 2 March. The form's own value happened to
+  be refused, only because an unsigned year past 9999 does not parse, as a generic 400 at the top
+  of the form. A shared `boundedDate` now covers create, update, interviews and CSV import, with
+  "must be between 2000 and 2099" and "must be a real calendar date".
+- **The interview form failed silently.** Its submit handler called `toISOString()` on an Invalid
+  Date, which threw: no request, no message. The schema check now stops it first.
+- **Every entry path meets one check.** Typing, pasting and calendar picks all end as the input's
+  `value`, which the zod schema validates. `DateField` also sets `min`/`max`: measured in Chromium
+  153, that caps a typed year at four digits and limits the calendar, but the input still reports
+  `1111-11-11` as its value, flagged only by `validity.rangeUnderflow`. The schema check is the one
+  that holds. `appliedDate` and `deadline` joined `SERVER_FIELDS` so an API date error lands on its
+  field.
+- **Existing out-of-range records** (none expected, prod unchecked) now fail on their next edit
+  until the date is fixed. The error shows on the field, so the user can correct it.
+- **The calendar stays native (user's call).** Unlike `<select>`, a date input has no
+  `base-select` equivalent: the browser draws the popup outside the page, and only `color-scheme`,
+  already set by the theme store, reaches it. So its radius, shadow, selected-day, hover and today
+  styles are the browser's. A styleable calendar (`react-day-picker` in `Popover`) is a separate
+  follow-up if wanted, not part of this fix.
+- **What the page can style, and what it can't.** The calendar button is `CalendarIcon` as a mask
+  in `text-content-muted`, matching the select chevron, verified in both themes. A hover rule darkens
+  it to `text-content`. This is unverified: in this environment Playwright never set `:hover`, even
+  on a plain text input. A `primary/10` tint for the focused day/month/year segment was built and
+  removed: Chromium parses `::-webkit-datetime-edit-*-field:focus` but paints its system highlight
+  over it, even from an id selector with `!important`.
+- **Keyboard:** unchanged, because the input is still native. Measured in the app: ArrowUp on the
+  day segment steps 2026-10-01 to 2026-10-02 in both themes. The popup's own arrow/Enter/Escape
+  handling belongs to the browser, and headless Chromium does not render the popup.
+- **Tests:** `server/tests/application.dateBounds.test.ts` (12) and
+  `client/tests/applications/dateFieldBounds.test.tsx` (22). With the fix reverted, 10 of the 12
+  server tests and 5 of the client ones fail. The others fail neither way (they check that valid
+  dates pass, or cover values rejected before and after). The screenshot's scenario was also run
+  end to end in the real app: type `11111111111` into Deadline, submit, see the message, and zero
+  POSTs, in both themes.
