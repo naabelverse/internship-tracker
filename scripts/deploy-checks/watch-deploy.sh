@@ -16,6 +16,8 @@
 # Finally it re-checks that neither service has grown a deployment trigger back; a trigger query that
 # fails (no "data" in the reply) counts as a failure too. Every check still runs so the report is
 # complete, but any FAIL or ERROR ends in FAILED instead of DONE, with exit 1. Usage errors exit 2.
+# A gh call after the wait is retried once; if it fails again, its field reads "unknown (gh failed
+# twice: <error>)" rather than blank, and a Deploy log that cannot be read is a check 1 ERROR.
 #
 # A Deploy run skipped because CI was red is not treated as the result: the script keeps watching
 # the same commit for a re-run's Deploy. DEPLOY_WAIT_MINUTES (default 60) bounds the wait for the
@@ -54,6 +56,25 @@ failures=0
 fail() {
   echo "$1"
   failures=$((failures + 1))
+}
+
+# Runs gh, retrying once after GH_RETRY_SECONDS (default 10). On success it prints gh's output. If
+# both attempts fail it prints "unknown (gh failed twice: <gh's last error line>)" and returns 1, so a
+# dropped connection can never print as a blank or as "not found".
+gh_retry() {
+  local out errfile attempt
+  errfile=$(mktemp)
+  for attempt in 1 2; do
+    if out=$(gh "$@" 2>"$errfile"); then
+      rm -f "$errfile"
+      printf '%s\n' "$out"
+      return 0
+    fi
+    [ "$attempt" -eq 1 ] && sleep "${GH_RETRY_SECONDS:-10}"
+  done
+  echo "unknown (gh failed twice: $(grep . "$errfile" | tail -1 | cut -c1-200))"
+  rm -f "$errfile"
+  return 1
 }
 
 # Prints "createdAt status id reason" for each recent deployment of commit $2 on service $1.
@@ -104,7 +125,7 @@ while :; do
   [ "$(date +%s)" -ge "$deadline" ] && break
   sleep 30
 done
-ci=$(gh run list -R "$REPO" --workflow ci.yml --limit 10 --json headSha,conclusion,event \
+ci=$(gh_retry run list -R "$REPO" --workflow ci.yml --limit 10 --json headSha,conclusion,event \
   --jq ".[] | select(.headSha==\"$sha\" and .event==\"push\") | .conclusion" | head -1)
 echo "CI conclusion: ${ci:-not found}"
 
@@ -115,13 +136,17 @@ if [ -z "$run" ] && [ -n "$skipped" ]; then
 elif [ -z "$run" ]; then
   fail "CHECK 1 FAIL: no completed Deploy run for $sha within $deploy_wait min"
 else
-  echo "DEPLOY RUN $run conclusion=$(gh run view -R "$REPO" "$run" --json conclusion --jq .conclusion)"
-  queued=$(gh run view -R "$REPO" "$run" --log | grep -E 'Railway queued deployment|Railway API error|No service|skipping' \
-    | grep -v 'echo ' | sed -E 's/^.*[0-9]Z //')
-  echo "$queued"
-  n=$(echo "$queued" | grep -c "Railway queued deployment .* at $sha\.")
-  if [ "$n" -eq 2 ]; then echo "CHECK 1 PASS: both services queued at $sha"
-  else fail "CHECK 1 FAIL: $n of 2 services queued at $sha"; fi
+  echo "DEPLOY RUN $run conclusion=$(gh_retry run view -R "$REPO" "$run" --json conclusion --jq .conclusion)"
+  if log=$(gh_retry run view -R "$REPO" "$run" --log); then
+    queued=$(echo "$log" | grep -E 'Railway queued deployment|Railway API error|No service|skipping' \
+      | grep -v 'echo ' | sed -E 's/^.*[0-9]Z //')
+    echo "$queued"
+    n=$(echo "$queued" | grep -c "Railway queued deployment .* at $sha\.")
+    if [ "$n" -eq 2 ]; then echo "CHECK 1 PASS: both services queued at $sha"
+    else fail "CHECK 1 FAIL: $n of 2 services queued at $sha"; fi
+  else
+    fail "CHECK 1 ERROR: could not read Deploy run $run's log, so what deploy.yml queued is $log"
+  fi
 fi
 
 # Let Railway's builds settle before judging.

@@ -17,6 +17,11 @@
 #
 # Checks 2 and 3 are failed one at a time (SERVER_STATUS=FAILED, DUPLICATE=client), and no-rerun
 # fails check 1. Each must end in FAILED with exit 1, which they did not before issue #45.
+#
+# GH_FAIL=<call>:<n> makes the first n attempts of one gh call fail with a connection error, for the
+# Deploy run's conclusion, the CI conclusion or the Deploy log. One failure must be retried away; two
+# must read as "unknown", never as a blank or "not found". On the check of PR #58's deploy, a dropped
+# connection printed "conclusion=" with nothing after it.
 
 set -u
 
@@ -32,6 +37,19 @@ mkdir -p "$WORK/bin" "$WORK/home"
 cat > "$WORK/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 args="$*"
+key=""
+case "$args" in
+  *"--workflow ci.yml"*) key=ci ;;
+  *"run view"*"--json conclusion"*) key=conclusion ;;
+  *"run view"*"--log"*) key=log ;;
+esac
+if [ -n "$key" ] && [ "${GH_FAIL%%:*}" = "$key" ]; then
+  n=$(( $(cat "$WORK/fail-$key" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$WORK/fail-$key"
+  if [ "$n" -le "${GH_FAIL#*:}" ]; then
+    echo 'Get "https://api.github.com/repos/x/y": dial tcp 20.205.243.168:443: connectex: A connection attempt failed' >&2
+    exit 1
+  fi
+fi
 case "$args" in
   *"--workflow deploy.yml"*)
     n=$(( $(cat "$WORK/calls" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$WORK/calls"
@@ -91,7 +109,7 @@ failures=0
 # expect <scenario> <extra env> <pattern that must appear>... ; a pattern starting with ! must not.
 expect() {
   local scenario=$1 env=$2; shift 2
-  rm -f "$WORK/calls"
+  rm -f "$WORK/calls" "$WORK"/fail-*
   local out
   # HOME points at an empty directory, so nothing can pick up a real Railway login. The script's exit
   # code is appended as "exit=N" so patterns can assert on it.
@@ -142,5 +160,15 @@ expect green "TRIGGERS=econnreset" \
 expect green "TRIGGERS=present" \
   "TRIGGERS server FAIL: a deployment trigger is back" "trig-0001" \
   "FAILED: 1 check(s) did not pass" "!DONE" "exit=1"
+
+# A gh call that drops its connection once is retried, and the report is the same as a clean run.
+expect green "GH_FAIL=conclusion:1"   "DEPLOY RUN 222 conclusion=success" "CHECK 1 PASS" "DONE" "exit=0"
+# Twice, and it is marked unknown with gh's error, not left blank. The conclusion is informational
+# (checks 1-3 decide), so the run still ends in DONE when every check passed.
+expect green "GH_FAIL=conclusion:2"   "DEPLOY RUN 222 conclusion=unknown (gh failed twice:" "dial tcp" "!conclusion=success"   "CHECK 1 PASS" "DONE" "exit=0"
+expect green "GH_FAIL=ci:2"   "CI conclusion: unknown (gh failed twice:" "!CI conclusion: not found" "DONE" "exit=0"
+# Without the log there is no way to tell which deployments deploy.yml queued, so check 1 is an
+# error rather than "0 of 2 services queued", which blamed the deploy for a network fault.
+expect green "GH_FAIL=log:2"   "CHECK 1 ERROR: could not read Deploy run 222's log" "dial tcp" "!0 of 2 services queued"   "FAILED:" "!DONE" "exit=1"
 
 if [ "$failures" -eq 0 ]; then echo "PASS: all scenarios"; else echo "$failures failure(s)"; exit 1; fi

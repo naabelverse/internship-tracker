@@ -4336,3 +4336,25 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
 - **Text only.** `parseTags` and `renderMarkdown` are untouched. The Tags example parses to the
   three tags it names, and the Notes example uses only syntax `marked` (GFM) renders and
   `DOMPurify` keeps: `strong`, `em`, `ul`/`li`.
+
+## The deploy watcher retries a failed gh call once, then says "unknown" (30 Sep 2026)
+
+- **Why:** on the check of PR #58's deploy, `gh run view --json conclusion` lost its connection to
+  api.github.com, and the report printed `DEPLOY RUN 36737005121 conclusion=` with nothing after
+  it. A failed call looked like an empty answer, the same class of gap as the trigger query in
+  PR #43. Two more calls had it: a failed CI lookup printed `CI conclusion: not found`, which is a
+  real result, and a failed log fetch reported `0 of 2 services queued`, which blamed the deploy
+  for a network fault.
+- **What:** `gh_retry` in `watch-deploy.sh` runs each of those three calls and retries once after
+  `GH_RETRY_SECONDS` (default 10). On a second failure it prints
+  `unknown (gh failed twice: <gh's last error line>)`. The run list polled while waiting for Deploy
+  is left as it is, because that loop already re-polls every 30 seconds.
+- **Which failures end in FAILED:** only the log. The two conclusions are informational, since
+  checks 1 to 3 decide the result, so an unknown conclusion with every check passing still ends in
+  DONE. Without the log, the queued ids are unknown, so check 1 is an ERROR, and check 3 fails for
+  both services because there is no id to match.
+- **Tests:** `test-watch-deploy.sh` gains `GH_FAIL=<call>:<n>`, which fails the first n attempts of
+  one call with the connection error seen on 30 Sep. Four cases: `conclusion:1` (retried, same
+  report as a clean run), `conclusion:2`, `ci:2` and `log:2`. All four failed against the old
+  script, and `conclusion:1` reproduced the blank exactly. The eight earlier cases are unchanged
+  and still pass.
