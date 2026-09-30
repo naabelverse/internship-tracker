@@ -4300,7 +4300,9 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   phase and stops there. On the bubble phase, the modal's focus trap (also on `document`,
   registered first) closed the dialog on the same press, discarding the form. It now also closes
   when focus tabs out, as it already did on an outside click. The filter and column menus gain
-  both. The panel can float with fixed positioning under an anchor
+  both, and `tests/applications/toolbarMenus.test.tsx` holds them directly: Escape, tab-out,
+  outside click and ticking a box, per menu. Against the previous `Popover`, only the two
+  tab-out cases fail, so the other three behaviours are unchanged. The panel can float with fixed positioning under an anchor
   (`useAnchoredPosition`), because an absolute panel is clipped by the modal body's
   `overflow-y-auto`. It stays in the modal's DOM, so the focus trap still holds it, and it
   follows the field through scroll and flips above when there is no room below.
