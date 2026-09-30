@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { MAX_DATE_YEAR, MIN_DATE_YEAR } from '@/types/application';
 
 /** `min` and `max` for a date input and a datetime-local input, respectively. */
@@ -30,4 +31,38 @@ export function isDateInputInRange(value: string): boolean {
 
   const probe = new Date(Date.UTC(year, month - 1, day));
   return probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+}
+
+/** The first and last days the calendar can show or pick, in local time. */
+export const CALENDAR_BOUNDS = {
+  first: new Date(MIN_DATE_YEAR, 0, 1),
+  last: new Date(MAX_DATE_YEAR, 11, 31),
+} as const;
+
+/** The time a datetime-local field starts at when its day is picked before any time is entered. */
+export const DEFAULT_PICKED_TIME = '09:00';
+
+/**
+ * The day a date or datetime-local value names, as local midnight, or
+ * `undefined` when the value is empty or would be refused by
+ * `isDateInputInRange`, so the calendar never marks a day the form rejects.
+ */
+export function dayFromInputValue(value: string): Date | undefined {
+  if (value === '' || !isDateInputInRange(value)) return undefined;
+
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number) as [number, number, number];
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * The value a field takes when `day` is picked from the calendar. A
+ * datetime-local field keeps the time it already holds, so moving an interview
+ * to another day never moves its hour.
+ */
+export function inputValueForDay(day: Date, withTime: boolean, previous: string): string {
+  const date = format(day, 'yyyy-MM-dd');
+  if (!withTime) return date;
+
+  const time = /T(\d{2}:\d{2})/.exec(previous)?.[1] ?? DEFAULT_PICKED_TIME;
+  return `${date}T${time}`;
 }

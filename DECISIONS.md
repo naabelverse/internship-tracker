@@ -4250,3 +4250,75 @@ took any string, and the API's `z.coerce.date()` took anything `new Date` could 
   dates pass, or cover values rejected before and after). The screenshot's scenario was also run
   end to end in the real app: type `11111111111` into Deadline, submit, see the message, and zero
   POSTs, in both themes.
+
+## Date fields open the app's calendar (30 Sep 2026)
+
+The follow-up the entry above deferred: the calendar that opens from Applied date, Deadline and an
+interview's Scheduled at now matches the select panel (rounded card, elevation, a tinted selected
+day, a hover wash, a today marker) instead of being drawn by the browser.
+
+- **Those three are still the only date fields.** All go through `DateField`. Filters, Settings and
+  CSV import take no typed date, so nothing else needed converting.
+- **The input stays native; only the popup is replaced.** `react-day-picker` 10 renders the month
+  inside `Popover`, and a pick is written into the same native input as if typed (the prototype's
+  `value` setter plus an `input` event). So `register` needed no change at any call site: no
+  `Controller`, no second value path. Typing into the dd/mm/yyyy segments still works, and every
+  entry path still ends as the input's `value` checked by the same zod schema and the server's
+  `boundedDate`. The calendar also cannot reach past 2000-01-01 or 2099-12-31
+  (`CALENDAR_BOUNDS`), and a value the schema would refuse is never shown as selected.
+- **Dependency:** `react-day-picker@10.0.1`. The locked stack names no picker, and a hand-built
+  grid would need its own keyboard model and ARIA. Its only other dependency, `@date-fns/tz`, sits
+  beside the `date-fns` 4.4 already shipped (deduped, one copy). Its stylesheet is not imported:
+  `.date-calendar` in `index.css` styles its `rdp-*` classes with existing tokens only.
+- **Bundle:** the library lands in the shared `ApplicationFormModal` chunk. Dashboard 220.0 →
+  236.9 KB gzip (budget 300), applications 159.0 → 175.5, detail 181.2 → 198.1. Landing is
+  unchanged at 122.3 KB and still isolated. Lazy-loading the calendar on first open would win the
+  ~17 KB back, at the cost of a loading state inside a panel whose size the positioning measures.
+  Not done: the budget has room, and the dashboard's chart vendor costs far more.
+- **The select panel's two guards, restated for dates.** The app's trigger shows, and the
+  platform button is hidden, only under `@supports selector(::-webkit-calendar-picker-indicator)`
+  and `pointer: fine`. Firefox draws its own calendar button with no selector to hide it, so it
+  keeps that one rather than showing two. Phones and tablets keep the platform picker. Measured:
+  desktop Chromium shows one icon (ours), and a touch context shows one (the platform's), with the
+  field's padding given back. Firefox and Safari are **unverified** (only Chromium is installed
+  here). Safari may still open its own popover from a click in the field.
+- **Look, and the numbers behind it.** Days are `rounded-control`, hover `primary/5` and selected
+  `primary/10`, the select panel's two tints. Those differ by only 1.11:1 light and 1.15:1 dark,
+  so the selected day also carries a semibold numeral and a 1px inset `primary` ring (the
+  option's checkmark has no calendar equivalent). Today is a `primary` dot under the numeral, not
+  the Calendar page's filled circle, which would outshout the selection. Numerals read 19.24 /
+  17.44 / 15.68:1 (plain / hovered / selected) light and 12.98 / 11.52 / 9.98:1 dark. Out-of-month
+  days read 7.46:1 light and 4.80:1 dark at worst (hovered). The ring reads 17.45:1 light and
+  11.48:1 dark. The dot reads at least 14.22:1 light and 8.83:1 dark (on a selected day). Keyboard
+  focus is a 2px inset ring, ordered after the selected rule so it wins on the selected day too.
+- **Keyboard.** Tab reaches the trigger after the input's own segments (three Tabs for a date).
+  Enter or Space opens the calendar with focus on the selected day, or today. Arrows, Home/End and
+  PageUp/PageDown are the library's. Enter picks, closes, and returns focus to the trigger.
+  Escape closes and returns focus. Tabbing out closes. Alt+ArrowDown in the input opens it, as it
+  opens a select.
+- **`Popover` changed for every user, deliberately.** Its Escape listener moved to the capture
+  phase and stops there. On the bubble phase, the modal's focus trap (also on `document`,
+  registered first) closed the dialog on the same press, discarding the form. It now also closes
+  when focus tabs out, as it already did on an outside click. The filter and column menus gain
+  both, and `tests/applications/toolbarMenus.test.tsx` holds them directly: Escape, tab-out,
+  outside click and ticking a box, per menu. Against the previous `Popover`, only the two
+  tab-out cases fail, so the other three behaviours are unchanged. The panel can float with fixed positioning under an anchor
+  (`useAnchoredPosition`), because an absolute panel is clipped by the modal body's
+  `overflow-y-auto`. It stays in the modal's DOM, so the focus trap still holds it, and it
+  follows the field through scroll and flips above when there is no room below.
+- **Date-time fields keep their time.** Picking a day for a Scheduled at of 14:30 keeps 14:30. An
+  empty one starts at 09:00 (`DEFAULT_PICKED_TIME`), shown in the field for the user to change.
+  Chromium's native date-time popup also had time columns. On desktop, time is now typed into the
+  segments only.
+- **Tests:** `tests/components/datePicker.test.tsx` covers the helpers, the named trigger and
+  dialog, today/selected/refused values, click and keyboard picks through a real `register`,
+  Alt+ArrowDown, tab-out, the preserved time, the 2000/2099 arrows, Escape inside a `Modal`, and
+  the stylesheet contract. `tests/applications/datePickerForms.test.tsx` picks at all three
+  locations and asserts what the API receives. `tests/a11y/calendarContrast.test.ts` reads both
+  alphas from `index.css` and gates text, ring and dot in both themes. Two were proven
+  non-vacuous: moving Escape back to the bubble phase fails the modal case, and assigning
+  `input.value` directly fails all three submit cases. The first run also caught that v10 marks
+  a dead month arrow with `aria-disabled`, not `disabled`, so the CSS keys on that. In a real
+  browser (Chromium, both themes), axe found no violations in the open calendar. The keyboard
+  path, Escape layering, scroll-following, the 11111111111 typed-year rejection with zero POSTs,
+  Feb 30 yielding no value, and form submission all passed (24/24).

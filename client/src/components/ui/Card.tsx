@@ -17,8 +17,8 @@ import { cn } from '@/lib/cn';
  *
  * - `SettingsSection` applies it to a `<form>` it owns for submit handling; a
  *   wrapper component cannot take that over without owning the form.
- * - `Popover` is a floating overlay — `shadow-float`, absolute positioning, its
- *   own stacking context — not a card in the page flow.
+ * - `Popover` is a floating overlay — `shadow-float`, absolute or fixed
+ *   positioning, its own stacking context — not a card in the page flow.
  * - `BoardCard` is draggable and swaps to a `ring-2` treatment mid-drag, so its
  *   surface is state-dependent in a way the padding scale does not describe.
  *
