@@ -19,9 +19,10 @@
 # fails check 1. Each must end in FAILED with exit 1, which they did not before issue #45.
 #
 # GH_FAIL=<call>:<n> makes the first n attempts of one gh call fail with a connection error, for the
-# Deploy run's conclusion, the CI conclusion or the Deploy log. One failure must be retried away; two
-# must read as "unknown", never as a blank or "not found". On the check of PR #58's deploy, a dropped
-# connection printed "conclusion=" with nothing after it.
+# Deploy run list, the Deploy run's conclusion, the CI conclusion or the Deploy log. One failure must
+# be retried away; two must read as "unknown", never as a blank or "not found". On the check of
+# PR #58's deploy, a dropped connection printed "conclusion=" with nothing after it. A Deploy run list
+# that keeps failing until the deadline used to read as "no completed Deploy run".
 
 set -u
 
@@ -39,6 +40,7 @@ cat > "$WORK/bin/gh" <<'EOF'
 args="$*"
 key=""
 case "$args" in
+  *"--workflow deploy.yml"*) key=deploy ;;
   *"--workflow ci.yml"*) key=ci ;;
   *"run view"*"--json conclusion"*) key=conclusion ;;
   *"run view"*"--log"*) key=log ;;
@@ -170,5 +172,14 @@ expect green "GH_FAIL=ci:2"   "CI conclusion: unknown (gh failed twice:" "!CI co
 # Without the log there is no way to tell which deployments deploy.yml queued, so check 1 is an
 # error rather than "0 of 2 services queued", which blamed the deploy for a network fault.
 expect green "GH_FAIL=log:2"   "CHECK 1 ERROR: could not read Deploy run 222's log" "dial tcp" "!0 of 2 services queued"   "FAILED:" "!DONE" "exit=1"
+
+# The Deploy run list, polled while waiting. One dropped connection is retried away without a word.
+expect green "GH_FAIL=deploy:1"   "DEPLOY RUN 222 conclusion=success" "!dial tcp" "CHECK 1 PASS" "DONE" "exit=0"
+# Two in a row are reported, the poll goes on, and the next answer is used. The error text must never
+# reach the run-id parser, which would have read "unknown" as a run.
+expect green "GH_FAIL=deploy:2"   "Deploy run list: unknown (gh failed twice:" "!DEPLOY RUN unknown"   "DEPLOY RUN 222 conclusion=success" "CHECK 1 PASS" "DONE" "exit=0"
+# Failing until the deadline is an ERROR naming gh's error, not "no completed Deploy run", which
+# blamed the deploy for a network fault.
+expect green "GH_FAIL=deploy:99 DEPLOY_WAIT_MINUTES=0"   "CHECK 1 ERROR: the last Deploy run lookup for" "dial tcp" "!no completed Deploy run"   "!DEPLOY RUN" "FAILED:" "!DONE" "exit=1"
 
 if [ "$failures" -eq 0 ]; then echo "PASS: all scenarios"; else echo "$failures failure(s)"; exit 1; fi

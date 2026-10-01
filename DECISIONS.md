@@ -4408,3 +4408,19 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   PR #60. Until it lands, filter by Source = Other.
 - **Not changed:** `schemaVersion` stays at 1, because the field is additive and optional, and the
   migration's own filter makes it idempotent.
+
+## The deploy watcher retries the Deploy run list too (1 Oct 2026)
+
+- **Why:** PR #59 left the Deploy run list polled during the wait outside `gh_retry`, because the
+  loop re-polls every 30 seconds anyway. That covers a short outage but not one that is still going
+  when the wait ends: the last lookup came back empty, and the report said
+  `no completed Deploy run for <sha>`, which blamed the deploy for a network fault.
+- **What:** the lookup now goes through `gh_retry`. A lookup that fails twice prints
+  `Deploy run list: unknown (gh failed twice: <error>)` and polling continues. Only the latest lookup
+  counts, so the result is a check 1 ERROR naming gh's error only if lookups are still failing when
+  the deadline passes. The error text is kept out of the run-id parser, which would otherwise read
+  `unknown` as a run id.
+- **Tests:** `GH_FAIL=deploy:<n>` in `test-watch-deploy.sh`, with three cases: `deploy:1` (retried
+  without a word), `deploy:2` (reported, then the next poll is used) and `deploy:99` with
+  `DEPLOY_WAIT_MINUTES=0` (ERROR, not "no completed Deploy run"). All three failed against the old
+  script. The twelve earlier cases still pass.
