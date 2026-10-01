@@ -52,4 +52,20 @@ describe('UpcomingRow', () => {
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText('Grab')).toBeInTheDocument();
   });
+
+  // jsdom paints nothing, so this holds the class contract; the colour was checked in a browser.
+  it('hovers with the select panel’s ink wash, and only when it is a link', () => {
+    const event = makeCalendarEvent({ company: 'Grab', at: inDays(5) });
+    const { unmount } = renderWithProviders(<UpcomingRow event={event} to="/applications/a1" />);
+
+    const link = screen.getByRole('link', { name: /grab/i });
+    expect(link).toHaveClass('hover:bg-primary/5');
+    expect(link).not.toHaveClass('hover:bg-surface-muted');
+    unmount();
+
+    renderWithProviders(<UpcomingRow event={event} />);
+    expect(screen.getByText('Grab').closest('[data-upcoming-row]')?.className).not.toMatch(
+      /hover:/,
+    );
+  });
 });
