@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Select } from '@/components/ui/Select';
 import { StatusSelect } from '@/features/applications/StatusSelect';
+import tailwindConfig from '../../tailwind.config';
 
 /**
  * Every `<select>` in the app is one of these two components, so the dropdown
@@ -50,13 +51,46 @@ describe('the shared dropdown panel', () => {
   it('draws the panel from the tokens the popover menus already use', () => {
     const panel = ruleBody('.select-control::picker(select)');
 
-    for (const utility of ['rounded-card', 'shadow-float', 'bg-surface', 'border-border', 'my-1']) {
+    for (const utility of ['rounded-card', 'bg-surface', 'outline-border', 'my-1']) {
       expect(panel, `the panel no longer uses ${utility}`).toMatch(new RegExp(`\\b${utility}\\b`));
     }
+    expect(panel, 'the panel no longer uses the float cast').toMatch(/\bshadow-float-cast\b/);
+    expect(panel, 'the panel no longer draws the float lift').toMatch(
+      /rgb\(var\(--atmos-lift\) \/ var\(--atmos-lift-peak\)\) 1px 2px/,
+    );
   });
 
-  it('keeps option corners concentric with the panel', () => {
+  it('is the float shadow less only its lit edge, which the panel redraws', () => {
+    const shadows = tailwindConfig.theme?.extend?.boxShadow as Record<string, string>;
+    const [lift, ...rest] = (shadows.float ?? '').split(/,\s*(?=inset|\d)/);
+
+    expect(lift).toMatch(/^inset 0 1px 0 0 rgb\(var\(--atmos-lift\)/);
+    expect(shadows['float-cast']).toBe(rest.join(', '));
+  });
+
+  /*
+   * A long list (Source) scrolls inside the panel, and its scrollbar is drawn
+   * just inside the border. Padding sits behind the scrollbar, so with `p-1` it
+   * ran flush against the edge and painted over the rounded corners.
+   */
+  it('insets a scrolling list with the border, not padding', () => {
+    const panel = ruleBody('.select-control::picker(select)');
+
+    expect(panel).toMatch(/\bborder-4\b/);
+    expect(panel).toMatch(/\bborder-transparent\b/);
+    expect(panel, 'padding would put the scrollbar back against the edge').not.toMatch(
+      /(?:^|\s)p[xytrbl]?-\d/,
+    );
+  });
+
+  /*
+   * The scroll area is clipped to the card radius (10px) less the border. At
+   * `border-[5px]` that 5px curve cut into a row's 6px corner; a 4px border
+   * leaves a 6px curve, and the 1px of padding keeps the rows inside it, at
+   * the same 5px offset `border p-1` gave them.
+   */
+  it('keeps option corners concentric with the panel, and unclipped', () => {
     expect(ruleBody('.select-control option')).toMatch(/\brounded-control\b/);
-    expect(ruleBody('.select-control::picker(select)')).toMatch(/\bp-1\b/);
+    expect(ruleBody('.select-control::picker(select)')).toMatch(/\bborder-4\b[\s\S]*\bp-px\b/);
   });
 });
