@@ -4501,6 +4501,24 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   is their figure's paragraph box spanning its column, with glyph positions unchanged.
 - **Not changed:** Settings' usage meter has the same `bg-primary` on `bg-surface-muted` pairing.
   On a 6px bar anchored left it still reads, so it is left for its own decision.
-- **Subtitle:** the no-streak line is now "Your applications, replies and interviews, and what's due
-  next." It names what the page shows, as the page's meta description does. The user chose it from
-  three options.
+- **Subtitle:** from `sm` the no-streak line is "Your applications, replies and interviews, and what's
+  due next." It names what the page shows, as the page's meta description does. The user chose it
+  from three options.
+- **The line has a phone length too:** below `sm`, the header keeps "New application" beside the
+  heading only while the line fits the room left over. Measured in the built app (Archivo is bundled,
+  so the widths hold on any device), the room is 159.2px at 360 wide, 174.2px at 375 and
+  189.2px at 390. The full line is 379.1px, so it pushed the button below and grew the header from
+  48px to 124px. Four items cannot fit in 159px. "Applications and what's due." (176.4px) fits only from
+  390, and "Replies, interviews, what's due." (193.2px) not until 414. Phones now get
+  "Applications, what's due." (153.9px, the longest readable wording that fits at 360). Narrower
+  than 360 the button still wraps, because 320 leaves 119px.
+- **The streak line already wrapped on phones before this change:** "N day streak — keep it going."
+  is 175.8px at 1 day, 183.7px at 12 and 191.7px at 100. It wrapped at 375 and 360 on `main`, and at
+  390 from 100 days. "Keep going." variants are still 163px or more, so below `sm` it is just
+  "12 day streak" (82.7px; 90.6px at 100). Checked in the browser at 360, 375, 390, 414, 639, 640,
+  768, 1024 and 1440 for streaks of 0, 1, 12 and 100: one line, button beside the heading, header
+  48px, in all 36 cases.
+- **One string reaches assistive technology:** the two lengths are sibling spans, `sm:hidden` and
+  `hidden sm:inline`. `display: none` takes the hidden one out of the accessibility tree, so the
+  header's snapshot holds exactly the visible line at every width checked. jsdom applies no CSS, so
+  `dashboard.test.tsx` can only hold the class contract. The browser check is the real evidence.

@@ -24,6 +24,27 @@ import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 import type { TimelineGranularity } from '@/types/analytics';
 
 /**
+ * The line under the heading, in a phone length and a full length.
+ *
+ * Below `sm` the header puts "New application" beside the heading only while
+ * the line is narrower than the room left over: 159px at 360 wide, 174px at
+ * 375, 189px at 390. The full lines are 379px (applications) and 184px (a
+ * 12 day streak), so on a phone they pushed the button onto its own row and the
+ * header grew from 48px to 124px. The short lines measure 154px and 83px.
+ *
+ * Only one is displayed at a time, and `display: none` also takes the other
+ * out of the accessibility tree, so a screen reader hears the one on screen.
+ */
+function Lede({ short, full }: { short: string; full: string }): JSX.Element {
+  return (
+    <>
+      <span className="sm:hidden">{short}</span>
+      <span className="hidden sm:inline">{full}</span>
+    </>
+  );
+}
+
+/**
  * The dashboard body. It lives behind `React.lazy` in the route table, so
  * Chart.js is fetched the first time someone opens this page and never on the
  * applications, board or calendar routes.
@@ -64,9 +85,17 @@ export function DashboardView(): JSX.Element {
       <PageHeader
         title="Dashboard"
         description={
-          summary.data.currentStreakDays > 0
-            ? `${String(summary.data.currentStreakDays)} day streak — keep it going.`
-            : "Your applications, replies and interviews, and what's due next."
+          summary.data.currentStreakDays > 0 ? (
+            <Lede
+              short={`${String(summary.data.currentStreakDays)} day streak`}
+              full={`${String(summary.data.currentStreakDays)} day streak — keep it going.`}
+            />
+          ) : (
+            <Lede
+              short="Applications, what's due."
+              full="Your applications, replies and interviews, and what's due next."
+            />
+          )
         }
         actions={
           <Button onClick={openCreate}>
