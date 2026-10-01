@@ -109,11 +109,10 @@ export function StatCards({ summary, isLoading }: StatCardsProps): JSX.Element {
         periodLabel="vs last week"
         isLoading={isLoading}
       >
-        {summary !== undefined && (
+        {summary === undefined ? undefined : (
           <WeeklyGoalRing
             completed={summary.weeklyGoal.completed}
             target={summary.weeklyGoal.target}
-            percentage={summary.weeklyGoal.percentage}
           />
         )}
       </StatCard>

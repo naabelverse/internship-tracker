@@ -91,6 +91,35 @@ describe('dashboard', () => {
     resetClientState();
   });
 
+  /*
+    jsdom applies no CSS, so these hold the class contract only: one length per
+    breakpoint, the other display: none (which also hides it from a screen
+    reader). That the short lines fit beside the button at 360px was measured
+    in a browser; see DECISIONS.md.
+  */
+  describe('header lede', () => {
+    it('shows the short line on phones and the full one from sm', async () => {
+      renderDashboard({
+        'GET /analytics/summary': () => ({
+          status: 200,
+          data: successBody(makeSummary({ currentStreakDays: 0 })),
+        }),
+      });
+
+      expect(await screen.findByText("Applications, what's due.")).toHaveClass('sm:hidden');
+      expect(
+        screen.getByText("Your applications, replies and interviews, and what's due next."),
+      ).toHaveClass('hidden', 'sm:inline');
+    });
+
+    it('drops the encouragement from the streak line on phones', async () => {
+      renderDashboard();
+
+      expect(await screen.findByText('4 day streak')).toHaveClass('sm:hidden');
+      expect(screen.getByText('4 day streak — keep it going.')).toHaveClass('hidden', 'sm:inline');
+    });
+  });
+
   describe('stat cards', () => {
     it('shows the six headline numbers', async () => {
       renderDashboard();
