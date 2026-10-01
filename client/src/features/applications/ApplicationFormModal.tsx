@@ -193,7 +193,7 @@ export function ApplicationFormModal({
             />
             {isOtherSource && (
               <TextField
-                label="Please specify"
+                label="Other source"
                 placeholder="e.g. Glints, university career portal"
                 maxLength={MAX_SOURCE_OTHER_LENGTH}
                 error={errors.sourceOther?.message}

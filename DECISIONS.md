@@ -4424,3 +4424,14 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   without a word), `deploy:2` (reported, then the next poll is used) and `deploy:99` with
   `DEPLOY_WAIT_MINUTES=0` (ERROR, not "no completed Deploy run"). All three failed against the old
   script. The twelve earlier cases still pass.
+
+## The Other-source field is labelled "Other source", and stays where it is (1 Oct 2026)
+
+- **Why:** "Please specify" did not say what to specify. At `sm` and up the field takes the right
+  column of the Source row, so Work mode sits directly above it and the label read as if it could
+  belong to either.
+- **What:** the label is now "Other source", a noun phrase like the form's other labels ("Company
+  website", "Resume version"). The field name, validation, placeholder and payload are unchanged.
+- **Not moved:** the field is already beside Source (same row, measured at y=418 for both at
+  1440px) and directly under it in the one-column phone layout. Putting it under Source on wide
+  screens would leave an empty cell beside Source or shift every later field by one cell.

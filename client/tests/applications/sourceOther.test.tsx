@@ -76,7 +76,7 @@ describe('the Source select', () => {
 
     await user.selectOptions(within(dialog).getByLabelText('Source'), 'JobStreet');
 
-    expect(within(dialog).queryByLabelText('Please specify')).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Other source')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Create application' }));
 
     await waitFor(() => {
@@ -93,10 +93,10 @@ describe('"Other: please specify"', () => {
     mockCreate();
     const dialog = await openNewForm();
 
-    expect(within(dialog).queryByLabelText('Please specify')).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Other source')).not.toBeInTheDocument();
     await user.selectOptions(within(dialog).getByLabelText('Source'), 'Other');
 
-    expect(within(dialog).getByLabelText('Please specify')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Other source')).toBeInTheDocument();
   });
 
   it('submits other with the text the user typed', async () => {
@@ -105,7 +105,7 @@ describe('"Other: please specify"', () => {
     const dialog = await openNewForm();
 
     await user.selectOptions(within(dialog).getByLabelText('Source'), 'Other');
-    await user.type(within(dialog).getByLabelText('Please specify'), '  Glints ');
+    await user.type(within(dialog).getByLabelText('Other source'), '  Glints ');
     await user.click(screen.getByRole('button', { name: 'Create application' }));
 
     await waitFor(() => {
@@ -124,7 +124,7 @@ describe('"Other: please specify"', () => {
     await user.click(screen.getByRole('button', { name: 'Create application' }));
 
     expect(await within(dialog).findByText('Say where you found it')).toBeInTheDocument();
-    expect(within(dialog).getByLabelText('Please specify')).toHaveAttribute('aria-invalid', 'true');
+    expect(within(dialog).getByLabelText('Other source')).toHaveAttribute('aria-invalid', 'true');
     expect(mock.callsTo('POST', '/applications')).toHaveLength(0);
   });
 
@@ -135,7 +135,7 @@ describe('"Other: please specify"', () => {
     const select = within(dialog).getByLabelText('Source');
 
     await user.selectOptions(select, 'Other');
-    await user.type(within(dialog).getByLabelText('Please specify'), 'Glints');
+    await user.type(within(dialog).getByLabelText('Other source'), 'Glints');
     await user.selectOptions(select, 'Hiredly');
     await user.click(screen.getByRole('button', { name: 'Create application' }));
 
@@ -155,7 +155,7 @@ describe('"Other: please specify"', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Edit application' });
 
     expect(within(dialog).getByLabelText<HTMLSelectElement>('Source').value).toBe('other');
-    expect(within(dialog).getByLabelText('Please specify')).toHaveValue('Glints');
+    expect(within(dialog).getByLabelText('Other source')).toHaveValue('Glints');
   });
 });
 
@@ -169,7 +169,7 @@ describe('a record holding a retired source', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Edit application' });
 
     expect(within(dialog).getByLabelText<HTMLSelectElement>('Source').value).toBe('other');
-    expect(within(dialog).getByLabelText('Please specify')).toHaveValue('internshala');
+    expect(within(dialog).getByLabelText('Other source')).toHaveValue('internshala');
   });
 
   it('renders on the detail page with the stored value', async () => {
