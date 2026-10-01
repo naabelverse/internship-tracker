@@ -1,10 +1,5 @@
 import type { Types } from 'mongoose';
-import {
-  Application,
-  LEGACY_SOURCE_LABELS,
-  type ApplicationDocument,
-  type LegacySource,
-} from '@/models/Application';
+import { Application, type ApplicationDocument } from '@/models/Application';
 import {
   createApplicationSchema,
   MAX_IMPORT_ROWS,
@@ -121,8 +116,13 @@ function cell(row: Record<string, string>, key: string): string | undefined {
   return value ? value : undefined;
 }
 
-const isLegacySource = (value: string): value is LegacySource =>
-  Object.hasOwn(LEGACY_SOURCE_LABELS, value);
+/**
+ * Sources that are no longer valid, as an export from before their retirement
+ * names them. Translation only: none of these is ever stored.
+ */
+const RETIRED_SOURCE_LABELS: Record<string, string> = { internshala: 'Internshala' };
+
+const isRetiredSource = (value: string): boolean => Object.hasOwn(RETIRED_SOURCE_LABELS, value);
 
 /**
  * A file exported before a source was retired still names it. Rather than skip
@@ -133,8 +133,8 @@ function sourceCells(row: Record<string, string>): { source?: string; sourceOthe
   const source = cell(row, 'source');
   const sourceOther = cell(row, 'sourceOther');
 
-  if (source !== undefined && isLegacySource(source)) {
-    return { source: 'other', sourceOther: sourceOther ?? LEGACY_SOURCE_LABELS[source] };
+  if (source !== undefined && isRetiredSource(source)) {
+    return { source: 'other', sourceOther: sourceOther ?? RETIRED_SOURCE_LABELS[source] };
   }
 
   return { source, sourceOther };

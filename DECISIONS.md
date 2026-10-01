@@ -4382,12 +4382,16 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   moves. The result is a shape the previous release already reads, so the migration can run before
   the deploy. It is run by hand, like 001: the runner is not part of server boot (DEPLOYMENT.md
   4.4).
-- **Why the model still accepts `internshala`:** Mongoose re-validates every path it loaded on
-  `save()`. Without the legacy entry, a row the migration has not reached returns 400 on any edit
-  or board drag. The regression test confirms this: it returned 400 when the entry was removed. The
-  API's zod enum does not accept the retired value, so nothing new can be written with it.
-  `LEGACY_SOURCE_LABELS` is the one list both the migration and the CSV import read, so an old
-  export's Internshala rows import as Other: Internshala too.
+- **The model rejects `internshala` outright, so the migration is a hard prerequisite.** The first
+  version of PR #60 kept the value in the Mongoose enum as a safety net. On the user's decision it
+  was removed, leaving no backward-compatibility value in the model. Mongoose re-validates every
+  path it loaded on `save()`, so a row the migration has not reached now returns 400 on any edit or
+  board drag. A test pins that failure deliberately. **The order is fixed: run migration 002 on
+  production, confirm 0 `source: "internshala"` rows remain, then merge.** `deploy.yml` deploys
+  main as soon as CI passes, so merging is deploying. The migration keeps its own copy of the
+  `internshala` → `Internshala` mapping, so it still means what it meant when it shipped. The CSV
+  import keeps another copy, so an old export's Internshala rows import as Other: Internshala. That
+  translates input and never stores the value.
 - **Display safety net:** `formatSource`/`sourceLabel` show an unknown stored value as stored,
   rather than as a blank in the table and detail page or as "Unspecified" on the chart. The form
   opens such a row as Other with the old value as the specify text, so saving it moves the row onto
@@ -4397,6 +4401,10 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   eleven bars against eight series tokens, which would have brought back the repeated-colour bug
   that `tokenContrast.test.ts` guards. With one colour, that cannot happen however long the list
   gets.
-- **Not changed:** `sourceOther` is not in the text-search index, because changing that index
-  means rebuilding it on production. `schemaVersion` stays at 1, because the field is additive and
-  optional, and the migration's own filter makes it idempotent.
+- **OPEN FOLLOW-UP, issue #61: `sourceOther` is not searchable.** List search uses the text index
+  on `company`, `role`, `notes` and `tags`, so searching "Glints" does not find "Other: Glints".
+  MongoDB allows one text index per collection, so adding the field means dropping and rebuilding
+  that index on production. That needs its own migration and a quiet moment, so it was kept out of
+  PR #60. Until it lands, filter by Source = Other.
+- **Not changed:** `schemaVersion` stays at 1, because the field is additive and optional, and the
+  migration's own filter makes it idempotent.

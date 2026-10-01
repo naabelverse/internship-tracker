@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { Types } from 'mongoose';
-import { Application } from '@/models/Application';
+import { Application, SOURCES } from '@/models/Application';
 import {
   APPLICATIONS_BASE,
   buildTestApp,
@@ -120,6 +120,27 @@ describe('source and the "Other: please specify" text', () => {
   });
 });
 
+describe('the model', () => {
+  it('rejects internshala outright', async () => {
+    const application = new Application({
+      user: new Types.ObjectId(),
+      company: 'Grab',
+      role: 'Intern',
+      source: 'internshala',
+    });
+
+    await expect(application.validate()).rejects.toThrow(/source/);
+  });
+
+  it('accepts exactly the current list, with no retired value kept for compatibility', () => {
+    const enumValues = (Application.schema.path('source') as unknown as { enumValues: string[] })
+      .enumValues;
+
+    expect(enumValues).toEqual([...SOURCES]);
+    expect(enumValues).not.toContain('internshala');
+  });
+});
+
 describe('a row still holding a retired source', () => {
   it('reads back as stored', async () => {
     const { accessToken } = await registerUser(app);
@@ -134,9 +155,10 @@ describe('a row still holding a retired source', () => {
     expect(response.body.data.application.source).toBe('internshala');
   });
 
-  // Every save re-validates the paths it loaded, so without the legacy entry in
-  // the model's enum this row would fail on a board drag until migration 002 ran.
-  it('can still change status and other fields before the migration runs', async () => {
+  // Every save re-validates the paths it loaded, so a row migration 002 has not
+  // reached cannot be saved at all. This is the failure that makes the migration
+  // a hard prerequisite of the deploy rather than a tidy-up after it.
+  it('fails its next save, which is why migration 002 must run before the deploy', async () => {
     const { accessToken } = await registerUser(app);
     const { id } = await createApplicationFor(app, accessToken);
     await storeLegacySource(id);
@@ -145,11 +167,14 @@ describe('a row still holding a retired source', () => {
       .patch(`${APPLICATIONS_BASE}/${id}/status`)
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ status: 'applied' });
-    expect(status.status).toBe(200);
+    expect(status.status).toBe(400);
 
     const edit = await patch(accessToken, id, { priority: 'high' });
-    expect(edit.status).toBe(200);
-    expect(edit.body.data.application.source).toBe('internshala');
+    expect(edit.status).toBe(400);
+
+    const stored = await Application.collection.findOne({ _id: new Types.ObjectId(id) });
+    expect(stored?.source).toBe('internshala');
+    expect(stored?.status).not.toBe('applied');
   });
 
   it('moves onto the current shape when the form saves it as other', async () => {

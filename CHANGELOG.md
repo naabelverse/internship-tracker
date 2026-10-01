@@ -28,10 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   group every Other together. The chart is now one colour, so any number of
   sources can be added without two bars sharing a colour by accident.
 - **Existing Internshala applications become Other: Internshala.** Migration
-  002 rewrites them without touching `updatedAt`. It has to be run by hand
-  before the deploy (`npm run migrate -w server`). Until it runs, those rows
-  still load, edit and move on the board, and show "internshala" as stored.
-  An old CSV export with Internshala rows imports the same way.
+  002 rewrites them without touching `updatedAt`. **It must run on production
+  before this release deploys** (`npm run migrate -w server`, then confirm no
+  `internshala` rows remain). The model no longer accepts the value, so a row
+  the migration has not reached fails its next edit or board drag. An old CSV
+  export with Internshala rows imports as Other: Internshala.
 
 ### Fixed
 
