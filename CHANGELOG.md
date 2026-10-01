@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   read-only `list(prefix)` for both drivers. The report names the storage
   driver and bucket it listed.
 
+### Changed
+
+- **Source options are Malaysia-focused, and "Other" asks what it was.** The
+  list is now JobStreet, LinkedIn, Indeed, Hiredly, Maukerja, MYFutureJobs,
+  Company site, Referral, Career fair and Other. Internshala is retired.
+  Choosing Other shows a required "Please specify" field, stored as
+  `sourceOther`, shown as "Other: Glints" in the table and on the detail page,
+  and exported as its own CSV column. Filters and the "By source" chart still
+  group every Other together. The chart is now one colour, so any number of
+  sources can be added without two bars sharing a colour by accident.
+- **Existing Internshala applications become Other: Internshala.** Migration
+  002 rewrites them without touching `updatedAt`. **It must run on production
+  before this release deploys** (`npm run migrate -w server`, then confirm no
+  `internshala` rows remain). The model no longer accepts the value, so a row
+  the migration has not reached fails its next edit or board drag. An old CSV
+  export with Internshala rows imports as Other: Internshala.
+
 ### Fixed
 
 - **"Try the demo" keeps the theme the visitor already picked.** The demo

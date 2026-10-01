@@ -57,6 +57,7 @@ const writableApplication = {
     status: { type: 'string', enum: [...APPLICATION_STATUSES] },
     priority: { type: 'string', enum: [...PRIORITIES] },
     source: { type: 'string', enum: [...SOURCES] },
+    sourceOther: { type: 'string', maxLength: 60, description: 'Dropped unless source is other' },
     jobUrl: { type: 'string' },
     appliedDate: { type: 'string', format: 'date-time' },
     deadline: { type: 'string', format: 'date-time' },

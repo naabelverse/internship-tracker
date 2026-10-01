@@ -406,7 +406,8 @@ erDiagram
         string role
         string status "saved|applied|assessment|interview|offer|rejected|ghosted|withdrawn"
         string priority "low|medium|high"
-        string source "linkedin|internshala|indeed|company_site|referral|career_fair|other"
+        string source "jobstreet|linkedin|indeed|hiredly|maukerja|myfuturejobs|company_site|referral|career_fair|other"
+        string sourceOther "what other was"
         string workMode "remote|hybrid|onsite"
         string employmentType "internship|part-time|full-time"
         object stipend "amount, currency, period"

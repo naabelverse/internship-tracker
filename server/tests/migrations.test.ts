@@ -194,3 +194,61 @@ describe('001-backfill-schema-version, the worked example', () => {
     expect(await migrations[0].up()).toEqual({ users: 0, applications: 0 });
   });
 });
+
+describe('002-retire-legacy-sources', () => {
+  const retireLegacySources = migrations[1];
+  const TOUCHED_AT = new Date('2026-01-01T00:00:00.000Z');
+
+  /** Inserts rows directly, since the API no longer accepts the retired value. */
+  async function seedRows(): Promise<void> {
+    const user = await User.create({
+      name: 'Grace Hopper',
+      email: 'grace@example.com',
+      password: 'Str0ngPassw0rd',
+      acceptedTermsAt: new Date(),
+    });
+    const row = { user: user._id, role: 'Intern', updatedAt: TOUCHED_AT, createdAt: TOUCHED_AT };
+
+    await Application.collection.insertMany([
+      { ...row, company: 'Old One', source: 'internshala' },
+      { ...row, company: 'Old Two', source: 'internshala' },
+      { ...row, company: 'Current', source: 'linkedin' },
+      { ...row, company: 'Specified', source: 'other', sourceOther: 'Glints' },
+    ]);
+  }
+
+  it('is the second migration in the shipped set', () => {
+    expect(retireLegacySources.version).toBe(2);
+    expect(retireLegacySources.name).toBe('retire-legacy-sources');
+  });
+
+  it('rewrites Internshala to other, keeping the name as the specify text', async () => {
+    await seedRows();
+
+    expect(await retireLegacySources.up()).toEqual({ internshala: 2 });
+
+    const rows = await Application.find().sort({ company: 1 }).lean();
+    expect(rows.map((row) => [row.company, row.source, row.sourceOther])).toEqual([
+      ['Current', 'linkedin', undefined],
+      ['Old One', 'other', 'Internshala'],
+      ['Old Two', 'other', 'Internshala'],
+      ['Specified', 'other', 'Glints'],
+    ]);
+  });
+
+  it('leaves updatedAt alone, since the user edited nothing', async () => {
+    await seedRows();
+
+    await retireLegacySources.up();
+
+    const rows = await Application.find().lean();
+    expect(rows.every((row) => row.updatedAt.getTime() === TOUCHED_AT.getTime())).toBe(true);
+  });
+
+  it('is safe to re-run: the second pass selects nothing', async () => {
+    await seedRows();
+
+    expect(await retireLegacySources.up()).toEqual({ internshala: 2 });
+    expect(await retireLegacySources.up()).toEqual({ internshala: 0 });
+  });
+});

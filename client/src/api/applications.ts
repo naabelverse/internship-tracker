@@ -21,6 +21,7 @@ export interface ApplicationPayload {
   status?: string;
   priority?: string;
   source?: string;
+  sourceOther?: string;
   jobUrl?: string;
   appliedDate?: string;
   deadline?: string;

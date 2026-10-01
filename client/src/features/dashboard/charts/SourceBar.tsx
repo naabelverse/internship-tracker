@@ -5,9 +5,8 @@ import { ChartFrame } from '@/features/dashboard/charts/ChartFrame';
 import { verticalOptions } from '@/features/dashboard/charts/chartOptions';
 import { useChartPalette } from '@/features/dashboard/charts/chartTheme';
 import '@/features/dashboard/charts/chartRegistry';
-import { SOURCE_LABELS } from '@/lib/statusConfig';
+import { sourceLabel } from '@/lib/statusConfig';
 import type { SourceEntry } from '@/types/analytics';
-import type { Source } from '@/types/application';
 
 interface SourceBarProps {
   sources: SourceEntry[] | undefined;
@@ -16,9 +15,13 @@ interface SourceBarProps {
   onRetry: () => void;
 }
 
-/** Rows the server could not attribute come back as `unspecified`. */
-function sourceLabel(source: string): string {
-  return SOURCE_LABELS[source as Source] ?? 'Unspecified';
+/**
+ * Rows the server could not attribute come back as `unspecified`. Anything else
+ * off the list is a retired value, shown as stored rather than folded into
+ * "Unspecified", which would claim the user never recorded one.
+ */
+function barLabel(source: string): string {
+  return source === 'unspecified' ? 'Unspecified' : sourceLabel(source);
 }
 
 /** Applications by source, SPEC section 6 chart 3. */
@@ -31,14 +34,15 @@ export function SourceBar({ sources, isLoading, error, onRetry }: SourceBarProps
 
   const data = useMemo(
     () => ({
-      labels: entries.map((entry) => sourceLabel(entry.source)),
+      labels: entries.map((entry) => barLabel(entry.source)),
       datasets: [
         {
           label: 'Applications',
           data: entries.map((entry) => entry.count),
-          backgroundColor: entries.map(
-            (_entry, index) => palette.series[index % palette.series.length],
-          ),
+          // One colour, as on the top-companies chart. Each bar is named on the
+          // axis, so a colour per bar carried nothing, and with more sources than
+          // series tokens it would have had to repeat one.
+          backgroundColor: palette.color('color-chart-1', 0.85),
           borderRadius: 6,
           maxBarThickness: 44,
         },
@@ -73,7 +77,7 @@ export function SourceBar({ sources, isLoading, error, onRetry }: SourceBarProps
           caption="Applications by source"
           valueHeading="Applications"
           rows={entries.map((entry) => ({
-            label: sourceLabel(entry.source),
+            label: barLabel(entry.source),
             value: String(entry.count),
           }))}
         />

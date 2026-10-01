@@ -106,6 +106,10 @@ export const components = {
         status: { type: 'string', enum: [...APPLICATION_STATUSES] },
         priority: { type: 'string', enum: [...PRIORITIES] },
         source: { type: 'string', enum: [...SOURCES] },
+        sourceOther: {
+          type: 'string',
+          description: 'What "other" was; only kept while source is other',
+        },
         jobUrl: { type: 'string' },
         appliedDate: dateTime,
         deadline: dateTime,

@@ -31,6 +31,7 @@ import {
 import {
   APPLICATION_STATUSES,
   EMPLOYMENT_TYPES,
+  MAX_SOURCE_OTHER_LENGTH,
   PRIORITIES,
   SOURCES,
   WORK_MODES,
@@ -52,6 +53,7 @@ const SERVER_FIELDS = [
   'location',
   'companyWebsite',
   'jobUrl',
+  'sourceOther',
   'appliedDate',
   'deadline',
   'notes',
@@ -91,11 +93,14 @@ export function ApplicationFormModal({
     reset,
     setError,
     getValues,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema),
     defaultValues: toFormValues(application),
   });
+
+  const isOtherSource = watch('source') === 'other';
 
   // Reopening for a different row must not show the previous row's values, but a
   // background refetch must not wipe what the user is typing. Keying the reset on
@@ -186,6 +191,15 @@ export function ApplicationFormModal({
               options={options(SOURCES, SOURCE_LABELS)}
               {...register('source')}
             />
+            {isOtherSource && (
+              <TextField
+                label="Please specify"
+                placeholder="e.g. Glints, university career portal"
+                maxLength={MAX_SOURCE_OTHER_LENGTH}
+                error={errors.sourceOther?.message}
+                {...register('sourceOther')}
+              />
+            )}
             <TextField
               label="Location"
               error={errors.location?.message}

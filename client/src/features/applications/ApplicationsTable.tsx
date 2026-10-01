@@ -4,7 +4,7 @@ import { ArrowDownIcon, ArrowUpIcon, EditIcon } from '@/components/ui/icons';
 import { StatusSelect } from '@/features/applications/StatusSelect';
 import type { ColumnDefinition } from '@/features/applications/columns';
 import { companyInitials, formatDate } from '@/lib/formatters';
-import { PRIORITY_CONFIG, SOURCE_LABELS } from '@/lib/statusConfig';
+import { PRIORITY_CONFIG, formatSource } from '@/lib/statusConfig';
 import { cn } from '@/lib/cn';
 import { paths } from '@/routes/paths';
 import type { Application, ApplicationStatus } from '@/types/application';
@@ -39,7 +39,7 @@ function cellContent(application: Application, columnId: string): JSX.Element | 
         </span>
       );
     case 'source':
-      return application.source ? SOURCE_LABELS[application.source] : '—';
+      return formatSource(application.source, application.sourceOther);
     case 'location':
       return application.location ?? '—';
     case 'appliedDate':

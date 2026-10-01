@@ -14,14 +14,20 @@ export const WORK_MODES = ['remote', 'hybrid', 'onsite'] as const;
 export const EMPLOYMENT_TYPES = ['internship', 'part-time', 'full-time'] as const;
 export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const SOURCES = [
+  'jobstreet',
   'linkedin',
-  'internshala',
   'indeed',
+  'hiredly',
+  'maukerja',
+  'myfuturejobs',
   'company_site',
   'referral',
   'career_fair',
   'other',
 ] as const;
+
+/** The free-text "Other: please specify" field, sized for a platform or event name. */
+export const MAX_SOURCE_OTHER_LENGTH = 60;
 export const STIPEND_PERIODS = ['month', 'year', 'hour'] as const;
 export const INTERVIEW_TYPES = [
   'oa',
@@ -118,6 +124,8 @@ export interface ApplicationAttributes {
   status: ApplicationStatus;
   priority: Priority;
   source?: Source;
+  /** What "Other" actually was. Only kept while `source` is `other`. */
+  sourceOther?: string;
   jobUrl?: string;
   appliedDate?: Date;
   deadline?: Date;
@@ -230,7 +238,10 @@ const applicationSchema = new Schema<ApplicationAttributes, ApplicationModelType
     stipend: { type: stipendSchema },
     status: { type: String, enum: APPLICATION_STATUSES, default: 'saved', required: true },
     priority: { type: String, enum: PRIORITIES, default: 'medium' },
+    // Exactly the current list. A row still holding a retired value fails its
+    // next save, which is why migration 002 must run before this ships.
     source: { type: String, enum: SOURCES },
+    sourceOther: { type: String, trim: true, maxlength: MAX_SOURCE_OTHER_LENGTH },
     jobUrl: { type: String, maxlength: 2048 },
     appliedDate: { type: Date },
     deadline: { type: Date },

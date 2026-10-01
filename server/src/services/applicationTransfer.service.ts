@@ -16,6 +16,7 @@ export const EXPORT_COLUMNS = [
   'status',
   'priority',
   'source',
+  'sourceOther',
   'workMode',
   'employmentType',
   'location',
@@ -44,6 +45,7 @@ function toExportRow(application: ApplicationDocument): Record<string, CsvCell> 
     status: application.status,
     priority: application.priority,
     source: application.source ?? '',
+    sourceOther: application.sourceOther ?? '',
     workMode: application.workMode ?? '',
     employmentType: application.employmentType,
     location: application.location ?? '',
@@ -115,6 +117,30 @@ function cell(row: Record<string, string>, key: string): string | undefined {
 }
 
 /**
+ * Sources that are no longer valid, as an export from before their retirement
+ * names them. Translation only: none of these is ever stored.
+ */
+const RETIRED_SOURCE_LABELS: Record<string, string> = { internshala: 'Internshala' };
+
+const isRetiredSource = (value: string): boolean => Object.hasOwn(RETIRED_SOURCE_LABELS, value);
+
+/**
+ * A file exported before a source was retired still names it. Rather than skip
+ * those rows, read them the way migration 002 rewrote the stored ones: `other`,
+ * with the platform kept as the "please specify" text.
+ */
+function sourceCells(row: Record<string, string>): { source?: string; sourceOther?: string } {
+  const source = cell(row, 'source');
+  const sourceOther = cell(row, 'sourceOther');
+
+  if (source !== undefined && isRetiredSource(source)) {
+    return { source: 'other', sourceOther: sourceOther ?? RETIRED_SOURCE_LABELS[source] };
+  }
+
+  return { source, sourceOther };
+}
+
+/**
  * Maps one CSV row onto the create schema shape. Everything arrives as a string,
  * so numbers, booleans and lists are converted before validation, which lets the
  * schema report a real reason per field rather than a blanket type error.
@@ -125,7 +151,7 @@ function rowToInput(row: Record<string, string>): Record<string, unknown> {
     role: cell(row, 'role'),
     status: cell(row, 'status'),
     priority: cell(row, 'priority'),
-    source: cell(row, 'source'),
+    ...sourceCells(row),
     workMode: cell(row, 'workMode'),
     employmentType: cell(row, 'employmentType'),
     location: cell(row, 'location'),

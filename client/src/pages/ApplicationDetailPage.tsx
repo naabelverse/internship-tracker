@@ -17,7 +17,7 @@ import {
   useUpdateApplication,
 } from '@/features/applications/useApplicationMutations';
 import { formatDate, formatStipend } from '@/lib/formatters';
-import { SOURCE_LABELS } from '@/lib/statusConfig';
+import { formatSource } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
 import type { Application } from '@/types/application';
 import { Card } from '@/components/ui/Card';
@@ -37,7 +37,7 @@ function DetailSkeleton(): JSX.Element {
 function Facts({ application }: { application: Application }): JSX.Element {
   const rows: [string, string][] = [
     ['Location', application.location ?? '—'],
-    ['Source', application.source ? SOURCE_LABELS[application.source] : '—'],
+    ['Source', formatSource(application.source, application.sourceOther)],
     ['Applied', formatDate(application.appliedDate)],
     ['Deadline', formatDate(application.deadline)],
     ['Stipend', formatStipend(application.stipend)],

@@ -121,14 +121,36 @@ export const PRIORITY_CONFIG: Record<Priority, { label: string; dot: string }> =
 };
 
 export const SOURCE_LABELS: Record<Source, string> = {
+  jobstreet: 'JobStreet',
   linkedin: 'LinkedIn',
-  internshala: 'Internshala',
   indeed: 'Indeed',
+  hiredly: 'Hiredly',
+  maukerja: 'Maukerja',
+  myfuturejobs: 'MYFutureJobs',
   company_site: 'Company site',
   referral: 'Referral',
   career_fair: 'Career fair',
   other: 'Other',
 };
+
+export function isKnownSource(value: string): value is Source {
+  return Object.hasOwn(SOURCE_LABELS, value);
+}
+
+/**
+ * The label for a stored source value. A value that has since left the list is
+ * shown as stored rather than as a blank, so an old row still says something.
+ */
+export function sourceLabel(value: string): string {
+  return isKnownSource(value) ? SOURCE_LABELS[value] : value;
+}
+
+/** An application's source as one line: "LinkedIn", "Other: Glints", or a dash. */
+export function formatSource(source: string | undefined, sourceOther?: string): string {
+  if (!source) return '—';
+  if (source === 'other' && sourceOther) return `${SOURCE_LABELS.other}: ${sourceOther}`;
+  return sourceLabel(source);
+}
 
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
   remote: 'Remote',

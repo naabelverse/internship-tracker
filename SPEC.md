@@ -169,7 +169,8 @@ Methods: `comparePassword()`, pre-save hash hook, `toJSON` strips password.
 | stipend | { amount: number, currency: string, period: 'month'\|'year'\|'hour' } | optional |
 | status | enum | `saved, applied, assessment, interview, offer, rejected, ghosted, withdrawn` |
 | priority | 'low' \| 'medium' \| 'high' | default medium |
-| source | enum | `linkedin, internshala, indeed, company_site, referral, career_fair, other` |
+| source | enum | `jobstreet, linkedin, indeed, hiredly, maukerja, myfuturejobs, company_site, referral, career_fair, other` |
+| sourceOther | string? | max 60; what "other" was. Required by the form when source is `other`, optional in the API and CSV, cleared when source is anything else |
 | jobUrl | string? | url validated |
 | appliedDate | Date? | |
 | deadline | Date? | |
