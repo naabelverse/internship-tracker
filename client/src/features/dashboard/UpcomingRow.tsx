@@ -25,10 +25,10 @@ const ROW = 'flex items-center gap-3 py-2.5';
 /**
  * The select panel's option hover: a wash of the neutral ink, inset `px-2` from
  * the text. `surface-muted` is a grey for controls, and on the white card it
- * reads as lavender. The matching `-mx-2` spends the inset from the card's own
- * padding, so the row's text stays aligned with the panel heading.
+ * reads as lavender. `UpcomingPanel`'s list carries the matching `-mx-2`, so the
+ * text stays aligned with the panel heading and the tint spans the dividers.
  */
-const ROW_HOVER = '-mx-2 px-2 rounded-control transition-colors hover:bg-primary/5';
+const ROW_HOVER = 'px-2 rounded-control transition-colors hover:bg-primary/5';
 
 /**
  * One deadline or interview: the dashboard's upcoming panel and the landing

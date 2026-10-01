@@ -309,6 +309,20 @@ describe('dashboard', () => {
       }
     });
 
+    // jsdom applies no CSS, so this holds the class contract; the geometry was measured in a browser.
+    it('widens its list, dividers included, to the rows’ hover tint', async () => {
+      renderDashboard();
+
+      const panel = (await screen.findByText('Upcoming')).closest('section') as HTMLElement;
+      const items = await within(panel).findAllByRole('listitem');
+      const list = items[0].parentElement as HTMLElement;
+
+      expect(list).toHaveClass('-mx-2', 'divide-y');
+      for (const item of items) {
+        expect(within(item).getByRole('link')).toHaveClass('px-2');
+      }
+    });
+
     it('shows at most five', async () => {
       renderDashboard({
         'GET /calendar': () => ({
