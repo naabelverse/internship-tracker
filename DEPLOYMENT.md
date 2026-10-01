@@ -1453,10 +1453,12 @@ keeps watching the same commit, because re-running CI starts a new Deploy run. I
 once. `bash scripts/deploy-checks/test-watch-deploy.sh` replays the skip-then-re-run sequence with
 stubbed `gh` and `railway`.
 
-Once the Deploy run is found, each `gh` call is retried once after 10 seconds (`GH_RETRY_SECONDS`).
-If it fails again, the field reads `unknown (gh failed twice: <error>)` instead of being blank, so a
-dropped connection never looks like a real result. The Deploy log is what check 1 and check 3 compare
-against, so a log that cannot be read is a check 1 ERROR, and the run ends in FAILED.
+Each `gh` call is retried once after 10 seconds (`GH_RETRY_SECONDS`). If it fails again, the field
+reads `unknown (gh failed twice: <error>)` instead of being blank, so a dropped connection never looks
+like a real result. The Deploy log is what check 1 and check 3 compare against, so a log that cannot
+be read is a check 1 ERROR, and the run ends in FAILED. While waiting for the Deploy run, a lookup
+that fails twice prints a `Deploy run list: unknown (...)` line and keeps polling. If the wait runs
+out while the lookups are still failing, that is a check 1 ERROR too, not "no completed Deploy run".
 
 It ends by printing each service's deployment triggers, which should be empty. It needs `gh` and the
 Railway CLI, both logged in (`railway whoami` refreshes an expired session). The trigger check uses

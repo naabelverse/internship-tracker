@@ -16,8 +16,9 @@
 # Finally it re-checks that neither service has grown a deployment trigger back; a trigger query that
 # fails (no "data" in the reply) counts as a failure too. Every check still runs so the report is
 # complete, but any FAIL or ERROR ends in FAILED instead of DONE, with exit 1. Usage errors exit 2.
-# A gh call after the wait is retried once; if it fails again, its field reads "unknown (gh failed
-# twice: <error>)" rather than blank, and a Deploy log that cannot be read is a check 1 ERROR.
+# Every gh call is retried once; if it fails again, its field reads "unknown (gh failed twice:
+# <error>)" rather than blank. A Deploy log that cannot be read is a check 1 ERROR, and so is a Deploy
+# run list still failing when the wait runs out.
 #
 # A Deploy run skipped because CI was red is not treated as the result: the script keeps watching
 # the same commit for a re-run's Deploy. DEPLOY_WAIT_MINUTES (default 60) bounds the wait for the
@@ -111,9 +112,19 @@ rerun_wait=${RERUN_WAIT_MINUTES:-360}
 deadline=$(( $(date +%s) + deploy_wait * 60 ))
 run=""
 skipped=""
+lookup_err=""
 while :; do
-  runs=$(gh run list -R "$REPO" --workflow deploy.yml --limit 20 --json databaseId,headSha,status,conclusion \
-    --jq ".[] | select(.headSha==\"$sha\" and .status==\"completed\") | \"\(.databaseId) \(.conclusion)\"")
+  # A lookup that fails twice is reported and polled again; its error text must not reach the awk
+  # below, which would read "unknown" as a run id. Only the latest lookup counts, so a deadline that
+  # passes during an outage is an ERROR rather than "no completed Deploy run".
+  if runs=$(gh_retry run list -R "$REPO" --workflow deploy.yml --limit 20 --json databaseId,headSha,status,conclusion \
+    --jq ".[] | select(.headSha==\"$sha\" and .status==\"completed\") | \"\(.databaseId) \(.conclusion)\""); then
+    lookup_err=""
+  else
+    lookup_err=$runs
+    runs=""
+    echo "Deploy run list: $lookup_err"
+  fi
   run=$(echo "$runs" | awk '$2 != "skipped" && $1 != "" { print $1; exit }')
   [ -n "$run" ] && break
   s=$(echo "$runs" | awk '$2 == "skipped" { print $1; exit }')
@@ -131,7 +142,9 @@ echo "CI conclusion: ${ci:-not found}"
 
 # deploy.yml logs "Railway queued deployment <id> of the web service|API service at <sha>."
 queued=""
-if [ -z "$run" ] && [ -n "$skipped" ]; then
+if [ -z "$run" ] && [ -n "$lookup_err" ]; then
+  fail "CHECK 1 ERROR: the last Deploy run lookup for $sha failed, so whether one completed is $lookup_err"
+elif [ -z "$run" ] && [ -n "$skipped" ]; then
   fail "CHECK 1 FAIL: Deploy run $skipped was skipped because CI was not green, and no re-run deployed within $rerun_wait min"
 elif [ -z "$run" ]; then
   fail "CHECK 1 FAIL: no completed Deploy run for $sha within $deploy_wait min"
