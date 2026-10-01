@@ -76,15 +76,21 @@ describe('the shared dropdown panel', () => {
   it('insets a scrolling list with the border, not padding', () => {
     const panel = ruleBody('.select-control::picker(select)');
 
-    expect(panel).toMatch(/\bborder-\[5px\]/);
+    expect(panel).toMatch(/\bborder-4\b/);
     expect(panel).toMatch(/\bborder-transparent\b/);
     expect(panel, 'padding would put the scrollbar back against the edge').not.toMatch(
       /(?:^|\s)p[xytrbl]?-\d/,
     );
   });
 
-  it('keeps option corners concentric with the panel', () => {
+  /*
+   * The scroll area is clipped to the card radius (10px) less the border. At
+   * `border-[5px]` that 5px curve cut into a row's 6px corner; a 4px border
+   * leaves a 6px curve, and the 1px of padding keeps the rows inside it, at
+   * the same 5px offset `border p-1` gave them.
+   */
+  it('keeps option corners concentric with the panel, and unclipped', () => {
     expect(ruleBody('.select-control option')).toMatch(/\brounded-control\b/);
-    expect(ruleBody('.select-control::picker(select)')).toMatch(/\bborder-\[5px\]/);
+    expect(ruleBody('.select-control::picker(select)')).toMatch(/\bborder-4\b[\s\S]*\bp-px\b/);
   });
 });

@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A dropdown long enough to scroll keeps its rounded, padded panel.** Source
   (eleven rows) and Settings' Timezone scroll, and on Windows their scrollbar
   sat flush against the panel's edge with a square grey track over both
-  right-hand corners. The scrollbar now sits inside the rounded edge, 4px clear
+  right-hand corners. The scrollbar now sits inside the rounded edge, 3px clear
   of it, in the theme's colours. Dropdowns that do not scroll look exactly as
   before.
 

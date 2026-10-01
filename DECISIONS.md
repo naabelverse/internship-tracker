@@ -4449,13 +4449,22 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   below the field, so it flips above it. `shadow-float`'s main cast falls downward, onto the field,
   so the top edge sits on the dimmed overlay with almost no shadow. The token is unchanged. That is
   how every flipped floating panel looks.
-- **Fix:** the 1px edge and the 4px inset are one transparent `border-[5px]`, and the visible edge is
-  a 1px outline over its outer pixel. The scrollbar and the clipped rows now sit inside the rounded
-  edge. `scrollbar-color` themes the thumb (`border-strong`) on a transparent track. Rows land
-  exactly where `border p-1` put them: measured row positions at rest are identical before and
-  after for all five New application selects in both themes.
+- **Fix:** the inset is a transparent `border-4` plus `p-px`, and the visible edge is a 1px outline
+  over the border's outer pixel. The scrollbar (3px clear of the edge line) and the clipped rows now
+  sit inside the rounded edge. `scrollbar-color` themes the thumb (`border-strong`) on a transparent
+  track. Rows land exactly where `border p-1` put them: measured row positions at rest are
+  identical before and after for all five New application selects in both themes.
+- **Why not one 5px border (found in review):** the scroll area is clipped to the card radius less
+  the border. At `border-[5px]` that curve is 5px with the rows touching it, so it cut the first
+  row's own 6px corner: up to 13 pixels per corner at 2x changed, by up to 33/255, on the focused
+  row in Employment type and Work mode. At `border-4` the curve is 6px with the rows 1px inside it.
+  Re-diffed against main at 2x in both themes, no pixel on a row differs. The remaining differences
+  are the redrawn lift (the 1px top band, Δ≤2, and its arc in the top corners, Δ≤16) and the edge's
+  curve antialiasing now that it is an outline (bottom corners Δ≤13 and the half-pixel right edge
+  Δ≤12). Both were accepted. The cast shadow outside the panel is pixel-identical, and main against
+  itself differed by 0 pixels.
 - **The lit edge moved, so it is redrawn:** `shadow-float` opens with an inset shadow, which is also
-  painted inside the border and would have sat 5px below the edge (a visible double line in dark
+  painted inside the border and would have sat 4px below the edge (a visible double line in dark
   mode). `tailwind.config.ts` now builds `float` from two named parts, and the panel uses
   `shadow-float-cast` (everything but the lift). It draws the lift from the same `--atmos-lift`
   tokens as a 1px gradient band directly under the edge. `float` itself is byte-identical, and a test

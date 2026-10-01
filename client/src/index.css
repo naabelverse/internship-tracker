@@ -419,19 +419,24 @@
        * inside the border, in front of the padding. With the usual `border p-1`
        * a list long enough to scroll, like Source, put the scrollbar flush
        * against the edge, and its square track painted over both right-hand
-       * corners. So the edge and the inset, 1px and 4px, are one transparent
-       * 5px border rather than a border and padding, which keeps the scrollbar,
-       * and the rows clipped as they scroll, inside the rounded edge. The
-       * visible 1px edge is an outline laid over the border's outer pixel. Rows
-       * sit exactly where `border p-1` put them.
+       * corners. So most of the inset is a transparent 4px border, which keeps
+       * the scrollbar, and the rows clipped as they scroll, inside the rounded
+       * edge. The visible 1px edge is an outline laid over the border's outer
+       * pixel.
+       *
+       * The last pixel of the inset stays padding. The scroll area is clipped
+       * to the card radius less the border, and with the whole 5px as border
+       * that curve (5px) cut into the first and last rows' own 6px corners. A
+       * 4px border leaves a 6px curve with the rows 1px inside it, so no row
+       * corner is clipped, and rows sit exactly where `border p-1` put them.
        *
        * `shadow-float`'s lit top edge is an inset shadow, which is also drawn
-       * inside the border, so it would sit 5px below the edge. The panel takes
+       * inside the border, so it would sit 4px below the edge. The panel takes
        * the rest of the shadow, `shadow-float-cast`, and draws the lift at the
        * same place as on every other floating panel: the pixel under the edge.
        */
       .select-control::picker(select) {
-        @apply my-1 max-h-96 rounded-card border-[5px] border-transparent bg-surface text-content shadow-float-cast outline outline-1 -outline-offset-1 outline-border;
+        @apply my-1 max-h-96 rounded-card border-4 border-transparent bg-surface p-px text-content shadow-float-cast outline outline-1 -outline-offset-1 outline-border;
         background-image: linear-gradient(
           to bottom,
           transparent 1px,
