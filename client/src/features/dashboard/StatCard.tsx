@@ -16,6 +16,7 @@ export interface StatCardProps {
   /** True when a fall is the good outcome, so the colour follows meaning. */
   lowerIsBetter?: boolean;
   isLoading: boolean;
+  /** A graphic beside the figures, centred on all three lines of them. */
   children?: ReactNode;
 }
 
@@ -24,6 +25,12 @@ export interface StatCardProps {
  *
  * Direction is carried by an arrow and by the word "up"/"down" in the label a
  * screen reader gets, not by colour alone, which SPEC section 6 requires.
+ *
+ * A card with a graphic becomes a flex row only then. The graphic used to sit
+ * in a row with the label and value alone, pinned to the top corner above an
+ * empty quarter of the card; centring it on the delta line too fills that
+ * space. The text keeps its top alignment either way, so labels stay level
+ * across a grid row whose cards stretch to different content heights.
  */
 export function StatCard({
   label,
@@ -40,42 +47,42 @@ export function StatCard({
   const isGood = lowerIsBetter ? !isUp : isUp;
   const Arrow = isUp ? ArrowUpIcon : ArrowDownIcon;
 
-  return (
-    <Card>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
-          {isLoading ? (
-            <Skeleton className="mt-2 h-8 w-20" label={`Loading ${label}`} />
-          ) : (
-            <p className="mt-1 text-stat stretch-display tabular-nums text-content">{value}</p>
-          )}
-        </div>
-        {children}
-      </div>
+  const hasGraphic = children !== undefined;
 
-      {!isLoading && (
-        // Wraps between the change and its period, never inside either, so a
-        // narrow card reads "↑ 32.3 pts" over "vs previous 30 days" rather
-        // than splitting "32.3" from "pts" or "No" from "change".
-        <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
-          {isFlat ? (
-            <span className="whitespace-nowrap text-content-subtle">No change</span>
-          ) : (
-            <span
-              className={cn(
-                'inline-flex items-center gap-1 whitespace-nowrap font-medium',
-                isGood ? 'text-success' : 'text-danger',
-              )}
-            >
-              <Arrow className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="sr-only">{isUp ? 'Up' : 'Down'}</span>
-              {formatDelta(Math.abs(delta))}
-            </span>
-          )}
-          <span className="text-content-subtle">{periodLabel}</span>
-        </p>
-      )}
+  return (
+    <Card className={hasGraphic ? 'flex gap-3' : undefined}>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
+        {isLoading ? (
+          <Skeleton className="mt-2 h-8 w-20" label={`Loading ${label}`} />
+        ) : (
+          <p className="mt-1 text-stat stretch-display tabular-nums text-content">{value}</p>
+        )}
+
+        {!isLoading && (
+          // Wraps between the change and its period, never inside either, so a
+          // narrow card reads "↑ 32.3 pts" over "vs previous 30 days" rather
+          // than splitting "32.3" from "pts" or "No" from "change".
+          <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+            {isFlat ? (
+              <span className="whitespace-nowrap text-content-subtle">No change</span>
+            ) : (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 whitespace-nowrap font-medium',
+                  isGood ? 'text-success' : 'text-danger',
+                )}
+              >
+                <Arrow className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">{isUp ? 'Up' : 'Down'}</span>
+                {formatDelta(Math.abs(delta))}
+              </span>
+            )}
+            <span className="text-content-subtle">{periodLabel}</span>
+          </p>
+        )}
+      </div>
+      {hasGraphic && <div className="shrink-0 self-center">{children}</div>}
     </Card>
   );
 }

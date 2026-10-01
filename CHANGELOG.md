@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The weekly goal ring shows its progress against the whole circle.** The
+  unfilled part of the ring was almost the card's own colour, so 1 of 5 read as
+  a stray dark stroke. It is now a visible tint in both themes. The arc covers
+  exactly its share: 1 of 5 is 72°, where its rounded ends used to stretch it to
+  86°. The ring is centred beside the whole card rather than tucked into the top
+  corner. The Dashboard's subtitle now reads "Your applications, replies and
+  interviews, and what's due next."
 - **"Try the demo" keeps the theme the visitor already picked.** The demo
   dashboard opened in the shared demo account's stored theme, often dark,
   whatever the visitor had chosen, and signing out left the landing page on it.

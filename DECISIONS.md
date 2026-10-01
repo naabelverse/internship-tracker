@@ -4474,3 +4474,33 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
 - **Not done:** the panel still flips above the field when it does not fit below. That is the
   browser's own position-try. Making it stay below and shrink instead would change every select,
   which is beyond this fix.
+
+## The weekly goal ring draws its exact share on a visible track (1 Oct 2026)
+
+- **What was wrong:** the fill was rendering as intended. `primary` is the neutral near-black
+  chosen on 11 Sep, the same colour the timeline uses for applications. The track was
+  `surface-muted`, which measures 1.14:1 on the card (1.11:1 dark), so the rest of the circle
+  vanished and the arc read as a stray dark stroke. The arc also overshot. Round caps reach half the
+  5-unit stroke past each end (7.16° on r=20), so 1 of 5 painted 86.29° instead of 72°, and it
+  started before twelve o'clock. Measured by re-rendering the live markup at 600px.
+- **Fix:** butt caps, and the track is `primary` at 20%, like the timeline's area fill: 1.54:1 on the
+  card (1.72:1 dark), with the fill at 11.4:1 (6.7:1) against it. Measured after: 1 of 5 = 72.07°,
+  1 of 3 = 120.00°, 0 of 5 = 0°, 5 of 5 = 360° (green, no seam), in both themes. The share comes
+  from `completed / target` rather than the server's `percentage`, which is rounded to one decimal
+  (1 of 3 would have drawn 119.88°). A goal of 0, which settings allow, draws an empty ring.
+- **Why not `border-strong`:** it was built first, at 2.15:1 in light. The grey remainder then
+  outweighed the progress it framed. In dark the two candidates are within a few channel values.
+- **Why the track stays under 3:1:** the ring repeats "1/5", which is printed beside it, and its
+  `aria-label` says the same, so the remainder is not the only carrier of the value. The part that
+  shows the value, fill against track, is 11.4:1.
+- **Layout:** the card was not taller than its siblings. The 48px ring added 0.7px (118 against
+  117.3). It sat in a row with the label and value only, pinned to the top corner above an empty
+  quarter of the card. `StatCard` now puts a graphic beside all three lines, centred on them, and
+  the ring is 56px from `sm` (48px below). The card is now 117.3px like the rest, at 1440, 1024 and
+  390px in both themes. Cards without a graphic keep a plain block. The only measured change to them
+  is their figure's paragraph box spanning its column, with glyph positions unchanged.
+- **Not changed:** Settings' usage meter has the same `bg-primary` on `bg-surface-muted` pairing.
+  On a 6px bar anchored left it still reads, so it is left for its own decision.
+- **Subtitle:** the no-streak line is now "Your applications, replies and interviews, and what's due
+  next." It names what the page shows, as the page's meta description does. The user chose it from
+  three options.

@@ -66,7 +66,7 @@ export function DashboardView(): JSX.Element {
         description={
           summary.data.currentStreakDays > 0
             ? `${String(summary.data.currentStreakDays)} day streak — keep it going.`
-            : 'Your search at a glance.'
+            : "Your applications, replies and interviews, and what's due next."
         }
         actions={
           <Button onClick={openCreate}>
