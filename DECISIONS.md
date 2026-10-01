@@ -4522,3 +4522,27 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   `hidden sm:inline`. `display: none` takes the hidden one out of the accessibility tree, so the
   header's snapshot holds exactly the visible line at every width checked. jsdom applies no CSS, so
   `dashboard.test.tsx` can only hold the class contract. The browser check is the real evidence.
+
+## The Upcoming row hovers with the select panel's inset ink wash (2 Oct 2026)
+
+- **Before:** the dashboard's Upcoming row hovered with `bg-surface-muted`, the grey that buttons,
+  icon buttons and the sidebar use. In light it paints `231 237 246` on the white card: OKLCH chroma
+  0.0137 at hue 258, 2.7 times the card's own 0.0051, so a whole row of it reads as lavender. In dark
+  it was already close to neutral.
+- **After:** `bg-primary/5`, the hover of the select panel's options and the date calendar's days,
+  which this file's entry on the select panel records as "a soft wash of the ink colour, not a hue".
+  Painted: `237 240 244` light (chroma 0.0058, the card's own level), `35 46 60` dark. Against the
+  card it is 1.110:1 light (was 1.143) and 1.126:1 dark (was 1.115). Text on the hovered row: body
+  17.33:1 light / 11.52:1 dark, subtle 7.41:1 / 4.80:1 (was 4.85:1). Read from screenshot pixels,
+  which matched the computed composites.
+- **Why not the applications table:** its rows have no hover, only their icon buttons do.
+- **Inset:** the tint used to run flush to the dot and the date, 0px on both sides, where the select
+  panel's options sit `px-2` inside theirs. The linked row is now `-mx-2 px-2`. The tint clears the
+  dot and the date by 8px, and the text does not move: the dot and the date's right edge still meet
+  the panel heading and "Open calendar" exactly, at 1440 and 390 wide. The 8px comes out of the
+  card's padding, leaving 12px outside the tint at 1440 (`sm:p-5`) and 8px at 390 (`p-4`). The tint
+  is 8px wider than the row dividers on each side. That is the cost of keeping the text and the
+  dividers where they were, rather than indenting the text or pulling the dividers out with it.
+- **Scope:** only the `Link` variant hovers. The landing hero renders the same row without `to`, and
+  that gets no hover class, which the new test holds. The tint still appears only under the pointer
+  and clears on leave. Keyboard focus shows the global focus ring and no tint, as it did before.

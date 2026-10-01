@@ -23,6 +23,14 @@ interface UpcomingRowProps {
 const ROW = 'flex items-center gap-3 py-2.5';
 
 /**
+ * The select panel's option hover: a wash of the neutral ink, inset `px-2` from
+ * the text. `surface-muted` is a grey for controls, and on the white card it
+ * reads as lavender. The matching `-mx-2` spends the inset from the card's own
+ * padding, so the row's text stays aligned with the panel heading.
+ */
+const ROW_HOVER = '-mx-2 px-2 rounded-control transition-colors hover:bg-primary/5';
+
+/**
  * One deadline or interview: the dashboard's upcoming panel and the landing
  * hero's example of it both render this, so the picture on the landing page
  * cannot drift from the thing it depicts.
@@ -63,11 +71,7 @@ export function UpcomingRow({ event, to }: UpcomingRowProps): JSX.Element {
       {body}
     </div>
   ) : (
-    <Link
-      data-upcoming-row=""
-      to={to}
-      className={cn(ROW, 'rounded-control transition-colors hover:bg-surface-muted')}
-    >
+    <Link data-upcoming-row="" to={to} className={cn(ROW, ROW_HOVER)}>
       {body}
     </Link>
   );
