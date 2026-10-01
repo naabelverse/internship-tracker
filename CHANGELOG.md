@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Source options are Malaysia-focused, and "Other" asks what it was.** The
   list is now JobStreet, LinkedIn, Indeed, Hiredly, Maukerja, MYFutureJobs,
   Company site, Referral, Career fair and Other. Internshala is retired.
-  Choosing Other shows a required "Please specify" field, stored as
+  Choosing Other shows a required "Other source" field, stored as
   `sourceOther`, shown as "Other: Glints" in the table and on the detail page,
   and exported as its own CSV column. Filters and the "By source" chart still
   group every Other together. The chart is now one colour, so any number of
