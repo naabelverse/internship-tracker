@@ -15,6 +15,16 @@ function token(name: string): string {
   return `rgb(var(--${name}) / <alpha-value>)`;
 }
 
+/** The floating panel's lit top edge, the first layer of `shadow-float`. */
+const FLOAT_LIFT = 'inset 0 1px 0 0 rgb(var(--atmos-lift) / var(--atmos-lift-peak))';
+
+/** The rest of `shadow-float`: a tight contact shadow, then a wide coloured cast. */
+const FLOAT_CAST = [
+  '0 1px 2px 0 rgb(var(--color-shadow) / 0.08)',
+  '0 2px 8px -4px rgb(var(--color-shadow) / 0.12)',
+  '0 40px 80px -32px rgb(var(--atmos-cast) / var(--atmos-cast-peak))',
+];
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   // `dark:` keys off the same attribute the inline boot script sets, so there is
@@ -140,12 +150,14 @@ export default {
          * rather than darker, which makes the same declaration read as a shadow
          * in light mode and as a glow in dark mode.
          */
-        float: [
-          'inset 0 1px 0 0 rgb(var(--atmos-lift) / var(--atmos-lift-peak))',
-          '0 1px 2px 0 rgb(var(--color-shadow) / 0.08)',
-          '0 2px 8px -4px rgb(var(--color-shadow) / 0.12)',
-          '0 40px 80px -32px rgb(var(--atmos-cast) / var(--atmos-cast-peak))',
-        ].join(', '),
+        float: [FLOAT_LIFT, ...FLOAT_CAST].join(', '),
+        /*
+         * The same panel without its lit edge, for a panel whose edge is not its
+         * padding box. An inset shadow is painted inside the border, so on the
+         * select panel's 4px border it would land 4px below the edge; that panel
+         * draws the lift itself (`.select-control::picker(select)` in index.css).
+         */
+        'float-cast': FLOAT_CAST.join(', '),
       },
       /*
        * Motion, given a scale for the same reason the radii have one.
