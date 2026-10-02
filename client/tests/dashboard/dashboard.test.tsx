@@ -260,6 +260,27 @@ describe('dashboard', () => {
       ).toBeInTheDocument();
     });
 
+    it('draws the weekly pace against the goal from the summary', async () => {
+      renderDashboard({
+        'GET /analytics/summary': () => ({
+          status: 200,
+          data: successBody(
+            makeSummary({
+              weeklyGoal: { target: 7, completed: 3, percentage: 42.9, previousCompleted: 1 },
+            }),
+          ),
+        }),
+      });
+
+      expect(
+        await screen.findByRole('img', {
+          name: /^applications added per week.*weekly goal: 7\.$/i,
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getAllByTestId('pace-bar')).toHaveLength(12);
+      expect(screen.getByText(/^goal met in \d+ of 12 weeks · /i)).toBeInTheDocument();
+    });
+
     it('explains an empty chart instead of drawing nothing', async () => {
       renderDashboard({
         'GET /analytics/by-source': () => ({ status: 200, data: successBody({ sources: [] }) }),

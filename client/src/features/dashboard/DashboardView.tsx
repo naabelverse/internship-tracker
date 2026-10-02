@@ -164,6 +164,7 @@ export function DashboardView(): JSX.Element {
           <ActivityHeatmap
             points={heatmap.data?.points}
             timeZone={timeZone}
+            weeklyGoal={summary.data.weeklyGoal.target}
             isLoading={heatmap.isPending}
           />
         </>

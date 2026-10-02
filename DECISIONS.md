@@ -4628,3 +4628,38 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
 - **Not covered:** a browser in a different zone from the account. The heatmap now follows the
   account, so it is right there too. Other date displays, such as the timeline chart's labels, still
   format in the browser's zone, and that is outside this fix.
+
+## The Activity card shows weekly pace against the goal (2 Oct 2026)
+
+- **What:** twelve bars, one per heatmap column, with a dashed line at the weekly goal and a line
+  such as "Goal met in 2 of 12 weeks · 3.4 a week on average". It fills the space beside the grid,
+  which was 602px of empty card at 1440.
+- **No new request:** the bars sum the heatmap's own 84 cells seven at a time (`paceWeeks.ts`), and
+  the goal is `summary.weeklyGoal.target`, which the page already waits on. The server counts the
+  goal's `completed` on `createdAt` from the local Monday in the account's zone, and the timeline's
+  `created` buckets use the same field and zone, so this week's bar always equals the stat card's
+  "N/5".
+- **Average over all twelve weeks, the one in progress included:** "of 12" and "a week" then
+  describe the same twelve columns. Early in a week the figure reads slightly low, which is preferred
+  to an inflated one. Confirmed with the user.
+- **A goal of 0 reads "No weekly goal set"** with no goal line, rather than a dashed line on the
+  baseline that every week "meets". Confirmed with the user.
+- **Colours:** the bars take the heatmap's five `heat-*` levels, scaled to the busiest week by the
+  same function the cells use (now `heatLevels.ts`), so the one "Less … More" legend covers both. The
+  goal line is `content-subtle`, the card's small-label colour. No new tokens.
+- **Beside or below is a container query on the card, not a viewport breakpoint.** The room beside
+  the grid is not monotonic in the window width. The sidebar arrives at `lg` and takes 256px, so a
+  1024 window leaves 186px beside the grid while 1023, with the sidebar in a drawer, leaves 457. The
+  panel moves beside the grid from a 48rem card, where the grid keeps its full 28rem and the panel
+  gets at least 260px. Measured: 1440, 1280, 1180 and 1023 put it beside; 1100, 1024, 768 and 375
+  stack it under the legend, where each bar is centred on its week's column to within 0.5px.
+  Tailwind 3.4's arbitrary `[@container_(…)]:` variant does this without the container-queries
+  plugin.
+- **One CSS grid for labels, cells, legend and panel.** Stacking puts the bars in the cells' own
+  column, which is what lines them up. The legend spans the label column to keep its place, and is
+  `contain: inline-size` so its text does not size that `auto` column. Without it the column grew to
+  130px and the grid shrank from 281px to 179px at 375. The first capture caught that, and
+  `e2e/audits/heatmap.spec.ts` now asserts the label column width; the existing grid-width test had
+  passed against the broken build.
+- **Cost:** where the panel stacks, the card grows by 144px. Where it sits beside the grid, the
+  card's height is unchanged at 368px.
