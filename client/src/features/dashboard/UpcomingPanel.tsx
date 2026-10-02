@@ -60,7 +60,9 @@ export function UpcomingPanel({
           Nothing scheduled in the next few weeks.
         </p>
       ) : (
-        <ul className="mt-3 divide-y divide-border">
+        // `-mx-2` widens the list, and with it the dividers, to the rows' hover tint;
+        // each row's `px-2` puts its text back in line with the heading.
+        <ul className="-mx-2 mt-3 divide-y divide-border">
           {upcoming.map((event) => (
             <li key={event.id}>
               <UpcomingRow event={event} to={paths.applicationDetail(event.applicationId)} />

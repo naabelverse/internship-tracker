@@ -61,8 +61,10 @@ describe('UpcomingRow', () => {
     const link = screen.getByRole('link', { name: /grab/i });
     expect(link).toHaveClass('hover:bg-primary/5');
     expect(link).not.toHaveClass('hover:bg-surface-muted');
-    // The tint clears the dot and the date by 8px, taken from the card's padding.
-    expect(link).toHaveClass('-mx-2', 'px-2');
+    // The tint clears the dot and the date by 8px. The panel's list, not the row,
+    // takes that 8px from the card's padding, so the dividers span the tint too.
+    expect(link).toHaveClass('px-2');
+    expect(link).not.toHaveClass('-mx-2');
     unmount();
 
     renderWithProviders(<UpcomingRow event={event} />);

@@ -4546,3 +4546,23 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
 - **Scope:** only the `Link` variant hovers. The landing hero renders the same row without `to`, and
   that gets no hover class, which the new test holds. The tint still appears only under the pointer
   and clears on leave. Keyboard focus shows the global focus ring and no tint, as it did before.
+
+## The Upcoming list's dividers span the row hover tint (2 Oct 2026)
+
+- **Supersedes** the trade-off in the entry above: "The tint is 8px wider than the row dividers on
+  each side." The dividers are `divide-y` borders on the list items, so they spanned the card's
+  content box, while each row's `-mx-2` took its tint 8px past them. The brief described the reverse,
+  with the dividers poking out past a narrower tint. Measured on `main`, the tint overhung the
+  dividers by 8.0px on each side for the first, middle and last rows, in both themes, at 1440 and
+  390 wide.
+- **Fix:** the `-mx-2` moves from the row to `UpcomingPanel`'s list, and the row keeps `px-2`. The
+  list, and with it every divider, widens to exactly the tint's edges. The tint, the text and the
+  hover colour do not move. Measured after, in all 24 cases: divider and tint edges coincide (0.0px),
+  the tint is 12px from the card's inner edge at 1440 and 8px at 390 as before, it still clears the
+  dot by 8px, and the dot and the date still meet the heading and "Open calendar" exactly.
+- **The other way was rejected:** narrowing the tint to the old dividers brings back the flush text
+  that the entry above fixed, unless the text is indented and loses its line with the heading.
+- **At rest the dividers are longer:** 16px longer in all, 8px past the text column on each side.
+  Before, they ended level with the heading and the dates. That is the visible cost, and the review
+  frames show it at rest.
+- **The landing hero's copy is unchanged.** It has its own list and plain rows, with no hover.
