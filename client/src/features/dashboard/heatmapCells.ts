@@ -1,3 +1,4 @@
+import { statusUpdates } from '@/features/dashboard/statusUpdates';
 import type { TimelinePoint } from '@/types/analytics';
 
 /** The grid's length, which SPEC section 6 fixes at the last twelve weeks. */
@@ -8,7 +9,10 @@ const MS_PER_DAY = 86_400_000;
 export interface Cell {
   /** The user's local calendar date, `YYYY-MM-DD`. */
   key: string;
+  /** Applications added that day. */
   count: number;
+  /** Status changes to existing applications that day; see `statusUpdates`. */
+  updates: number;
 }
 
 /**
@@ -47,15 +51,17 @@ function weekdayIndex(key: string): number {
 
 /**
  * The last twelve weeks of the user's local days, ending on the week that
- * holds `now`, Monday-aligned, with each bucket's applications on the day it
- * names in `timeZone`. The browser's own zone plays no part in it.
+ * holds `now`, Monday-aligned, with each bucket's applications and status
+ * updates on the day it names in `timeZone`. The browser's own zone plays no part in it.
  */
 export function buildCells(points: TimelinePoint[], now: Date, timeZone: string): Cell[] {
   const counts = new Map<string, number>();
+  const updates = new Map<string, number>();
 
   for (const point of points) {
     const key = localDayKey(new Date(point.bucket), timeZone);
     counts.set(key, (counts.get(key) ?? 0) + point.created);
+    updates.set(key, (updates.get(key) ?? 0) + statusUpdates(point));
   }
 
   // Monday of the current week, then back eleven more weeks, so the grid always
@@ -66,6 +72,6 @@ export function buildCells(points: TimelinePoint[], now: Date, timeZone: string)
   return Array.from({ length: WEEKS * DAYS_PER_WEEK }, (_unused, index) => {
     const key = shiftDayKey(start, index);
 
-    return { key, count: counts.get(key) ?? 0 };
+    return { key, count: counts.get(key) ?? 0, updates: updates.get(key) ?? 0 };
   });
 }

@@ -4663,3 +4663,43 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   passed against the broken build.
 - **Cost:** where the panel stacks, the card grows by 144px. Where it sits beside the grid, the
   card's height is unchanged at 368px.
+
+## Status updates leave out each application's opening entry (2 Oct 2026)
+
+- **What:** the Activity card shows "Added" and "Status updates" over the grid's twelve weeks, with a
+  line such as "1.3 updates for every application added", in the empty top of the column above
+  Weekly pace. The demo account reads 41 added and 53 status updates.
+- **The correction:** the timeline's `statusChanges` counts every `statusHistory` entry, and every
+  application's history opens with a `from: null` entry written as it is created — by the form, the
+  CSV import (which goes through `createApplication`) and the demo set alike. So each application
+  added was also counted once as a status change. Shown raw, the demo account would have read
+  "94 status updates, 2.3 per application": 41 of the 94 are the 41 applications themselves. The
+  client now shows `max(0, statusChanges − created)` per bucket (`statusUpdates.ts`). That entry and
+  `createdAt` are the same moment, so they always share a bucket and the subtraction removes exactly
+  them.
+- **Why it matters:** "status updates" is a claim about how often the user acts on applications
+  they already have. The raw figure more than doubled it for this account, and for an account that
+  only adds applications it reported one update per application where there were none. That is a
+  wrong number, not a styling choice.
+- **The Timeline chart had the same fault, and is corrected too.** Its "Status changes" line and its
+  screen-reader table plotted the raw count. This was beyond the approved change (the stats block);
+  it is included because the requirement was that the raw count is shown nowhere, and it uses the
+  same helper.
+- **Client-side rather than on the server:** filtering `from: null` out of the aggregation would be
+  equally exact, but it changes what the documented `statusChanges` field means for every consumer.
+  The subtraction keeps the API as it is and puts the correction in one function both charts use.
+  `server/tests/analytics.statusUpdates.test.ts` holds the server to the premise: on the demo set,
+  `statusChanges − created` equals the `from`-bearing entries counted straight off the documents in
+  every bucket, and the grid's twelve weeks give 41, 94 and 53.
+- **"For every application added", not "per application":** the twelve weeks' updates include moves
+  on applications added before them, so the ratio compares two activity counts, not a per-record
+  rate.
+- **Placement:** above Weekly pace, not in the strip to its right, which only exists above a
+  ~1320px window (0px at 1280) and would have needed its own breakpoint. Beside the grid (1023, 1180,
+  1280, 1366, 1440) the side column spans the grid and legend rows with `justify-between`, so the
+  figures sit level with the grid's top row, Weekly pace stays on the legend line, and the card keeps
+  its 368px height. Stacked (1024, 1100, 768, 375) the figures sit above Weekly pace in the grid's
+  column and the card grows by 87px.
+- **Test fixtures changed deliberately:** `makeTimeline` had buckets with fewer status changes than
+  applications added, which real data cannot produce. Its raw counts now include the openings, so the
+  corrected figures are the same 3, 6 and 9 as before.

@@ -17,7 +17,6 @@ interface WeeklyPaceProps {
   cells: Cell[];
   /** The account's weekly goal; 0 means none is set. */
   target: number;
-  className?: string;
 }
 
 /**
@@ -28,7 +27,7 @@ interface WeeklyPaceProps {
  * own levels and outline, and the dashed goal line is the card's subtle text
  * colour, so nothing here is a colour the card did not already use.
  */
-export function WeeklyPace({ cells, target, className }: WeeklyPaceProps): JSX.Element {
+export function WeeklyPace({ cells, target }: WeeklyPaceProps): JSX.Element {
   const totals = useMemo(() => weeklyTotals(cells), [cells]);
   const scale = paceScale(totals, target);
   const busiest = totals.reduce((max, week) => Math.max(max, week.count), 0);
@@ -36,7 +35,7 @@ export function WeeklyPace({ cells, target, className }: WeeklyPaceProps): JSX.E
   const goalLabel = target > 0 ? ` Weekly goal: ${String(target)}.` : '';
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs text-content-subtle">Weekly pace</h3>
         {target > 0 && (
