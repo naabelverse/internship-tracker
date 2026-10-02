@@ -5,6 +5,7 @@ import type {
   SourceEntry,
   StatusBreakdownEntry,
   Timeline,
+  TimelinePoint,
 } from '@/types/analytics';
 import type { ApiErrorBody, ApiSuccessBody, PaginationMeta } from '@/types/api';
 import type { Application, Attachment, Interview } from '@/types/application';
@@ -250,6 +251,11 @@ export function makeTimeline(overrides: Partial<Timeline> = {}): Timeline {
     ],
     ...overrides,
   };
+}
+
+/** One timeline bucket; `bucket` is the UTC instant of a local day or week start. */
+export function makeTimelinePoint(overrides: Partial<TimelinePoint> = {}): TimelinePoint {
+  return { bucket: '2026-10-01T16:00:00.000Z', created: 1, statusChanges: 0, ...overrides };
 }
 
 export function makeFunnel(): FunnelStage[] {

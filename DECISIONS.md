@@ -4600,3 +4600,31 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
 - **Test:** `e2e/audits/heatmap.spec.ts` checks square cells, the grid width against `min(room, 448)`
   and label alignment at four widths. jsdom applies no CSS. The spec fails on `main` ("grid width @
   375px: expected 281, received 188") and passes on this branch.
+
+## The Activity heatmap keys its days in the account's timezone (2 Oct 2026)
+
+- **Bug:** the analytics pipeline buckets each day on the user's local midnight and returns that as
+  a UTC instant, so local 2 Oct in Kuala Lumpur arrives as `2026-10-01T16:00:00Z`. The heatmap took
+  the first ten characters (`2026-10-01`) and keyed its own cells by the browser clock's UTC date. For
+  a UTC+8 account every count was drawn on the previous day's cell from 08:00 to midnight local, and
+  only lined up before 08:00. West of UTC the counts were keyed correctly, but the grid's week
+  alignment came from the browser's local weekday while its keys came from UTC, so the grid could
+  slide a day.
+- **Fix:** `features/dashboard/heatmapCells.ts` reads every bucket, and "today", back as a calendar
+  date in the account's IANA zone (`Intl.DateTimeFormat` with `timeZone`). It steps between days with
+  date-only arithmetic at UTC midnight, so a daylight saving change cannot skip or repeat a cell. The
+  zone is `user.timezone`, the one the server bucketed on, not the browser's. The browser's zone is
+  only a fallback for a session with no user, which the protected dashboard never renders. Cell titles
+  format the date key itself.
+- **Kept on the client:** the API contract is unchanged. The server's instant is correct, and the
+  timeline chart formats the same instants in the browser's zone.
+- **Test:** `client/tests/dashboard/heatmapCells.test.ts` pins local Friday 2 Oct 2026:
+  - `Asia/Kuala_Lumpur` at 07:30, 13:00 and 23:59 local, on both sides of the UTC date change;
+  - `America/Los_Angeles` at 01:00, 13:00 and 22:30 local;
+  - `America/New_York` across the 1 Nov 2026 change back from daylight time.
+    With the old algorithm swapped back in, 4 of the 8 cases fail under a UTC process zone and 6 fail
+    under `Asia/Kuala_Lumpur`. The fix passes all 8 under UTC, `Asia/Kuala_Lumpur` and
+    `America/Los_Angeles`.
+- **Not covered:** a browser in a different zone from the account. The heatmap now follows the
+  account, so it is right there too. Other date displays, such as the timeline chart's labels, still
+  format in the browser's zone, and that is outside this fix.
