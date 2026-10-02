@@ -3,17 +3,16 @@ import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
+import { buildCells } from '@/features/dashboard/heatmapCells';
 import type { TimelinePoint } from '@/types/analytics';
 
 interface ActivityHeatmapProps {
   /** Daily buckets; anything coarser cannot fill a per-day grid. */
   points: TimelinePoint[] | undefined;
+  /** The account's IANA zone, which the server bucketed the days in. */
+  timeZone: string;
   isLoading: boolean;
 }
-
-const WEEKS = 12;
-const DAYS_PER_WEEK = 7;
-const MS_PER_DAY = 86_400_000;
 
 /** Monday first, matching the week the analytics aggregation buckets on. */
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -33,36 +32,6 @@ function levelFor(count: number, busiest: number): number {
   return 1;
 }
 
-interface Cell {
-  key: string;
-  date: Date;
-  count: number;
-}
-
-/** The last twelve weeks of days, ending on today, Monday-aligned. */
-function buildCells(points: TimelinePoint[], today: Date): Cell[] {
-  const counts = new Map<string, number>();
-
-  for (const point of points) {
-    const key = point.bucket.slice(0, 10);
-    counts.set(key, (counts.get(key) ?? 0) + point.created);
-  }
-
-  // Monday of the current week, then back eleven more weeks, so the grid always
-  // ends on a whole week and today never lands mid-column.
-  const mondayOffset = (today.getDay() + 6) % DAYS_PER_WEEK;
-  const start = new Date(
-    today.getTime() - (mondayOffset + (WEEKS - 1) * DAYS_PER_WEEK) * MS_PER_DAY,
-  );
-
-  return Array.from({ length: WEEKS * DAYS_PER_WEEK }, (_unused, index) => {
-    const date = new Date(start.getTime() + index * MS_PER_DAY);
-    const key = date.toISOString().slice(0, 10);
-
-    return { key, date, count: counts.get(key) ?? 0 };
-  });
-}
-
 /**
  * Activity per day over the last twelve weeks.
  *
@@ -70,8 +39,12 @@ function buildCells(points: TimelinePoint[], today: Date): Cell[] {
  * coloured squares need no canvas, and as real elements each one can carry its
  * own title and its own row in the table below.
  */
-export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JSX.Element {
-  const cells = useMemo(() => buildCells(points ?? [], new Date()), [points]);
+export function ActivityHeatmap({
+  points,
+  timeZone,
+  isLoading,
+}: ActivityHeatmapProps): JSX.Element {
+  const cells = useMemo(() => buildCells(points ?? [], new Date(), timeZone), [points, timeZone]);
   const busiest = cells.reduce((max, cell) => Math.max(max, cell.count), 0);
   const total = cells.reduce((sum, cell) => sum + cell.count, 0);
   const activeDays = cells.filter((cell) => cell.count > 0).length;
@@ -119,7 +92,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
                   key={cell.key}
                   data-testid="heatmap-cell"
                   data-count={cell.count}
-                  title={`${formatDate(cell.date.toISOString())}: ${String(cell.count)} added`}
+                  title={`${formatDate(cell.key)}: ${String(cell.count)} added`}
                   className={cn(
                     'aspect-square rounded-chip ring-1 ring-inset ring-border/60',
                     LEVEL_CLASSES[levelFor(cell.count, busiest)],

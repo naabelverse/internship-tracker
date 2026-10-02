@@ -20,6 +20,7 @@ import {
 } from '@/features/dashboard/useDashboardQueries';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { useSession } from '@/hooks/useSession';
 import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 import type { TimelineGranularity } from '@/types/analytics';
 
@@ -58,6 +59,9 @@ export function DashboardView(): JSX.Element {
   const heatmap = useHeatmapQuery();
   const upcoming = useUpcomingQuery();
   const { statusBreakdown, bySource, funnel, topCompanies } = useBreakdownQueries();
+  // The zone the server bucketed the heatmap's days in. The dashboard is only
+  // reachable signed in, so the browser's own zone is a fallback in name only.
+  const timeZone = useSession().user?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const openCreate = (): void => {
     setCreateOpen(true);
@@ -157,7 +161,11 @@ export function DashboardView(): JSX.Element {
             />
           </div>
 
-          <ActivityHeatmap points={heatmap.data?.points} isLoading={heatmap.isPending} />
+          <ActivityHeatmap
+            points={heatmap.data?.points}
+            timeZone={timeZone}
+            isLoading={heatmap.isPending}
+          />
         </>
       )}
 
