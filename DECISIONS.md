@@ -4738,3 +4738,8 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   shorter than the loaded card. The legend and its placeholder now carry `row-start-2`.
 - **Heatmap label wording:** its screen-reader label said "N active days" for days with an
   application added. It now says "across N days", so "active" has one meaning on the card.
+- **Strip spacing, reviewed and accepted:** in the strip the stat sits 324px right of Status
+  updates (measured, at 1440 and 1536). At 1440 it reads as a fourth figure with a wide pause; at
+  1536 it is looser, with 125px of strip to its right. Judged loose but clearly labelled, and left
+  as is. Optional future nice-to-have, not planned: right-align the strip copy under "Last 12
+  weeks", so it anchors to the card's corner at every strip width.
