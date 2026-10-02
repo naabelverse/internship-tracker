@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The dashboard's Activity card shows weekly pace against your goal.**
+  Twelve small bars, one per week of the heatmap, with a dashed line at the
+  weekly goal and a line such as "Goal met in 2 of 12 weeks · 3.4 a week on
+  average". It sits beside the grid when the card has room, and below it, each
+  bar under its own week, when it does not. It uses data the dashboard already
+  loads, so it adds no request.
 - **`npm run storage:sweep -w server` finds uploaded files that no application
   references** (issue #42), the ones left behind by deletions before the #34
   fix. It is a dry run by default. `--apply --expect <N>` deletes exactly the

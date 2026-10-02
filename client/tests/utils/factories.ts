@@ -7,6 +7,7 @@ import type {
   Timeline,
   TimelinePoint,
 } from '@/types/analytics';
+import type { Cell } from '@/features/dashboard/heatmapCells';
 import type { ApiErrorBody, ApiSuccessBody, PaginationMeta } from '@/types/api';
 import type { Application, Attachment, Interview } from '@/types/application';
 import type { CalendarEvent } from '@/types/calendar';
@@ -256,6 +257,25 @@ export function makeTimeline(overrides: Partial<Timeline> = {}): Timeline {
 /** One timeline bucket; `bucket` is the UTC instant of a local day or week start. */
 export function makeTimelinePoint(overrides: Partial<TimelinePoint> = {}): TimelinePoint {
   return { bucket: '2026-10-01T16:00:00.000Z', created: 1, statusChanges: 0, ...overrides };
+}
+
+/**
+ * Heatmap cells, seven per entry of `weekTotals`, from the Monday `start`.
+ * Each week's total is split between its Monday and its Thursday, so a reader
+ * that took one day per week instead of summing all seven would come up short.
+ */
+export function makeWeeksOfCells(weekTotals: number[], start = '2026-07-13'): Cell[] {
+  const first = Date.parse(`${start}T00:00:00Z`);
+
+  return weekTotals.flatMap((total, week) =>
+    Array.from({ length: 7 }, (_unused, day) => {
+      const key = new Date(first + (week * 7 + day) * 86_400_000).toISOString().slice(0, 10);
+      const monday = Math.ceil(total / 2);
+      const count = day === 0 ? monday : day === 3 ? total - monday : 0;
+
+      return { key, count };
+    }),
+  );
 }
 
 export function makeFunnel(): FunnelStage[] {
