@@ -3,10 +3,12 @@ import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
+import { ActiveDaysStat } from '@/features/dashboard/ActiveDaysStat';
 import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { WeeklyPace } from '@/features/dashboard/WeeklyPace';
 import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
-import { buildCells } from '@/features/dashboard/heatmapCells';
+import { countActiveDays } from '@/features/dashboard/followThroughStats';
+import { buildCells, localDayKey } from '@/features/dashboard/heatmapCells';
 import type { TimelinePoint } from '@/types/analytics';
 
 interface ActivityHeatmapProps {
@@ -24,21 +26,38 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
  * Weekday labels, the grid, and the side column (follow-through over weekly
- * pace), as one CSS grid whose second column is the heatmap's: up to `max-w-md` (28rem), which puts a cell
- * at about 32px and the grid at 259px tall, level with the 256px plots in the
- * chart cards above.
+ * pace), as one CSS grid whose second column is the heatmap's: up to
+ * `max-w-md` (28rem), which puts a cell at about 32px and the grid at 259px
+ * tall, level with the 256px plots in the chart cards above.
  *
  * Narrow, the side column takes the row under the legend in that same column,
  * so each pace bar sits directly under its week. From a 48rem card it moves
- * beside the grid instead, behind a 1rem spacer track: the grid keeps its full 28rem
- * and the panel gets at least 260px, up to 28rem, where its bars match the
- * cells' pitch exactly. It is a container query, not a viewport breakpoint,
+ * beside the grid instead, behind a 1rem spacer track: the grid keeps its full
+ * 28rem and the panel gets at least 260px, up to 28rem, where its bars match
+ * the cells' pitch exactly. From a 66rem card the side column is full width
+ * and a strip opens to its right, behind another 1rem spacer; see
+ * `ACTIVE_DAYS_IN_STRIP`. It is a container query, not a viewport breakpoint,
  * because the room beside the grid is not monotonic in the viewport: the
  * sidebar arriving at `lg` takes 256px, so a 1024 window leaves about 186px
  * beside the grid while a 1023 one, with the sidebar in a drawer, leaves 457.
  */
 const LAYOUT =
-  'mt-4 grid grid-cols-[auto_minmax(0,28rem)] justify-start gap-x-2 gap-y-4 [@container_(min-width:48rem)]:grid-cols-[auto_28rem_1rem_minmax(0,28rem)]';
+  'mt-4 grid grid-cols-[auto_minmax(0,28rem)] justify-start gap-x-2 gap-y-4 [@container_(min-width:48rem)]:grid-cols-[auto_28rem_1rem_minmax(0,28rem)] [@container_(min-width:66rem)]:grid-cols-[auto_28rem_1rem_28rem_1rem_minmax(0,1fr)]';
+
+/**
+ * Active days has two places, and exactly one copy shows. From a 66rem card it
+ * takes the strip right of the side column: labels, grid, side column, two
+ * spacers and five gaps come to 988px, so a 66rem (1056px) card leaves 68px,
+ * room for "Active days" at 12px. That is a window of about 1418px with the
+ * sidebar; the strip is 90px at 1440 and 186px from 1536, where the page
+ * stops widening. Below it the strip is narrower than the label (48px at
+ * 1366, none at 1280), so the stat joins Added and Status updates as a third
+ * figure instead. `display: none` on the other copy takes it out of the
+ * accessibility tree as well as the layout, so it is never read twice.
+ */
+const ACTIVE_DAYS_IN_ROW = '[@container_(min-width:66rem)]:hidden';
+const ACTIVE_DAYS_IN_STRIP =
+  'hidden [@container_(min-width:66rem)]:col-start-6 [@container_(min-width:66rem)]:row-start-1 [@container_(min-width:66rem)]:block';
 
 /**
  * Follow-through over weekly pace, stacked under the legend in the grid's
@@ -67,7 +86,8 @@ export function ActivityHeatmap({
   const cells = useMemo(() => buildCells(points ?? [], new Date(), timeZone), [points, timeZone]);
   const busiest = cells.reduce((max, cell) => Math.max(max, cell.count), 0);
   const total = cells.reduce((sum, cell) => sum + cell.count, 0);
-  const activeDays = cells.filter((cell) => cell.count > 0).length;
+  const activeDays = countActiveDays(cells, localDayKey(new Date(), timeZone));
+  const addedDays = cells.filter((cell) => cell.count > 0).length;
 
   return (
     // The card is the query container, so the layout follows the room the card
@@ -84,10 +104,10 @@ export function ActivityHeatmap({
         <div className={LAYOUT}>
           <span className="w-5" aria-hidden="true" />
           <Skeleton className="aspect-[12/7] w-full" label="Loading activity" />
-          <span className="col-span-2 h-4" aria-hidden="true" />
+          <span className="col-span-2 row-start-2 h-4" aria-hidden="true" />
           <div className={SIDE_COLUMN} aria-hidden="true">
-            {/* The figures' 71px: a label, a numeral and the summary line. */}
-            <div className="skeleton h-[4.5rem]" />
+            {/* The figures: 87px with Active days in the row, 71px without. */}
+            <div className="skeleton h-[5.5rem] [@container_(min-width:66rem)]:h-[4.5rem]" />
             <div className="skeleton h-32" />
           </div>
         </div>
@@ -113,7 +133,7 @@ export function ActivityHeatmap({
           <div
             className="grid min-w-0 grid-flow-col grid-cols-12 grid-rows-7 gap-1 sm:gap-1.5"
             role="img"
-            aria-label={`Activity heatmap: ${String(total)} applications added across ${String(activeDays)} active days in the last 12 weeks`}
+            aria-label={`Activity heatmap: ${String(total)} applications added across ${String(addedDays)} days in the last 12 weeks`}
           >
             {cells.map((cell) => (
               <span
@@ -129,10 +149,13 @@ export function ActivityHeatmap({
             ))}
           </div>
 
-          {/* Spans the label column to keep its place at the card's edge, but is
+          {/* Pinned to the row under the grid rather than auto-placed. With six
+              tracks, two free columns beside the grid fit it first: the loading
+              placeholder, with no strip to block them, landed there and lost
+              the legend row. Spans the label column to keep its place at the card's edge, but is
               sized as if empty: otherwise "Less … More" (about 110px) would set
               the auto label column's width, shrinking the grid to 179px at 375. */}
-          <div className="col-span-2 flex items-center gap-1.5 text-[0.625rem] text-content-subtle [contain:inline-size]">
+          <div className="col-span-2 row-start-2 flex items-center gap-1.5 text-[0.625rem] text-content-subtle [contain:inline-size]">
             <span>Less</span>
             {HEAT_LEVEL_CLASSES.map((level) => (
               <span key={level} className={cn('h-2.5 w-2.5 rounded-chip', level)} />
@@ -141,9 +164,15 @@ export function ActivityHeatmap({
           </div>
 
           <div className={SIDE_COLUMN}>
-            <FollowThrough cells={cells} />
+            <FollowThrough cells={cells}>
+              <ActiveDaysStat activeDays={activeDays} className={ACTIVE_DAYS_IN_ROW} />
+            </FollowThrough>
             <WeeklyPace cells={cells} target={weeklyGoal} />
           </div>
+
+          <dl className={ACTIVE_DAYS_IN_STRIP}>
+            <ActiveDaysStat activeDays={activeDays} />
+          </dl>
         </div>
       )}
     </Card>

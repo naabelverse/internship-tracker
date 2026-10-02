@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { Cell } from '@/features/dashboard/heatmapCells';
 import { followThroughText, summarizeFollowThrough } from '@/features/dashboard/followThroughStats';
 
 interface FollowThroughProps {
   /** The heatmap's own cells, so both figures cover the same twelve weeks. */
   cells: Cell[];
+  /** Further figures for the same row, each a `div` holding a `dt` and its `dd`s. */
+  children?: ReactNode;
 }
 
 /**
@@ -12,7 +14,7 @@ interface FollowThroughProps {
  * twelve weeks. Labels are the pace panel's small subtle text and the figures
  * are the stat cards' display numerals, so it reads as part of the same card.
  */
-export function FollowThrough({ cells }: FollowThroughProps): JSX.Element {
+export function FollowThrough({ cells, children }: FollowThroughProps): JSX.Element {
   const summary = useMemo(() => summarizeFollowThrough(cells), [cells]);
 
   return (
@@ -30,6 +32,7 @@ export function FollowThrough({ cells }: FollowThroughProps): JSX.Element {
             {summary.updates}
           </dd>
         </div>
+        {children}
       </dl>
       <p className="text-xs text-content-subtle">{followThroughText(summary)}</p>
     </div>

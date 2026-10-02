@@ -23,7 +23,7 @@ export interface Cell {
  * `2026-10-01T16:00:00Z`. Its first ten characters name the wrong day for any
  * zone east of UTC; only reading it back in the same zone names the right one.
  */
-function localDayKey(instant: Date, timeZone: string): string {
+export function localDayKey(instant: Date, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',

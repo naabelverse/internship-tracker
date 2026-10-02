@@ -1,11 +1,17 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ActivityHeatmap } from '@/features/dashboard/ActivityHeatmap';
 import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { TimelineChart } from '@/features/dashboard/charts/TimelineChart';
 import { Chart } from '@/features/dashboard/charts/chartRegistry';
-import { followThroughText, summarizeFollowThrough } from '@/features/dashboard/followThroughStats';
+import {
+  countActiveDays,
+  followThroughText,
+  summarizeFollowThrough,
+} from '@/features/dashboard/followThroughStats';
 import { buildCells } from '@/features/dashboard/heatmapCells';
 import { statusUpdates } from '@/features/dashboard/statusUpdates';
+import type { Cell } from '@/features/dashboard/heatmapCells';
 import type { TimelinePoint } from '@/types/analytics';
 import { makeTimeline, makeTimelinePoint, makeWeeksOfCells } from '../utils/factories';
 import { resetClientState } from '../utils/render';
@@ -173,5 +179,104 @@ describe('TimelineChart status changes', () => {
       const canvas = document.querySelector('canvas');
       expect(canvas && Chart.getChart(canvas)?.data.datasets[1]?.data).toEqual([DEMO_UPDATES]);
     });
+  });
+});
+
+describe('countActiveDays', () => {
+  /** Twelve empty weeks from Monday 13 Jul; today is Friday 2 Oct, the 82nd day. */
+  const TODAY = '2026-10-02';
+
+  function cellsWith(days: Record<string, { count?: number; updates?: number }>): Cell[] {
+    return makeWeeksOfCells(Array.from({ length: 12 }, () => 0)).map((cell) => ({
+      ...cell,
+      ...days[cell.key],
+    }));
+  }
+
+  it('counts a day an application was added', () => {
+    expect(countActiveDays(cellsWith({ '2026-09-01': { count: 2 } }), TODAY).active).toBe(1);
+  });
+
+  it('counts a day with status moves alone, which added-only counting misses', () => {
+    expect(countActiveDays(cellsWith({ '2026-09-02': { updates: 3 } }), TODAY).active).toBe(1);
+  });
+
+  it('counts a day with both once', () => {
+    expect(
+      countActiveDays(cellsWith({ '2026-09-03': { count: 1, updates: 1 } }), TODAY).active,
+    ).toBe(1);
+  });
+
+  it('does not count a day with neither', () => {
+    expect(countActiveDays(cellsWith({}), TODAY)).toEqual({ active: 0, elapsed: 82 });
+  });
+
+  it('is out of the days so far, leaving the rest of this week out', () => {
+    const days = cellsWith({ '2026-07-13': { count: 1 }, [TODAY]: { updates: 1 } });
+
+    expect(countActiveDays(days, TODAY)).toEqual({ active: 2, elapsed: 82 });
+    expect(countActiveDays(days, '2026-10-04')).toEqual({ active: 2, elapsed: 84 });
+  });
+});
+
+describe('ActivityHeatmap places Active days twice and shows one', () => {
+  const now = Date.now();
+  const daysAgo = (days: number): string => new Date(now - days * 86_400_000).toISOString();
+
+  function renderCard(): void {
+    render(
+      <ActivityHeatmap
+        points={[
+          // One added and two moves today; moves alone three days ago.
+          makeTimelinePoint({ bucket: daysAgo(0), created: 1, statusChanges: 3 }),
+          makeTimelinePoint({ bucket: daysAgo(3), created: 0, statusChanges: 2 }),
+        ]}
+        timeZone="UTC"
+        weeklyGoal={5}
+        isLoading={false}
+      />,
+    );
+  }
+
+  it('counts both days, the one with moves alone included, in both copies', () => {
+    renderCard();
+
+    const copies = screen.getAllByText('Active days');
+    expect(copies).toHaveLength(2);
+    for (const label of copies) {
+      expect(label.nextElementSibling).toHaveTextContent(/^2$/);
+      expect(label.nextElementSibling?.nextElementSibling).toHaveTextContent(
+        /^of (7[89]|8[0-4]) days$/,
+      );
+    }
+  });
+
+  it('puts one copy in the Added and Status updates row, gone from a 66rem card', () => {
+    renderCard();
+
+    const row = screen.getByText('Added').closest('dl');
+    if (!row) throw new Error('No figures row');
+    const inRow = within(row).getByText('Active days').parentElement;
+
+    expect(inRow).toHaveClass('[@container_(min-width:66rem)]:hidden');
+    expect(inRow).not.toHaveClass('hidden');
+  });
+
+  it('puts the other in its own list in the strip, hidden until a 66rem card', () => {
+    renderCard();
+
+    const strip = screen
+      .getAllByText('Active days')
+      .map((label) => label.closest('dl'))
+      .find((list) => list !== screen.getByText('Added').closest('dl'));
+
+    // `hidden` is `display: none`, which takes it out of the accessibility tree
+    // too; the e2e audit reads the browser's own tree to confirm it.
+    expect(strip).toHaveClass(
+      'hidden',
+      '[@container_(min-width:66rem)]:block',
+      '[@container_(min-width:66rem)]:col-start-6',
+    );
+    expect(strip?.children).toHaveLength(1);
   });
 });

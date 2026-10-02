@@ -73,7 +73,7 @@ test('the weekly pace panel sits beside the grid only when it has room', async (
   const plot = card.getByRole('img', { name: /applications added per week/i });
   const bars = plot.getByTestId('pace-bar');
   const labels = card.locator('ul[aria-hidden="true"]');
-  const figures = card.locator('dl');
+  const figures = card.locator('dl').filter({ has: page.locator('dt:text-is("Added")') });
   const paceHeading = card.getByRole('heading', { level: 3, name: 'Weekly pace' });
 
   await expect(bars).toHaveCount(12);
@@ -148,8 +148,83 @@ test('a new application is not counted as its own status update', async ({ page 
   await expect(card.locator('dt:text-is("Added") + dd')).toHaveText('1');
   await expect(card.locator('dt:text-is("Status updates") + dd')).toHaveText('0');
   await expect(card.getByText('No status updates yet')).toBeVisible();
+  await expect(card.locator('dt:text-is("Active days") + dd').filter({ visible: true })).toHaveText(
+    '1',
+  );
   // The Applications over time chart's text alternative, in the default weekly grouping.
   await expect(page.getByText('1 added, 0 status changes', { exact: true })).toBeAttached();
+});
+
+/**
+ * Active days is rendered twice, once in the figures row and once in the strip
+ * right of the side column, and a card-width query shows one. The strip needs a
+ * 66rem card: 90px of strip at 1440, none worth using at 1366.
+ */
+const ACTIVE_DAYS_LAYOUT = [
+  [375, 'row'],
+  [768, 'row'],
+  [1024, 'row'],
+  [1280, 'row'],
+  [1366, 'row'],
+  [1440, 'strip'],
+  [1536, 'strip'],
+] as const;
+
+test('Active days shows once: in the strip when there is room, in the row otherwise', async ({
+  page,
+}) => {
+  const account = newAccount('active');
+  const api = await apiFor(12);
+  const { accessToken } = await registerAccount(api, account);
+  await createApplication(api, accessToken, { company: 'Active Co', role: 'Intern' });
+  await api.dispose();
+
+  await signIn(page, account);
+
+  const card = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { level: 2, name: 'Activity' }) });
+  const row = card.locator('dl').filter({ has: page.locator('dt:text-is("Added")') });
+  const added = row.locator('dt:text-is("Added")');
+  const updates = row.locator('dt:text-is("Status updates")');
+  const shown = card.locator('dt:text-is("Active days")').filter({ visible: true });
+
+  await expect(card.locator('dt:text-is("Active days")')).toHaveCount(2);
+
+  for (const [width, place] of ACTIVE_DAYS_LAYOUT) {
+    await page.setViewportSize({ width, height: 900 });
+    await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    const at = `@ ${String(width)}px`;
+
+    await expect(shown, `one copy visible ${at}`).toHaveCount(1);
+    // The browser's own accessibility tree: the hidden copy must not be in it.
+    const tree = await card.ariaSnapshot();
+    expect(tree.match(/Active days/g)?.length, `read once ${at}`).toBe(1);
+
+    const stat = await box(shown);
+    const rowBox = await box(row);
+    const addedBox = await box(added);
+    const contentRight = await card.evaluate(
+      (el) =>
+        el.getBoundingClientRect().left +
+        el.clientLeft +
+        el.clientWidth -
+        parseFloat(getComputedStyle(el).paddingRight),
+    );
+
+    // Level with Added either way: one row of figures, never wrapped.
+    expect(Math.abs(stat.top - addedBox.top), `level with Added ${at}`).toBeLessThan(1);
+    expect(stat.right, `inside the card ${at}`).toBeLessThanOrEqual(contentRight + 0.5);
+
+    if (place === 'row') {
+      const updatesBox = await box(updates);
+      expect(stat.left, `after Status updates ${at}`).toBeGreaterThan(updatesBox.right);
+      expect(stat.right, `inside the side column ${at}`).toBeLessThanOrEqual(rowBox.right + 0.5);
+    } else {
+      expect(stat.left, `right of the side column ${at}`).toBeGreaterThanOrEqual(rowBox.right + 16);
+    }
+  }
 });
 
 test('the activity grid scales with its card and keeps its cells square', async ({ page }) => {

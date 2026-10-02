@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   updates" over the same twelve weeks, with a line such as "1.3 updates for
   every application added", above Weekly pace. It also uses data the dashboard
   already loads.
+- **The Activity card counts your active days.** "Active days: 52 of 82 days",
+  any day you added an application or moved one between statuses. On wide
+  screens it fills the space to the right of Weekly pace; otherwise it is a third
+  figure beside Added and Status updates.
 - **`npm run storage:sweep -w server` finds uploaded files that no application
   references** (issue #42), the ones left behind by deletions before the #34
   fix. It is a dry run by default. `--apply --expect <N>` deletes exactly the

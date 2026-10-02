@@ -4703,3 +4703,38 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
 - **Test fixtures changed deliberately:** `makeTimeline` had buckets with fewer status changes than
   applications added, which real data cannot produce. Its raw counts now include the openings, so the
   corrected figures are the same 3, 6 and 9 as before.
+
+## Active days fills the strip right of the side column, or joins the figures row (3 Oct 2026)
+
+- **What:** "Active days", a large count and "of N days" beneath: days in the grid's twelve weeks on
+  which an application was added or moved between statuses, out of the days so far. The demo account
+  on 2 Oct 2026 reads 52 of 82.
+- **Added or moved, not added only (28):** the stat answers how consistently the search is worked,
+  and follow-up is part of that. It sums the corrected per-day status updates from PR #72, so a
+  new application's opening entry never makes a day count twice or count on its own.
+- **Out of the days so far:** the grid runs to the end of the current week, and days that have not
+  happened cannot be active, so the denominator is 78–84 rather than a fixed 84.
+- **Rejected:** busiest day (a three-way tie at 3, with 54 of 82 days empty, and already implied by
+  the darkest cell colour); current streak (already in the page header); longest gap (mostly
+  restates Active days from the other side).
+- **Two placements, one shown.** From a 66rem card the side column is full width and a sixth track
+  opens to its right, behind a 1rem spacer. Labels, grid, side column, two spacers and five gaps
+  take 988px, so a 1056px card leaves 68px, enough for the 61px stat. That switch happens between
+  a 1416 and a 1418 window with the sidebar, and the strip is 90px at 1440 and 186px from 1536.
+  Below it the strip is narrower than the label (48px at 1366, none at 1280), so the stat is the
+  third figure in the Added/Status updates row instead. Hiding it would make a real number depend on
+  screen size.
+- **Rendered twice, not moved:** one element cannot be placed in the grid's sixth track and inside
+  the side column's flex row by CSS alone. Each copy carries the opposite container-query class, and
+  `display: none` removes the hidden copy from the accessibility tree as well as the layout.
+  `e2e/audits/heatmap.spec.ts` reads the browser's own tree (`ariaSnapshot`) at seven widths and
+  finds "Active days" once at each. jsdom applies no CSS, so the client suite only pins the classes.
+- **Measured:** the three-figure row does not wrap at 375 (all three labels share a top edge, with
+  39.5px to spare). Beside the grid the card keeps its 368px height at every width. Where the side
+  column stacks, the card grows by 16px for the "of N days" line. The grid and Weekly pace have the
+  same boxes as on `main`.
+- **Legend pinned to row 2:** with six tracks, auto-placement put the loading skeleton's legend
+  placeholder into the strip's free columns, dropping its row and making the skeleton 12.6px
+  shorter than the loaded card. The legend and its placeholder now carry `row-start-2`.
+- **Heatmap label wording:** its screen-reader label said "N active days" for days with an
+  application added. It now says "across N days", so "active" has one meaning on the card.
