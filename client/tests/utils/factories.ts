@@ -245,10 +245,12 @@ export function makeTimeline(overrides: Partial<Timeline> = {}): Timeline {
   return {
     granularity: 'week',
     range: '90d',
+    // Raw counts, as the server sends them: each application added is also one
+    // status change (its opening entry), so 3, 6 and 9 moves on top of those.
     points: [
-      { bucket: '2026-08-03T00:00:00.000Z', created: 5, statusChanges: 3 },
-      { bucket: '2026-08-10T00:00:00.000Z', created: 8, statusChanges: 6 },
-      { bucket: '2026-08-17T00:00:00.000Z', created: 2, statusChanges: 9 },
+      { bucket: '2026-08-03T00:00:00.000Z', created: 5, statusChanges: 8 },
+      { bucket: '2026-08-10T00:00:00.000Z', created: 8, statusChanges: 14 },
+      { bucket: '2026-08-17T00:00:00.000Z', created: 2, statusChanges: 11 },
     ],
     ...overrides,
   };
@@ -263,8 +265,13 @@ export function makeTimelinePoint(overrides: Partial<TimelinePoint> = {}): Timel
  * Heatmap cells, seven per entry of `weekTotals`, from the Monday `start`.
  * Each week's total is split between its Monday and its Thursday, so a reader
  * that took one day per week instead of summing all seven would come up short.
+ * A week's status updates, if given, land on its Saturday.
  */
-export function makeWeeksOfCells(weekTotals: number[], start = '2026-07-13'): Cell[] {
+export function makeWeeksOfCells(
+  weekTotals: number[],
+  start = '2026-07-13',
+  weekUpdates: number[] = [],
+): Cell[] {
   const first = Date.parse(`${start}T00:00:00Z`);
 
   return weekTotals.flatMap((total, week) =>
@@ -272,8 +279,9 @@ export function makeWeeksOfCells(weekTotals: number[], start = '2026-07-13'): Ce
       const key = new Date(first + (week * 7 + day) * 86_400_000).toISOString().slice(0, 10);
       const monday = Math.ceil(total / 2);
       const count = day === 0 ? monday : day === 3 ? total - monday : 0;
+      const updates = day === 5 ? (weekUpdates[week] ?? 0) : 0;
 
-      return { key, count };
+      return { key, count, updates };
     }),
   );
 }

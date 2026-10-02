@@ -4,6 +4,7 @@ import { ChartDataSummary } from '@/features/dashboard/charts/ChartDataSummary';
 import { ChartFrame } from '@/features/dashboard/charts/ChartFrame';
 import { useChartPalette } from '@/features/dashboard/charts/chartTheme';
 import { verticalOptions } from '@/features/dashboard/charts/chartOptions';
+import { statusUpdates } from '@/features/dashboard/statusUpdates';
 import '@/features/dashboard/charts/chartRegistry';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
@@ -58,7 +59,8 @@ export function TimelineChart({
         },
         {
           label: 'Status changes',
-          data: points.map((point) => point.statusChanges),
+          // Moves only: the raw count also holds each new application's opening entry.
+          data: points.map(statusUpdates),
           borderColor: palette.color('color-info'),
           backgroundColor: palette.color('color-info', 0.12),
           pointBackgroundColor: palette.color('color-info'),
@@ -127,7 +129,7 @@ export function TimelineChart({
           valueHeading="Added, status changes"
           rows={points.map((point) => ({
             label: formatDate(point.bucket),
-            value: `${String(point.created)} added, ${String(point.statusChanges)} status changes`,
+            value: `${String(point.created)} added, ${String(statusUpdates(point))} status changes`,
           }))}
         />
       </>

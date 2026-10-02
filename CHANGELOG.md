@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   average". It sits beside the grid when the card has room, and below it, each
   bar under its own week, when it does not. It uses data the dashboard already
   loads, so it adds no request.
+- **The Activity card shows how much you follow up.** "Added" and "Status
+  updates" over the same twelve weeks, with a line such as "1.3 updates for
+  every application added", above Weekly pace. It also uses data the dashboard
+  already loads.
 - **`npm run storage:sweep -w server` finds uploaded files that no application
   references** (issue #42), the ones left behind by deletions before the #34
   fix. It is a dry run by default. `--apply --expect <N>` deletes exactly the
@@ -42,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A new application no longer counts as its own status change.** The
+  "Applications over time" chart's status-change line and its screen-reader
+  table counted every application added as one status change too, because each
+  application's history opens with an entry for its first status. Both now count
+  only moves between statuses.
 - **The weekly goal ring shows its progress against the whole circle.** The
   unfilled part of the ring was almost the card's own colour, so 1 of 5 read as
   a stray dark stroke. It is now a visible tint in both themes. The arc covers

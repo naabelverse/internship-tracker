@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
+import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { WeeklyPace } from '@/features/dashboard/WeeklyPace';
 import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
 import { buildCells } from '@/features/dashboard/heatmapCells';
@@ -22,14 +23,14 @@ interface ActivityHeatmapProps {
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
- * Weekday labels, the grid, and the weekly pace panel, as one CSS grid whose
- * second column is the heatmap's: up to `max-w-md` (28rem), which puts a cell
+ * Weekday labels, the grid, and the side column (follow-through over weekly
+ * pace), as one CSS grid whose second column is the heatmap's: up to `max-w-md` (28rem), which puts a cell
  * at about 32px and the grid at 259px tall, level with the 256px plots in the
  * chart cards above.
  *
- * Narrow, the pace panel takes the row under the legend in that same column,
- * so each bar sits directly under its week. From a 48rem card it moves beside
- * the grid instead, behind a 1rem spacer track: the grid keeps its full 28rem
+ * Narrow, the side column takes the row under the legend in that same column,
+ * so each pace bar sits directly under its week. From a 48rem card it moves
+ * beside the grid instead, behind a 1rem spacer track: the grid keeps its full 28rem
  * and the panel gets at least 260px, up to 28rem, where its bars match the
  * cells' pitch exactly. It is a container query, not a viewport breakpoint,
  * because the room beside the grid is not monotonic in the viewport: the
@@ -39,9 +40,16 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const LAYOUT =
   'mt-4 grid grid-cols-[auto_minmax(0,28rem)] justify-start gap-x-2 gap-y-4 [@container_(min-width:48rem)]:grid-cols-[auto_28rem_1rem_minmax(0,28rem)]';
 
-/** Stacked under the legend in the grid's column, or beside the grid and legend. */
-const PACE_PLACEMENT =
-  'col-start-2 row-start-3 [@container_(min-width:48rem)]:col-start-4 [@container_(min-width:48rem)]:row-span-2 [@container_(min-width:48rem)]:row-start-1 [@container_(min-width:48rem)]:self-end';
+/**
+ * Follow-through over weekly pace, stacked under the legend in the grid's
+ * column, or beside the grid and legend. Beside, the column spans both rows
+ * and `justify-between` keeps the pace bars level with the legend, where they
+ * sat alone, while the figures take the empty top of the column beside the
+ * grid's first rows. Neither is tall enough to grow those rows, so the card
+ * keeps its height there.
+ */
+const SIDE_COLUMN =
+  'col-start-2 row-start-3 flex flex-col gap-4 [@container_(min-width:48rem)]:col-start-4 [@container_(min-width:48rem)]:row-span-2 [@container_(min-width:48rem)]:row-start-1 [@container_(min-width:48rem)]:justify-between';
 
 /**
  * Activity per day over the last twelve weeks, and per week against the goal.
@@ -77,7 +85,11 @@ export function ActivityHeatmap({
           <span className="w-5" aria-hidden="true" />
           <Skeleton className="aspect-[12/7] w-full" label="Loading activity" />
           <span className="col-span-2 h-4" aria-hidden="true" />
-          <div className={cn('skeleton h-32', PACE_PLACEMENT)} aria-hidden="true" />
+          <div className={SIDE_COLUMN} aria-hidden="true">
+            {/* The figures' 71px: a label, a numeral and the summary line. */}
+            <div className="skeleton h-[4.5rem]" />
+            <div className="skeleton h-32" />
+          </div>
         </div>
       ) : (
         <div className={LAYOUT}>
@@ -128,7 +140,10 @@ export function ActivityHeatmap({
             <span>More</span>
           </div>
 
-          <WeeklyPace cells={cells} target={weeklyGoal} className={PACE_PLACEMENT} />
+          <div className={SIDE_COLUMN}>
+            <FollowThrough cells={cells} />
+            <WeeklyPace cells={cells} target={weeklyGoal} />
+          </div>
         </div>
       )}
     </Card>

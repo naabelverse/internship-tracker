@@ -43,9 +43,10 @@ async function box(locator: Locator): Promise<Box> {
 }
 
 /**
- * Where the weekly pace panel sits. Beside the grid needs a 48rem card: 28rem
- * of grid and at least 260px of panel. A 1024 window with the sidebar open has
- * a 662px card, about 186px beside the grid, so it stacks; 1280 has 918px.
+ * Where the weekly pace panel sits, with the follow-through figures above it.
+ * Beside the grid needs a 48rem card: 28rem of grid and at least 260px of
+ * panel. A 1024 window with the sidebar open has a 662px card, about 186px
+ * beside the grid, so it stacks; 1280 has 918px.
  */
 const PACE_LAYOUT = [
   [375, 'below'],
@@ -72,6 +73,8 @@ test('the weekly pace panel sits beside the grid only when it has room', async (
   const plot = card.getByRole('img', { name: /applications added per week/i });
   const bars = plot.getByTestId('pace-bar');
   const labels = card.locator('ul[aria-hidden="true"]');
+  const figures = card.locator('dl');
+  const paceHeading = card.getByRole('heading', { level: 3, name: 'Weekly pace' });
 
   await expect(bars).toHaveCount(12);
 
@@ -83,7 +86,13 @@ test('the weekly pace panel sits beside the grid only when it has room', async (
     const gridBox = await box(grid);
     const plotBox = await box(plot);
     const labelsBox = await box(labels);
+    const figuresBox = await box(figures);
+    const headingBox = await box(paceHeading);
     const at = `@ ${String(width)}px`;
+
+    // Follow-through always sits above Weekly pace, on the pace panel's left edge.
+    expect(figuresBox.bottom, `figures above weekly pace ${at}`).toBeLessThan(headingBox.top);
+    expect(figuresBox.left, `figures on the pace panel's edge ${at}`).toBeCloseTo(plotBox.left, 0);
 
     // The weekday labels keep their own narrow column. The legend spans it, and
     // once sized that column to "Less … More", which cost the grid 102px.
@@ -91,6 +100,7 @@ test('the weekly pace panel sits beside the grid only when it has room', async (
 
     if (placement === 'below') {
       expect(plotBox.top, `pace below the grid ${at}`).toBeGreaterThan(gridBox.bottom);
+      expect(figuresBox.top, `figures below the grid ${at}`).toBeGreaterThan(gridBox.bottom);
       expect(plotBox.width, `pace as wide as the grid ${at}`).toBeCloseTo(gridBox.width, 0);
 
       // Each bar under its own week: the column's top cell shares its centre.
@@ -105,11 +115,41 @@ test('the weekly pace panel sits beside the grid only when it has room', async (
       }
     } else {
       expect(plotBox.left, `pace right of the grid ${at}`).toBeGreaterThan(gridBox.right);
+      // In the empty top of the column, level with the grid's first row.
+      expect(
+        Math.abs(figuresBox.top - gridBox.top),
+        `figures level with the grid ${at}`,
+      ).toBeLessThan(1);
       expect(plotBox.bottom, `pace level with the grid ${at}`).toBeLessThan(gridBox.bottom + 40);
       expect(gridBox.width, `grid unsqueezed beside the pace ${at}`).toBeCloseTo(GRID_CAP, 0);
       expect(plotBox.width, `pace keeps its 260px floor ${at}`).toBeGreaterThanOrEqual(260);
     }
   }
+});
+
+/**
+ * Each application's history opens with an entry the timeline counts as a
+ * status change. One application and no moves must read 0 status updates in
+ * both places the count appears, not the raw 1.
+ */
+test('a new application is not counted as its own status update', async ({ page }) => {
+  const account = newAccount('follow');
+  const api = await apiFor(12);
+  const { accessToken } = await registerAccount(api, account);
+  await createApplication(api, accessToken, { company: 'Follow Co', role: 'Intern' });
+  await api.dispose();
+
+  await signIn(page, account);
+
+  const card = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { level: 2, name: 'Activity' }) });
+
+  await expect(card.locator('dt:text-is("Added") + dd')).toHaveText('1');
+  await expect(card.locator('dt:text-is("Status updates") + dd')).toHaveText('0');
+  await expect(card.getByText('No status updates yet')).toBeVisible();
+  // The Applications over time chart's text alternative, in the default weekly grouping.
+  await expect(page.getByText('1 added, 0 status changes', { exact: true })).toBeAttached();
 });
 
 test('the activity grid scales with its card and keeps its cells square', async ({ page }) => {
