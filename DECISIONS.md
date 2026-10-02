@@ -4566,3 +4566,37 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   Before, they ended level with the heading and the dates. That is the visible cost, and the review
   frames show it at rest.
 - **The landing hero's copy is unchanged.** It has its own list and plain rows, with no hover.
+
+## The Activity heatmap scales with its card, to a cap (2 Oct 2026)
+
+- **Problem, measured on `main`:** twelve fixed 12px columns made a 188×108px grid at every width.
+  The card spans the dashboard, so the grid used 20% of its content width at 1440, 18% at 1920, 33%
+  at 1024, 23% at 1023 (where the sidebar collapses and the card widens) and 70% at 375.
+- **Fix:** the cells are twelve equal `minmax(0, 1fr)` columns of `aspect-square` cells, so they grow
+  with the card and stay square. The gap is 4px below `sm` and 6px from `sm` up. The weekday labels
+  are now a seven-row grid on the same gap, stretched to the grid's height. The old `justify-between`
+  column only lined up with 12px rows. Measured after: the label and row centres agree to within 1px
+  at 375, 768, 1024 and 1440.
+- **Cap:** `max-w-md` (448px) holds cells at 31.8px and the grid at 259px tall, level with the 256px
+  `h-64` plots in the chart cards above. The card is 368px tall against their 352px. Uncapped, square
+  cells would reach 82px at 1440 and the grid 600px tall.
+- **What the cap leaves:** at 375 the grid fills the card (cells 19.75px). At 768 and 1024 it fills
+  about 70%, at 1280 52%, at 1440 44% and at 1920 41%. Twelve columns of square cells are about 12:7,
+  so a full-width card cannot be filled at a sensible height. That is a property of the grid's shape.
+  More cell scaling cannot fix it.
+- **Not taken:**
+  - Showing more weeks to fill the width would contradict SPEC section 6's "last 12 weeks". It would
+    also make the history depend on screen width, even though `1y` daily buckets exist.
+  - Narrowing the card would move the empty space from inside the card to beside it. Nothing on the
+    dashboard could share its row.
+- **Unchanged:** the 84 cells, the level colours in both themes, the aria-label, "Last 12 weeks" at
+  the card's top right like other cards' header actions, and the legend under the label column. The
+  legend's top margin is 16px; it was 12px plus 4px of scrollbar padding. The grid no longer
+  overflows at any width, so the horizontal scroll wrapper is gone.
+- **Skeleton:** it was a fixed `h-32` (128px), so a 259px grid would have made the card jump on
+  load. It now has the grid's 12:7 shape and cap, with `ml-7` for the label column and `mb-7` for the
+  legend. The jump is 0.6px at 1440 and 1.5px at 375, measured with the day timeline held for 4s.
+  On `main` it was about 10px.
+- **Test:** `e2e/audits/heatmap.spec.ts` checks square cells, the grid width against `min(room, 448)`
+  and label alignment at four widths. jsdom applies no CSS. The spec fails on `main` ("grid width @
+  375px: expected 281, received 188") and passes on this branch.

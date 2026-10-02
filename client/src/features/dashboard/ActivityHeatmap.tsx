@@ -84,23 +84,33 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
       </div>
 
       {isLoading ? (
-        <Skeleton className="mt-4 h-32 w-full" label="Loading activity" />
+        // The grid's own 12:7 shape and cap, beside the label column's 28px and
+        // above the legend's, so the card does not jump when it loads.
+        <Skeleton className="mb-7 ml-7 mt-4 aspect-[12/7] max-w-md" label="Loading activity" />
       ) : (
         <>
-          <div className="relative mt-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-4 flex gap-2">
+            {/* Seven rows on the same gap as the cells, stretched to the grid's
+                height, so each label stays centred on its row at any cell size. */}
             <ul
-              className="flex shrink-0 flex-col justify-between py-0.5 text-[0.625rem] text-content-subtle"
+              className="grid shrink-0 grid-rows-7 gap-1 text-[0.625rem] text-content-subtle sm:gap-1.5"
               aria-hidden="true"
             >
               {WEEKDAY_LABELS.map((day, index) => (
-                <li key={day} className={cn('leading-3', index % 2 === 1 && 'invisible')}>
+                <li
+                  key={day}
+                  className={cn('flex items-center leading-3', index % 2 === 1 && 'invisible')}
+                >
                   {day}
                 </li>
               ))}
             </ul>
 
+            {/* Twelve equal columns of square cells that grow with the card, up
+                to `max-w-md`: 448px puts a cell at about 32px and the grid at
+                259px tall, level with the 256px plots in the chart cards above. */}
             <div
-              className="grid grid-flow-col grid-rows-7 gap-1"
+              className="grid min-w-0 max-w-md flex-1 grid-flow-col grid-cols-12 grid-rows-7 gap-1 sm:gap-1.5"
               role="img"
               aria-label={`Activity heatmap: ${String(total)} applications added across ${String(activeDays)} active days in the last 12 weeks`}
             >
@@ -111,7 +121,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
                   data-count={cell.count}
                   title={`${formatDate(cell.date.toISOString())}: ${String(cell.count)} added`}
                   className={cn(
-                    'h-3 w-3 rounded-chip ring-1 ring-inset ring-border/60',
+                    'aspect-square rounded-chip ring-1 ring-inset ring-border/60',
                     LEVEL_CLASSES[levelFor(cell.count, busiest)],
                   )}
                 />
@@ -119,7 +129,7 @@ export function ActivityHeatmap({ points, isLoading }: ActivityHeatmapProps): JS
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-1.5 text-[0.625rem] text-content-subtle">
+          <div className="mt-4 flex items-center gap-1.5 text-[0.625rem] text-content-subtle">
             <span>Less</span>
             {LEVEL_CLASSES.map((level) => (
               <span key={level} className={cn('h-2.5 w-2.5 rounded-chip', level)} />
