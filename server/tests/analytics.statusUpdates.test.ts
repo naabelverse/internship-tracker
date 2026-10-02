@@ -46,6 +46,23 @@ describe('timeline statusChanges include each application’s opening entry', ()
     expect(raw - created).toBe(53);
   });
 
+  it('gives the demo account 52 active days of 82, counting days with moves alone', async () => {
+    const user = await demoUser();
+    const points = (await getTimeline(user, KL, 'day', '90d', NOW)).filter(
+      (point) => new Date(point.bucket) >= GRID_START,
+    );
+    const addedDays = points.filter((point) => point.created > 0).length;
+    const activeDays = points.filter(
+      (point) => point.created > 0 || point.statusChanges - point.created > 0,
+    ).length;
+    // Monday 13 Jul to Friday 2 Oct inclusive.
+    const elapsed = Math.ceil((NOW.getTime() - GRID_START.getTime()) / 86_400_000);
+
+    expect(addedDays).toBe(28);
+    expect(activeDays).toBe(52);
+    expect(elapsed).toBe(82);
+  });
+
   it('matches the moves counted straight off the documents, bucket by bucket', async () => {
     const user = await demoUser();
     const points = await getTimeline(user, KL, 'day', '90d', NOW);

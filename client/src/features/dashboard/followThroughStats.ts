@@ -7,6 +7,13 @@ export interface FollowThroughSummary {
   updates: number;
 }
 
+export interface ActiveDays {
+  /** Days with an application added or moved. */
+  active: number;
+  /** The grid's days up to and including today; the rest of this week is still to come. */
+  elapsed: number;
+}
+
 const ratioFormat = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 });
 
 /** The grid's own days summed, so both figures cover exactly the twelve weeks drawn. */
@@ -15,6 +22,21 @@ export function summarizeFollowThrough(cells: Cell[]): FollowThroughSummary {
     (sum, cell) => ({ added: sum.added + cell.count, updates: sum.updates + cell.updates }),
     { added: 0, updates: 0 },
   );
+}
+
+/**
+ * Days spent on the search: any day an application was added or moved between
+ * statuses. Follow-up counts as much as adding, so a day of status changes
+ * alone is active. Out of the days so far, not all 84: the grid runs to the
+ * end of this week, and days that have not happened cannot be active.
+ */
+export function countActiveDays(cells: Cell[], today: string): ActiveDays {
+  const elapsed = cells.filter((cell) => cell.key <= today);
+
+  return {
+    active: elapsed.filter((cell) => cell.count > 0 || cell.updates > 0).length,
+    elapsed: elapsed.length,
+  };
 }
 
 /**
