@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
 import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
@@ -22,6 +22,8 @@ interface WeeklyPaceProps {
    * plot and the panel both grow into any height their column has to spare.
    */
   plotClassName?: string;
+  /** An explanation of the panel, set beside its title. */
+  info?: ReactNode;
 }
 
 /**
@@ -36,6 +38,7 @@ export function WeeklyPace({
   cells,
   target,
   plotClassName = 'h-20',
+  info,
 }: WeeklyPaceProps): JSX.Element {
   const totals = useMemo(() => weeklyTotals(cells), [cells]);
   const scale = paceScale(totals, target);
@@ -46,7 +49,10 @@ export function WeeklyPace({
   return (
     <div className="flex flex-auto flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs text-content-subtle">Weekly pace</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-xs text-content-subtle">Weekly pace</h3>
+          {info}
+        </div>
         {target > 0 && (
           <span
             className="flex items-center gap-1.5 text-[0.625rem] text-content-subtle"

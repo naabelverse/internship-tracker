@@ -121,6 +121,13 @@ export const AlertIcon = (props: IconProps): JSX.Element => (
   </Icon>
 );
 
+export const HelpIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.6 9.4a2.5 2.5 0 014.8 1c0 1.7-2.4 2.2-2.4 3.6M12 17h.01" />
+  </Icon>
+);
+
 export const PlusIcon = (props: IconProps): JSX.Element => (
   <Icon {...props}>
     <path d="M12 5v14M5 12h14" />

@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
 import { ActiveDaysStat } from '@/features/dashboard/ActiveDaysStat';
+import { FiguresTip, HeatmapTip, PaceTip } from '@/features/dashboard/ActivityTips';
 import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { WeeklyPace } from '@/features/dashboard/WeeklyPace';
 import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
@@ -169,7 +170,7 @@ export function ActivityHeatmap({
           {/* Pinned to the row under the grid rather than auto-placed, so no
               track layout can move it beside the grid. Spans the label column
               to keep its place at the card's edge, but is sized as if empty:
-              otherwise "Less … More" (about 110px) would set the auto label
+              otherwise "Less … More" and its tip (about 134px) would set the auto label
               column's width, shrinking the grid to 179px at 375. */}
           <div className="col-span-2 row-start-2 flex items-center gap-1.5 text-[0.625rem] text-content-subtle [contain:inline-size]">
             <span>Less</span>
@@ -177,13 +178,21 @@ export function ActivityHeatmap({
               <span key={level} className={cn('h-2.5 w-2.5 rounded-chip', level)} />
             ))}
             <span>More</span>
+            <div className="ml-1 flex">
+              <HeatmapTip />
+            </div>
           </div>
 
           <div className={SIDE_COLUMN}>
-            <FollowThrough cells={cells}>
+            <FollowThrough cells={cells} info={<FiguresTip />}>
               <ActiveDaysStat activeDays={activeDays} />
             </FollowThrough>
-            <WeeklyPace cells={cells} target={weeklyGoal} plotClassName={PACE_PLOT} />
+            <WeeklyPace
+              cells={cells}
+              target={weeklyGoal}
+              plotClassName={PACE_PLOT}
+              info={<PaceTip goal={weeklyGoal} />}
+            />
           </div>
         </div>
       )}
