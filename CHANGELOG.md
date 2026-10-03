@@ -20,8 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every application added", above Weekly pace. It also uses data the dashboard
   already loads.
 - **The Activity card counts your active days.** "Active days: 52 of 82 days",
-  any day you added an application or moved one between statuses. On wide
-  screens it fills the space to the right of Weekly pace; otherwise it is a third
+  any day you added an application or moved one between statuses, as a third
   figure beside Added and Status updates.
 - **`npm run storage:sweep -w server` finds uploaded files that no application
   references** (issue #42), the ones left behind by deletions before the #34
@@ -33,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Activity card fills its width at every screen size.** The heatmap keeps
+  its column; the figures and Weekly pace share one column beside it that runs to
+  the card's edge, with the pace bars growing into the height beside the grid.
+  On tablets and on laptops with the sidebar open the two now sit side by side
+  instead of stacking, which halves the card's height and removes an empty
+  column down its right side. Phones still stack, each bar under its week.
 - **Source options are Malaysia-focused, and "Other" asks what it was.** The
   list is now JobStreet, LinkedIn, Indeed, Hiredly, Maukerja, MYFutureJobs,
   Company site, Referral, Career fair and Other. Internshala is retired.

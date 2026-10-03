@@ -219,7 +219,7 @@ describe('countActiveDays', () => {
   });
 });
 
-describe('ActivityHeatmap places Active days twice and shows one', () => {
+describe('ActivityHeatmap shows Active days once, as the third figure', () => {
   const now = Date.now();
   const daysAgo = (days: number): string => new Date(now - days * 86_400_000).toISOString();
 
@@ -238,45 +238,38 @@ describe('ActivityHeatmap places Active days twice and shows one', () => {
     );
   }
 
-  it('counts both days, the one with moves alone included, in both copies', () => {
+  it('counts both days, the one with moves alone included', () => {
     renderCard();
 
-    const copies = screen.getAllByText('Active days');
-    expect(copies).toHaveLength(2);
-    for (const label of copies) {
-      expect(label.nextElementSibling).toHaveTextContent(/^2$/);
-      expect(label.nextElementSibling?.nextElementSibling).toHaveTextContent(
-        /^of (7[89]|8[0-4]) days$/,
-      );
-    }
+    const label = screen.getByText('Active days');
+    expect(label.nextElementSibling).toHaveTextContent(/^2$/);
+    expect(label.nextElementSibling?.nextElementSibling).toHaveTextContent(
+      /^of (7[89]|8[0-4]) days$/,
+    );
   });
 
-  it('puts one copy in the Added and Status updates row, gone from a 66rem card', () => {
+  it('renders one copy, third in the Added and Status updates row, hidden at no width', () => {
     renderCard();
 
+    // The strip and its second copy are gone: no width-dependent placement.
+    expect(screen.getAllByText('Active days')).toHaveLength(1);
     const row = screen.getByText('Added').closest('dl');
     if (!row) throw new Error('No figures row');
-    const inRow = within(row).getByText('Active days').parentElement;
+    const figures = [...row.children].map((figure) => figure.querySelector('dt')?.textContent);
 
-    expect(inRow).toHaveClass('[@container_(min-width:66rem)]:hidden');
-    expect(inRow).not.toHaveClass('hidden');
+    expect(figures).toEqual(['Added', 'Status updates', 'Active days']);
+    expect(within(row).getByText('Active days').parentElement?.className).toBe('');
   });
 
-  it('puts the other in its own list in the strip, hidden until a 66rem card', () => {
+  it('lays the row out in equal columns that never shrink below their content', () => {
     renderCard();
 
-    const strip = screen
-      .getAllByText('Active days')
-      .map((label) => label.closest('dl'))
-      .find((list) => list !== screen.getByText('Added').closest('dl'));
-
-    // `hidden` is `display: none`, which takes it out of the accessibility tree
-    // too; the e2e audit reads the browser's own tree to confirm it.
-    expect(strip).toHaveClass(
-      'hidden',
-      '[@container_(min-width:66rem)]:block',
-      '[@container_(min-width:66rem)]:col-start-6',
+    // Spread across a wide column, unwrapped in a narrow one: the prototype's
+    // `repeat(3, minmax(0, 1fr))` wrapped "Status updates" at a 240px column.
+    expect(screen.getByText('Added').closest('dl')).toHaveClass(
+      'grid',
+      'grid-flow-col',
+      'auto-cols-[minmax(max-content,1fr)]',
     );
-    expect(strip?.children).toHaveLength(1);
   });
 });
