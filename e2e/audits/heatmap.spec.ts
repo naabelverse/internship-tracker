@@ -42,21 +42,45 @@ async function box(locator: Locator): Promise<Box> {
   });
 }
 
+/** The card width (40rem) from which the side column sits beside the grid. */
+const BESIDE_MIN = 640;
+
+/** The side column's floor beside the grid: 15rem. */
+const SIDE_FLOOR = 240;
+
+/** Between the grid and the side column: a 1rem spacer track and two 8px gaps. */
+const GUTTER = 32;
+
+/** The card's content box, inside its border as well as its padding. */
+async function contentEdges(card: Locator): Promise<{ left: number; right: number }> {
+  return card.evaluate((el) => {
+    const { left } = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return {
+      left: left + el.clientLeft + parseFloat(style.paddingLeft),
+      right: left + el.clientLeft + el.clientWidth - parseFloat(style.paddingRight),
+    };
+  });
+}
+
 /**
  * Where the weekly pace panel sits, with the follow-through figures above it.
- * Beside the grid needs a 48rem card: 28rem of grid and at least 260px of
- * panel. A 1024 window with the sidebar open has a 662px card, about 186px
- * beside the grid, so it stacks; 1280 has 918px.
+ * One rule: beside the grid from a 40rem card, where the side column takes the
+ * rest of the card's width. A 1024 window with the sidebar open has a 662px
+ * card, so it is beside, with the grid giving up width to the column's floor.
  */
 const PACE_LAYOUT = [
   [375, 'below'],
-  [768, 'below'],
-  [1024, 'below'],
+  [768, 'beside'],
+  [1024, 'beside'],
   [1280, 'beside'],
   [1440, 'beside'],
+  [1536, 'beside'],
 ] as const;
 
-test('the weekly pace panel sits beside the grid only when it has room', async ({ page }) => {
+test('the weekly pace panel sits beside the grid from a 40rem card and fills it', async ({
+  page,
+}) => {
   const account = newAccount('pace');
   const api = await apiFor(12);
   const { accessToken } = await registerAccount(api, account);
@@ -114,15 +138,42 @@ test('the weekly pace panel sits beside the grid only when it has room', async (
         ).toBeLessThan(0.5);
       }
     } else {
+      const content = await contentEdges(card);
+      const panelBox = await box(plot.locator('xpath=..'));
+      const legendBox = await box(grid.locator('xpath=following-sibling::div[1]'));
+
+      expect(content.right - content.left, `a 40rem card ${at}`).toBeGreaterThanOrEqual(BESIDE_MIN);
       expect(plotBox.left, `pace right of the grid ${at}`).toBeGreaterThan(gridBox.right);
-      // In the empty top of the column, level with the grid's first row.
       expect(
         Math.abs(figuresBox.top - gridBox.top),
         `figures level with the grid ${at}`,
       ).toBeLessThan(1);
-      expect(plotBox.bottom, `pace level with the grid ${at}`).toBeLessThan(gridBox.bottom + 40);
-      expect(gridBox.width, `grid unsqueezed beside the pace ${at}`).toBeCloseTo(GRID_CAP, 0);
-      expect(plotBox.width, `pace keeps its 260px floor ${at}`).toBeGreaterThanOrEqual(260);
+
+      // Nothing left empty to the right: the column runs to the card's edge,
+      // never under its floor, and the grid gives up width only at that floor.
+      expect(plotBox.right, `pace to the card's edge ${at}`).toBeCloseTo(content.right, 0);
+      expect(plotBox.width, `pace keeps its 15rem floor ${at}`).toBeGreaterThanOrEqual(
+        SIDE_FLOOR - 0.5,
+      );
+      expect(gridBox.width, `grid fills to its cap first ${at}`).toBeCloseTo(
+        Math.min(GRID_CAP, content.right - gridBox.left - GUTTER - SIDE_FLOOR),
+        0,
+      );
+
+      // The column never sets the card's height. The grid stretches with its
+      // row, so a row grown by the column makes the grid taller than its seven
+      // square cells and six gaps, both measured across, where no row
+      // stretching reaches. The pace panel ends level with the legend, its
+      // plot grown into the rest.
+      const week0 = await box(cells.nth(0));
+      const week1 = await box(cells.nth(7));
+      const natural = 7 * week0.width + 6 * (week1.left - week0.right);
+      expect(gridBox.height, `grid row no taller than the grid ${at}`).toBeCloseTo(natural, 0);
+      expect(panelBox.bottom, `pace ends level with the legend ${at}`).toBeCloseTo(
+        legendBox.bottom,
+        0,
+      );
+      expect(plotBox.height, `pace plot at least 48px ${at}`).toBeGreaterThanOrEqual(47.5);
     }
   }
 });
@@ -156,23 +207,13 @@ test('a new application is not counted as its own status update', async ({ page 
 });
 
 /**
- * Active days is rendered twice, once in the figures row and once in the strip
- * right of the side column, and a card-width query shows one. The strip needs a
- * 66rem card: 90px of strip at 1440, none worth using at 1366.
+ * Active days is the third figure in the Added and Status updates row at every
+ * width, rendered once. The row's columns never shrink below their content, so
+ * no label wraps, down to the side column's 240px floor at 1024.
  */
-const ACTIVE_DAYS_LAYOUT = [
-  [375, 'row'],
-  [768, 'row'],
-  [1024, 'row'],
-  [1280, 'row'],
-  [1366, 'row'],
-  [1440, 'strip'],
-  [1536, 'strip'],
-] as const;
+const ACTIVE_DAYS_WIDTHS = [375, 768, 1024, 1280, 1366, 1440, 1536] as const;
 
-test('Active days shows once: in the strip when there is room, in the row otherwise', async ({
-  page,
-}) => {
+test('Active days shows once, third in the figures row, which never wraps', async ({ page }) => {
   const account = newAccount('active');
   const api = await apiFor(12);
   const { accessToken } = await registerAccount(api, account);
@@ -189,41 +230,34 @@ test('Active days shows once: in the strip when there is room, in the row otherw
   const updates = row.locator('dt:text-is("Status updates")');
   const shown = card.locator('dt:text-is("Active days")').filter({ visible: true });
 
-  await expect(card.locator('dt:text-is("Active days")')).toHaveCount(2);
+  await expect(card.locator('dt:text-is("Active days")')).toHaveCount(1);
 
-  for (const [width, place] of ACTIVE_DAYS_LAYOUT) {
+  for (const width of ACTIVE_DAYS_WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     await card.scrollIntoViewIfNeeded();
     await page.waitForTimeout(250);
     const at = `@ ${String(width)}px`;
 
-    await expect(shown, `one copy visible ${at}`).toHaveCount(1);
-    // The browser's own accessibility tree: the hidden copy must not be in it.
+    await expect(shown, `visible ${at}`).toHaveCount(1);
+    // The browser's own accessibility tree reads it exactly once.
     const tree = await card.ariaSnapshot();
     expect(tree.match(/Active days/g)?.length, `read once ${at}`).toBe(1);
 
     const stat = await box(shown);
     const rowBox = await box(row);
     const addedBox = await box(added);
-    const contentRight = await card.evaluate(
-      (el) =>
-        el.getBoundingClientRect().left +
-        el.clientLeft +
-        el.clientWidth -
-        parseFloat(getComputedStyle(el).paddingRight),
-    );
+    const updatesBox = await box(updates);
+    const content = await contentEdges(card);
 
-    // Level with Added either way: one row of figures, never wrapped.
+    // One row of figures: level with Added, after Status updates, inside the row.
     expect(Math.abs(stat.top - addedBox.top), `level with Added ${at}`).toBeLessThan(1);
-    expect(stat.right, `inside the card ${at}`).toBeLessThanOrEqual(contentRight + 0.5);
+    expect(stat.left, `after Status updates ${at}`).toBeGreaterThan(updatesBox.right);
+    expect(stat.right, `inside the row ${at}`).toBeLessThanOrEqual(rowBox.right + 0.5);
+    expect(stat.right, `inside the card ${at}`).toBeLessThanOrEqual(content.right + 0.5);
 
-    if (place === 'row') {
-      const updatesBox = await box(updates);
-      expect(stat.left, `after Status updates ${at}`).toBeGreaterThan(updatesBox.right);
-      expect(stat.right, `inside the side column ${at}`).toBeLessThanOrEqual(rowBox.right + 0.5);
-    } else {
-      expect(stat.left, `right of the side column ${at}`).toBeGreaterThanOrEqual(rowBox.right + 16);
-    }
+    // No label wraps: a wrapped "Status updates" is twice the height of "Added".
+    expect(updatesBox.height, `Status updates on one line ${at}`).toBeCloseTo(addedBox.height, 0);
+    expect(stat.height, `Active days on one line ${at}`).toBeCloseTo(addedBox.height, 0);
   }
 });
 
@@ -251,27 +285,22 @@ test('the activity grid scales with its card and keeps its cells square', async 
     await card.scrollIntoViewIfNeeded();
     await page.waitForTimeout(250);
 
-    // The card's content edge, inside its border as well as its padding.
-    const contentRight = await card.evaluate(
-      (el) =>
-        el.getBoundingClientRect().left +
-        el.clientLeft +
-        el.clientWidth -
-        parseFloat(getComputedStyle(el).paddingRight),
-    );
+    const content = await contentEdges(card);
     const gridBox = await box(grid);
     const first = await box(cells.first());
-    const room = contentRight - gridBox.left;
+    const room = content.right - gridBox.left;
+    // Beside the grid, the side column's floor and gutter come out of the room.
+    const share = content.right - content.left >= BESIDE_MIN ? room - GUTTER - SIDE_FLOOR : room;
 
     expect(Math.abs(first.width - first.height), `square cell @ ${String(width)}px`).toBeLessThan(
       0.5,
     );
     expect(gridBox.width, `grid width @ ${String(width)}px`).toBeCloseTo(
-      Math.min(room, GRID_CAP),
+      Math.min(share, GRID_CAP),
       0,
     );
     expect(gridBox.right, `grid inside the card @ ${String(width)}px`).toBeLessThanOrEqual(
-      contentRight + 0.5,
+      content.right + 0.5,
     );
 
     for (const row of LABELLED_ROWS) {

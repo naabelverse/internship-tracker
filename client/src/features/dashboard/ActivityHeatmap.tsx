@@ -30,45 +30,40 @@ const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
  * `max-w-md` (28rem), which puts a cell at about 32px and the grid at 259px
  * tall, level with the 256px plots in the chart cards above.
  *
- * Narrow, the side column takes the row under the legend in that same column,
- * so each pace bar sits directly under its week. From a 48rem card it moves
- * beside the grid instead, behind a 1rem spacer track: the grid keeps its full
- * 28rem and the panel gets at least 260px, up to 28rem, where its bars match
- * the cells' pitch exactly. From a 66rem card the side column is full width
- * and a strip opens to its right, behind another 1rem spacer; see
- * `ACTIVE_DAYS_IN_STRIP`. It is a container query, not a viewport breakpoint,
- * because the room beside the grid is not monotonic in the viewport: the
- * sidebar arriving at `lg` takes 256px, so a 1024 window leaves about 186px
- * beside the grid while a 1023 one, with the sidebar in a drawer, leaves 457.
+ * One rule. Narrow, the side column takes the row under the legend in that
+ * same column, so each pace bar sits directly under its week. From a 40rem
+ * card it moves beside the grid, behind a 1rem spacer track, and takes all the
+ * width left over, never less than 15rem. The grid's track reaches its 28rem
+ * cap before the side column grows past that floor: a 662px card (a 1024
+ * window with the sidebar) has a 362px grid and a 240px column, and a 1174px
+ * one (1536 and up, where the page stops widening) a 448px grid and a 674px
+ * column, so nothing is left empty to the right at any width. It is a container
+ * query, not a viewport breakpoint, because the card's width is not monotonic
+ * in the viewport: the sidebar arriving at `lg` takes 256px, so a 1024 window
+ * has a 662px card while a 1023 one, with the sidebar in a drawer, has 933.
  */
 const LAYOUT =
-  'mt-4 grid grid-cols-[auto_minmax(0,28rem)] justify-start gap-x-2 gap-y-4 [@container_(min-width:48rem)]:grid-cols-[auto_28rem_1rem_minmax(0,28rem)] [@container_(min-width:66rem)]:grid-cols-[auto_28rem_1rem_28rem_1rem_minmax(0,1fr)]';
-
-/**
- * Active days has two places, and exactly one copy shows. From a 66rem card it
- * takes the strip right of the side column: labels, grid, side column, two
- * spacers and five gaps come to 988px, so a 66rem (1056px) card leaves 68px,
- * room for "Active days" at 12px. That is a window of about 1418px with the
- * sidebar; the strip is 90px at 1440 and 186px from 1536, where the page
- * stops widening. Below it the strip is narrower than the label (48px at
- * 1366, none at 1280), so the stat joins Added and Status updates as a third
- * figure instead. `display: none` on the other copy takes it out of the
- * accessibility tree as well as the layout, so it is never read twice.
- */
-const ACTIVE_DAYS_IN_ROW = '[@container_(min-width:66rem)]:hidden';
-const ACTIVE_DAYS_IN_STRIP =
-  'hidden [@container_(min-width:66rem)]:col-start-6 [@container_(min-width:66rem)]:row-start-1 [@container_(min-width:66rem)]:block';
+  'mt-4 grid grid-cols-[auto_minmax(0,28rem)] justify-start gap-x-2 gap-y-4 [@container_(min-width:40rem)]:grid-cols-[auto_minmax(0,28rem)_1rem_minmax(15rem,1fr)]';
 
 /**
  * Follow-through over weekly pace, stacked under the legend in the grid's
- * column, or beside the grid and legend. Beside, the column spans both rows
- * and `justify-between` keeps the pace bars level with the legend, where they
- * sat alone, while the figures take the empty top of the column beside the
- * grid's first rows. Neither is tall enough to grow those rows, so the card
- * keeps its height there.
+ * column, or beside the grid and legend, spanning both rows. Beside, the
+ * column is exactly as tall as those rows and the pace plot takes whatever
+ * height the figures leave; see `PACE_PLOT`.
  */
 const SIDE_COLUMN =
-  'col-start-2 row-start-3 flex flex-col gap-4 [@container_(min-width:48rem)]:col-start-4 [@container_(min-width:48rem)]:row-span-2 [@container_(min-width:48rem)]:row-start-1 [@container_(min-width:48rem)]:justify-between';
+  'col-start-2 row-start-3 flex flex-col gap-4 [@container_(min-width:40rem)]:col-start-4 [@container_(min-width:40rem)]:row-span-2 [@container_(min-width:40rem)]:row-start-1';
+
+/**
+ * The pace plot: 80px under the grid. Beside it, the plot starts at 48px and
+ * grows into the column's spare height, so the column never sets the card's
+ * height. Its floor there, with "of N days" under Active days and the pace
+ * summary wrapped to two lines in a 240px column, is 215px; the grid and legend
+ * rows are 227px at a 40rem card and 290px once the grid reaches its cap, where
+ * the plot is 139px. That is why the rule is at 40rem: at 38rem the rows are
+ * 208px and the column would push the card 7px taller.
+ */
+const PACE_PLOT = 'h-20 [@container_(min-width:40rem)]:h-12';
 
 /**
  * Activity per day over the last twelve weeks, and per week against the goal.
@@ -106,9 +101,10 @@ export function ActivityHeatmap({
           <Skeleton className="aspect-[12/7] w-full" label="Loading activity" />
           <span className="col-span-2 row-start-2 h-4" aria-hidden="true" />
           <div className={SIDE_COLUMN} aria-hidden="true">
-            {/* The figures: 87px with Active days in the row, 71px without. */}
-            <div className="skeleton h-[5.5rem] [@container_(min-width:66rem)]:h-[4.5rem]" />
-            <div className="skeleton h-32" />
+            {/* The figures are 87px. The pace panel is 128px under the grid
+                and fills the rest of the column beside it. */}
+            <div className="skeleton h-[5.5rem]" />
+            <div className="skeleton h-32 flex-auto [@container_(min-width:40rem)]:h-auto" />
           </div>
         </div>
       ) : (
@@ -149,12 +145,11 @@ export function ActivityHeatmap({
             ))}
           </div>
 
-          {/* Pinned to the row under the grid rather than auto-placed. With six
-              tracks, two free columns beside the grid fit it first: the loading
-              placeholder, with no strip to block them, landed there and lost
-              the legend row. Spans the label column to keep its place at the card's edge, but is
-              sized as if empty: otherwise "Less … More" (about 110px) would set
-              the auto label column's width, shrinking the grid to 179px at 375. */}
+          {/* Pinned to the row under the grid rather than auto-placed, so no
+              track layout can move it beside the grid. Spans the label column
+              to keep its place at the card's edge, but is sized as if empty:
+              otherwise "Less … More" (about 110px) would set the auto label
+              column's width, shrinking the grid to 179px at 375. */}
           <div className="col-span-2 row-start-2 flex items-center gap-1.5 text-[0.625rem] text-content-subtle [contain:inline-size]">
             <span>Less</span>
             {HEAT_LEVEL_CLASSES.map((level) => (
@@ -165,14 +160,10 @@ export function ActivityHeatmap({
 
           <div className={SIDE_COLUMN}>
             <FollowThrough cells={cells}>
-              <ActiveDaysStat activeDays={activeDays} className={ACTIVE_DAYS_IN_ROW} />
+              <ActiveDaysStat activeDays={activeDays} />
             </FollowThrough>
-            <WeeklyPace cells={cells} target={weeklyGoal} />
+            <WeeklyPace cells={cells} target={weeklyGoal} plotClassName={PACE_PLOT} />
           </div>
-
-          <dl className={ACTIVE_DAYS_IN_STRIP}>
-            <ActiveDaysStat activeDays={activeDays} />
-          </dl>
         </div>
       )}
     </Card>

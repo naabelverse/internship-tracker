@@ -4738,3 +4738,72 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   shorter than the loaded card. The legend and its placeholder now carry `row-start-2`.
 - **Heatmap label wording:** its screen-reader label said "N active days" for days with an
   application added. It now says "across N days", so "active" has one meaning on the card.
+
+## Activity card redesigned as heatmap left, one stretching column right (3 Oct 2026)
+
+- **What:** the heatmap keeps its column (up to 28rem). Everything else, the three figures over
+  Weekly pace, is one column that takes all the width left over, never under 15rem (240px), from
+  a 40rem card. Below that the card stacks as before, each pace bar under its week. This replaces
+  the 48rem beside rule, the 66rem strip, and the second, hidden copy of Active days. Calculations,
+  labels, titles and screen-reader text are unchanged.
+- **Why a redesign rather than another patch:** four PRs each fixed one gap at one width and left
+  two container rules, a strip and a duplicated stat. Measured on the shipped card, the worst gap
+  was not the one reported at 1440+: at 768 and 1024 (sidebar open) the card stacked and left a
+  ~200 × 573px column empty down its whole right side.
+- **Three directions, prototyped by rearranging the real card's DOM in a production build and
+  measured at six widths.** Dead space is the share of the card body more than 24px from any text,
+  cell or bar, so ordinary gaps do not count:
+
+  | Window | Card   | Shipped | A (chosen) | B     | C     |
+  | ------ | ------ | ------- | ---------- | ----- | ----- |
+  | 375    | 309px  | 2.2%    | 3.3%       | 6.3%  | 2.2%  |
+  | 768    | 678px  | 33.5%   | 1.0%       | 15.6% | 33.5% |
+  | 1024   | 662px  | 31.9%   | 1.7%       | 15.8% | 31.9% |
+  | 1280   | 918px  | 14.0%   | 5.1%       | 17.1% | 14.0% |
+  | 1440   | 1078px | 23.7%   | 9.4%       | 18.4% | 24.1% |
+  | 1920   | 1174px | 30.0%   | 11.4%      | 19.1% | 30.3% |
+
+- **Rejected, B (figures across the top, heatmap and pace side by side below):** also one rule, but
+  the card is about 100px taller at every width from 768 up (471px against 368 at 1280 and up),
+  the figures row leaves a ~900 × 90px void to its right, and the pace chart grows to 674 × 242px
+  and outweighs the heatmap.
+- **Rejected, C (the shipped layout without the strip):** the smallest change, and Active days
+  rejoins its row, but it fixes no gap: 768 and 1024 keep their empty column and 1440+ keeps a
+  122–218px right margin.
+- **The figures row is `grid-flow-col auto-cols-[minmax(max-content,1fr)]`:** equal columns, none
+  narrower than its content. The prototype's `repeat(3, minmax(0, 1fr))` wrapped "Status updates" in
+  a 240px column. The three figures need 177px plus two 16px gaps, inside the 240px floor and the
+  226px grid of a 320px phone.
+- **Pace summary: it wraps to two lines in the 240px column, rather than a 272px floor.** A 272px
+  floor costs the heatmap 32px at 1024 (cells 24.7px → 22px) and still cannot promise one line:
+  "Goal met in 10 of 12 weeks · 10.5 a week on average" is wider than 272px. With the grid that
+  much shorter, the fixed 80px plot would no longer fit beside it either, so the card would grow.
+- **40rem, not the prototype's ~38rem:** beside the grid the plot starts at 48px and grows into the
+  column's spare height, so the column never sets the row height. Its floor, with "of N days" and a
+  two-line pace summary, is 215px. The grid and legend rows are 227px at 40rem and 208px at 38rem,
+  where the column would push the card 7px taller. At the 28rem cap the rows are 290px and the plot
+  is 139px, against a fixed 80px before.
+- **Cost, accepted:** once the column is wider than the grid (about 1300 and up), the pace bars are
+  wider than the heatmap cells (about 50px against 32px at 1536+), so "each bar matches its week's
+  cell pitch" holds only when stacked. At 768 and 1024 the cells are 26px and 24.7px rather than
+  31.8px, and the card is about 330px tall rather than 615px.
+- **Tests rewritten to the new rules, not loosened.** Four, one more than first flagged:
+  - `heatmap.spec.ts` "pace beside the grid only when it has room" (48rem; grid at its 448px cap;
+    a 260px panel floor) now pins: beside from 40rem at 768/1024/1280/1440/1536; the column ends at
+    the card's content edge; it is at least 240px; the grid is `min(448, room − 32 − 240)`; the
+    grid is exactly seven cells and six gaps tall, both measured across (the column did not grow
+    the row); the pace panel ends level with the legend; the plot is at least 48px.
+  - `heatmap.spec.ts` "Active days … in the strip when there is room" now pins one copy, read once
+    in the accessibility tree, third in the row at seven widths, with "Status updates" and
+    "Active days" each on one line.
+  - `heatmap.spec.ts` "the activity grid scales with its card", not in the original list, expected
+    `min(room, 448)` at every width. Beside the grid it now expects `min(room − 32 − 240, 448)`.
+  - `followThroughStats.test.tsx` "places Active days twice and shows one" now pins a single copy,
+    third in the row, carrying no placement class, and the row's column rule.
+- **The rewritten e2e checks fail on what they guard.** Against `main`'s build the three rewritten
+  tests fail (pace not beside at 768, two Active days copies, grid width at 768) and the unchanged
+  one passes. A throwaway build with the prototype's `grid-cols-3` row and a fixed 80px plot fails
+  "Status updates on one line @ 768px" (32px against 16) and "grid row no taller than the grid @
+  1024px" (212.5px against 208.7). A first version of that last check compared the weekday labels'
+  height with the grid's and passed on the broken build, because both stretch with the row; it was
+  replaced before commit.

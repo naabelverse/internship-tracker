@@ -17,6 +17,11 @@ interface WeeklyPaceProps {
   cells: Cell[];
   /** The account's weekly goal; 0 means none is set. */
   target: number;
+  /**
+   * The plot's height. A fixed 80px unless the parent passes its own rule; the
+   * plot and the panel both grow into any height their column has to spare.
+   */
+  plotClassName?: string;
 }
 
 /**
@@ -27,7 +32,11 @@ interface WeeklyPaceProps {
  * own levels and outline, and the dashed goal line is the card's subtle text
  * colour, so nothing here is a colour the card did not already use.
  */
-export function WeeklyPace({ cells, target }: WeeklyPaceProps): JSX.Element {
+export function WeeklyPace({
+  cells,
+  target,
+  plotClassName = 'h-20',
+}: WeeklyPaceProps): JSX.Element {
   const totals = useMemo(() => weeklyTotals(cells), [cells]);
   const scale = paceScale(totals, target);
   const busiest = totals.reduce((max, week) => Math.max(max, week.count), 0);
@@ -35,7 +44,7 @@ export function WeeklyPace({ cells, target }: WeeklyPaceProps): JSX.Element {
   const goalLabel = target > 0 ? ` Weekly goal: ${String(target)}.` : '';
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-auto flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs text-content-subtle">Weekly pace</h3>
         {target > 0 && (
@@ -50,7 +59,10 @@ export function WeeklyPace({ cells, target }: WeeklyPaceProps): JSX.Element {
       </div>
 
       <div
-        className="relative grid h-20 grid-cols-12 items-end gap-1 sm:gap-1.5"
+        className={cn(
+          'relative grid flex-auto grid-cols-12 items-end gap-1 sm:gap-1.5',
+          plotClassName,
+        )}
         role="img"
         aria-label={`Applications added per week, oldest first: ${counts}.${goalLabel}`}
       >
