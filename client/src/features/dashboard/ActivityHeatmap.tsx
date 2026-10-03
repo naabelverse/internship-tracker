@@ -25,6 +25,18 @@ interface ActivityHeatmapProps {
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /**
+ * The subtitle in a phone length and a full length, the Dashboard header's
+ * `Lede` pattern, so it stays one line. The full line measures 405px and the
+ * short one 210px; the card's content box is 254px at 320 wide and 324px at
+ * 390, then 662px or more from 768 up. The switch is at a 26rem card, on the
+ * same container query as `LAYOUT`, because the card's width does not follow
+ * the viewport's. `display: none` takes the hidden one out of the
+ * accessibility tree, so a screen reader hears only the one on screen.
+ */
+const SUBTITLE_SHORT = '[@container_(min-width:26rem)]:hidden';
+const SUBTITLE_FULL = 'hidden [@container_(min-width:26rem)]:inline';
+
+/**
  * Weekday labels, the grid, and the side column (follow-through over weekly
  * pace), as one CSS grid whose second column is the heatmap's: up to
  * `max-w-md` (28rem), which puts a cell at about 32px and the grid at 259px
@@ -88,9 +100,18 @@ export function ActivityHeatmap({
     // The card is the query container, so the layout follows the room the card
     // actually has rather than the window's width.
     <Card as="section" className="[container-type:inline-size]">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div>
         <h2 className="panel-title">Activity</h2>
-        <p className="text-xs text-content-subtle">Last 12 weeks</p>
+        <p className="mt-0.5 text-xs text-content-subtle">
+          <span className={SUBTITLE_SHORT}>
+            {weeklyGoal > 0 ? 'Last 12 weeks, against your weekly goal' : 'Last 12 weeks'}
+          </span>
+          <span className={SUBTITLE_FULL}>
+            {weeklyGoal > 0
+              ? 'Your activity over the last 12 weeks, and how it compares to your weekly goal.'
+              : 'Your activity over the last 12 weeks.'}
+          </span>
+        </p>
       </div>
 
       {isLoading ? (
