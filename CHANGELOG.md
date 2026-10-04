@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Activity card explains what it shows.** A line under the heading says
+  it covers the last 12 weeks against your weekly goal, and a small (?) beside
+  the heatmap, the figures and Weekly pace opens a short note on how each is
+  counted: shade is applications added, Active days is any day you added or
+  moved one, and a week meets the goal by reaching it. The notes open on click
+  or Enter and close on Escape, so they work by touch and keyboard.
 - **The dashboard's Activity card shows weekly pace against your goal.**
   Twelve small bars, one per week of the heatmap, with a dashed line at the
   weekly goal and a line such as "Goal met in 2 of 12 weeks · 3.4 a week on

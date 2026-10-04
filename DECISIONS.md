@@ -4807,3 +4807,35 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   1024px" (212.5px against 208.7). A first version of that last check compared the weekday labels'
   height with the grid's and passed on the broken build, because both stretch with the row; it was
   replaced before commit.
+
+## The Activity card explains itself: a subtitle and three info tips (4 Oct 2026)
+
+- **Subtitle replaces the right-aligned "Last 12 weeks".** The line under "Activity" now says it,
+  so the label would repeat it. A 405px full line ("Your activity over the last 12 weeks, and how it
+  compares to your weekly goal.") and a 210px short one, swapped by a 26rem container query, the
+  Dashboard header's `Lede` pattern. The card's content box is 254–324px on phones and 662px or more
+  from 768, so it is one line at every width measured (320 to 1920). With no goal set, the goal
+  clause is dropped. Cost: the card is 18px taller at every width.
+- **`InfoTip` is a new pattern, built on `Popover`, not a tooltip library.** The app had no tooltip
+  or info icon. `title` text cannot be reached by keyboard or touch, and a hover tooltip cannot be
+  opened on a phone, so the tip is a click/Enter disclosure: `Popover` with `role="dialog"`, an icon
+  trigger named "About …", Escape and outside-click to close, and focus back on the icon. The panel
+  is anchored to its own trigger, so `useAnchoredPosition` keeps it inside the 16px gutter at 320.
+  The icon is 14px with a 26px pseudo-element target (WCAG 2.2's 24px minimum), measured by hit-walk.
+- **The trigger is block `flex`.** `Popover` wraps it in a `div`. An `inline-flex` trigger gave that
+  div a 24px line box, which grew the legend and pace title rows from 16px to 24px. Measured before
+  and after: with `flex`, everything apart from the subtitle is pixel-identical at seven widths.
+- **Tip copy follows the code, not the brief's example.** The brief suggested the heatmap's tip say
+  shade is "applications/updates that day". Shade is applications added only (`heatLevel(cell.count)`),
+  so the tip says that, and that a day of status updates alone looks empty but is an active day.
+- **Accepted:** at 320 the "1.3 updates for every application added" line wraps to two lines (the
+  column is 226px; text plus icon is wider), adding 16px there only. A panel opened near the
+  viewport's bottom flips above its icon, as every anchored panel does, and can cover the figures it
+  explains until the page is scrolled.
+- **Open, found by the Task 1 data check and not changed here:**
+  - The goal line is a 1px top border whose box ends at the goal value, so it is drawn just above
+    it. A week at exactly the goal ends 1px under the line's top, and with rounded bar tops it reads
+    as falling short. On the demo data, two of the three "Goal met" weeks are exactly 5, so the chart
+    visibly shows one week reaching the line while the text says three.
+  - The heatmap shades added applications only, while Active days counts added or moved. The demo
+    account shows 55 active days against 30 shaded squares.

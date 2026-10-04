@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/formatters';
 import { ActiveDaysStat } from '@/features/dashboard/ActiveDaysStat';
+import { FiguresTip, HeatmapTip, PaceTip } from '@/features/dashboard/ActivityTips';
 import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { WeeklyPace } from '@/features/dashboard/WeeklyPace';
 import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
@@ -23,6 +24,18 @@ interface ActivityHeatmapProps {
 
 /** Monday first, matching the week the analytics aggregation buckets on. */
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/**
+ * The subtitle in a phone length and a full length, the Dashboard header's
+ * `Lede` pattern, so it stays one line. The full line measures 405px and the
+ * short one 210px; the card's content box is 254px at 320 wide and 324px at
+ * 390, then 662px or more from 768 up. The switch is at a 26rem card, on the
+ * same container query as `LAYOUT`, because the card's width does not follow
+ * the viewport's. `display: none` takes the hidden one out of the
+ * accessibility tree, so a screen reader hears only the one on screen.
+ */
+const SUBTITLE_SHORT = '[@container_(min-width:26rem)]:hidden';
+const SUBTITLE_FULL = 'hidden [@container_(min-width:26rem)]:inline';
 
 /**
  * Weekday labels, the grid, and the side column (follow-through over weekly
@@ -88,9 +101,18 @@ export function ActivityHeatmap({
     // The card is the query container, so the layout follows the room the card
     // actually has rather than the window's width.
     <Card as="section" className="[container-type:inline-size]">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div>
         <h2 className="panel-title">Activity</h2>
-        <p className="text-xs text-content-subtle">Last 12 weeks</p>
+        <p className="mt-0.5 text-xs text-content-subtle">
+          <span className={SUBTITLE_SHORT}>
+            {weeklyGoal > 0 ? 'Last 12 weeks, against your weekly goal' : 'Last 12 weeks'}
+          </span>
+          <span className={SUBTITLE_FULL}>
+            {weeklyGoal > 0
+              ? 'Your activity over the last 12 weeks, and how it compares to your weekly goal.'
+              : 'Your activity over the last 12 weeks.'}
+          </span>
+        </p>
       </div>
 
       {isLoading ? (
@@ -148,7 +170,7 @@ export function ActivityHeatmap({
           {/* Pinned to the row under the grid rather than auto-placed, so no
               track layout can move it beside the grid. Spans the label column
               to keep its place at the card's edge, but is sized as if empty:
-              otherwise "Less … More" (about 110px) would set the auto label
+              otherwise "Less … More" and its tip (about 134px) would set the auto label
               column's width, shrinking the grid to 179px at 375. */}
           <div className="col-span-2 row-start-2 flex items-center gap-1.5 text-[0.625rem] text-content-subtle [contain:inline-size]">
             <span>Less</span>
@@ -156,13 +178,21 @@ export function ActivityHeatmap({
               <span key={level} className={cn('h-2.5 w-2.5 rounded-chip', level)} />
             ))}
             <span>More</span>
+            <div className="ml-1 flex">
+              <HeatmapTip />
+            </div>
           </div>
 
           <div className={SIDE_COLUMN}>
-            <FollowThrough cells={cells}>
+            <FollowThrough cells={cells} info={<FiguresTip />}>
               <ActiveDaysStat activeDays={activeDays} />
             </FollowThrough>
-            <WeeklyPace cells={cells} target={weeklyGoal} plotClassName={PACE_PLOT} />
+            <WeeklyPace
+              cells={cells}
+              target={weeklyGoal}
+              plotClassName={PACE_PLOT}
+              info={<PaceTip goal={weeklyGoal} />}
+            />
           </div>
         </div>
       )}

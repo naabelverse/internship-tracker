@@ -7,6 +7,8 @@ interface FollowThroughProps {
   cells: Cell[];
   /** Further figures for the same row, each a `div` holding a `dt` and its `dd`s. */
   children?: ReactNode;
+  /** An explanation of the figures, set beside the sentence under them. */
+  info?: ReactNode;
 }
 
 /**
@@ -19,7 +21,7 @@ interface FollowThroughProps {
  * Added, Status updates and Active days need 177px plus two 16px gaps, inside
  * the Activity card's 240px floor for this column and its 226px grid at 320.
  */
-export function FollowThrough({ cells, children }: FollowThroughProps): JSX.Element {
+export function FollowThrough({ cells, children, info }: FollowThroughProps): JSX.Element {
   const summary = useMemo(() => summarizeFollowThrough(cells), [cells]);
 
   return (
@@ -39,7 +41,11 @@ export function FollowThrough({ cells, children }: FollowThroughProps): JSX.Elem
         </div>
         {children}
       </dl>
-      <p className="text-xs text-content-subtle">{followThroughText(summary)}</p>
+      <div className="flex items-start gap-1.5">
+        <p className="text-xs text-content-subtle">{followThroughText(summary)}</p>
+        {/* One 16px line tall, so the icon centres on the sentence's first line. */}
+        {info !== undefined && <div className="flex h-4 items-center">{info}</div>}
+      </div>
     </div>
   );
 }
