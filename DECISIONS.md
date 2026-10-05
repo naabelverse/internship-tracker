@@ -4839,3 +4839,52 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
     visibly shows one week reaching the line while the text says three.
   - The heatmap shades added applications only, while Active days counts added or moved. The demo
     account shows 55 active days against 30 shaded squares.
+
+## The Activity figures get a title, their ratio becomes a caption, and a rule sets Weekly pace apart (6 Oct 2026)
+
+- **Why:** "1.3 updates for every application added (?)" sat 16px above "Weekly pace (?)", in the
+  same 12px subtle text with the same icon, so it read as a second section heading. It is the
+  Added/Status updates summary and has nothing to do with Weekly pace.
+- **What:** the three figures are a titled section, "Follow-through" with its (?) beside it, the
+  label PR #76 proposed and the Weekly pace title's own style. The ratio line keeps its text and its
+  style (12px, `text-content-subtle`, the same as "of N days", which it already was), loses its (?),
+  and sits 4px under the figures row. Its explanation stays in "About these figures", moved to the
+  end of the tip. Inside the figures the gaps are 8px under the title and 4px under the row.
+- **A hairline rule rather than a wider gap.** Where the app splits two regions of one surface it
+  uses a `border-t border-border` hairline (modal footers, settings sections, the filters popover's
+  last row, the Upcoming list's rows). No surface uses a gap bigger than its usual 16px section
+  rhythm to mark a boundary. The rule sits on Weekly pace's section with 8px either side: 17px
+  between the groups, rule included, against at most 8px inside either one. A gap that separates on
+  its own (24px) was prototyped too and works, but costs 7px more of the pace plot (36px against
+  43px at a real 1024 window), and in the stacked layout it would be wider than the 16px between the
+  heatmap and the figures.
+- **The ratio is not a sub-line of Status updates.** Measured on the built card, that column is
+  80px wide at 320, 83px at 375, 64px at 768 and 1024 and 179px at 1440, and only 211px at 1920, for
+  a 207px sentence, so it would wrap at every width but the widest. It stays a full-width line,
+  where without the icon it is now one line at every width, 320 included (PR #76 accepted a
+  two-line wrap there).
+- **Measured on the real build, both themes, at 320, 375, 768, 1024, 1440 and 1920:** no figure
+  label or numeral wraps or overflows; the ratio line is one line, has no button, and computes to
+  the same `12px 400` and colour as "of N days" in each theme; the gaps are 8px under the title, 4px
+  under the figures row and 8px under the pace title, against 17px above Weekly pace with a 1px solid
+  `border` rule in it. Beside the grid (768 to 1920) the card's height is unchanged from `main` and
+  the grid row is not stretched; stacked, the card is 5px taller at 320 (the title and rule, less the
+  ratio's lost second line) and 21px taller at 375.
+- **Cost: the pace plot's floor beside the grid drops from 48px to 36px.** Beside the grid the
+  column must never be taller than the grid and legend rows, and its spare height (plot minus
+  floor), measured on `main`, is 11.6px at a 40rem card, 24.4px at a 1024 window's 662px card, and
+  only 15.7px at 1024 with a classic Windows scrollbar (a 647px card; headless Chromium hides
+  scrollbars, so the e2e suite sees 662). The title row and the rule cost 21px together, so at 48px
+  the column would have set the card's height from 640px to 655px cards, real 1024 windows included.
+  Moving the 40rem rule instead would have sent a real 1024 window to the stacked layout. At 36px the
+  plot is 38.6px at a 40rem card, 42.7px at a real 1024 and 51.4px at a headless one, and unchanged
+  wherever there was room (it grows to fill).
+- **Tests:** `activityExplainers.test.tsx` pins the ratio line as a `p` directly after the figures
+  with no button in its block and the same text utilities as "of N days", the figures' tip beside
+  the "Follow-through" title, and the side column's two sections with only Weekly pace's ruled off
+  and the ratio line the last thing before the rule. All three fail against `main`'s components. In
+  `e2e/audits/heatmap.spec.ts` a new test measures, at 320, 375, 768, 1024, 1440 and 1920, that no
+  figure wraps or overflows, that the ratio has no button and the computed style of "of N days", and
+  that the gap above Weekly pace is at least twice every gap inside a group, with a 1px rule in it.
+  Two existing assertions changed deliberately: the figures' section, not their `dl`, is level with
+  the grid (the title is now its top edge), and the plot floor reads 36px, not 48px.

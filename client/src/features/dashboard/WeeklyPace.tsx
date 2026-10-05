@@ -24,6 +24,8 @@ interface WeeklyPaceProps {
   plotClassName?: string;
   /** An explanation of the panel, set beside its title. */
   info?: ReactNode;
+  /** Extra classes for the panel, such as a divider from the section above. */
+  className?: string;
 }
 
 /**
@@ -39,6 +41,7 @@ export function WeeklyPace({
   target,
   plotClassName = 'h-20',
   info,
+  className,
 }: WeeklyPaceProps): JSX.Element {
   const totals = useMemo(() => weeklyTotals(cells), [cells]);
   const scale = paceScale(totals, target);
@@ -47,7 +50,7 @@ export function WeeklyPace({
   const goalLabel = target > 0 ? ` Weekly goal: ${String(target)}.` : '';
 
   return (
-    <div className="flex flex-auto flex-col gap-2">
+    <div className={cn('flex flex-auto flex-col gap-2', className)}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <h3 className="text-xs text-content-subtle">Weekly pace</h3>

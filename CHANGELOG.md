@@ -38,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Activity card's figures no longer look like a heading for Weekly
+  pace.** Added, Status updates and Active days sit under their own small
+  "Follow-through" title with a (?) beside it. The "1.3 updates for every
+  application added" line is now a plain caption just under the figures, with
+  no (?) of its own (its explanation is in the title's tip). A thin rule sets
+  Weekly pace apart.
 - **The Activity card fills its width at every screen size.** The heatmap keeps
   its column; the figures and Weekly pace share one column beside it that runs to
   the card's edge, with the pace bars growing into the height beside the grid.

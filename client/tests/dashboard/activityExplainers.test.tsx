@@ -100,6 +100,22 @@ describe('the Activity info tips', () => {
     ).toBeInTheDocument();
   });
 
+  it('explains the ratio line in the figures’ tip, which sits beside their title', async () => {
+    const user = userEvent.setup();
+    renderCard(5);
+    const title = screen.getByRole('heading', { level: 3, name: 'Follow-through' });
+    const trigger = screen.getByRole('button', { name: 'About these figures' });
+
+    expect(title.parentElement).toContainElement(trigger);
+
+    await user.click(trigger);
+    expect(
+      within(screen.getByRole('dialog')).getByText(
+        'The line under the figures is status updates divided by applications added.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('says there is no line when no weekly goal is set', async () => {
     const user = userEvent.setup();
     renderCard(0);
@@ -108,5 +124,71 @@ describe('the Activity info tips', () => {
     expect(
       within(screen.getByRole('dialog')).getByText(/No weekly goal is set/),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * The ratio line once carried its own (?) and sat 16px above "Weekly pace (?)",
+ * the same size, so it read as a second heading. It is now the figures'
+ * caption, and a rule sets Weekly pace apart. jsdom applies no CSS, so this
+ * pins the structure; `e2e/audits/heatmap.spec.ts` measures the gaps.
+ */
+describe('the Activity figures group', () => {
+  /** Three added and four moves: "1.3 updates for every application added". */
+  function renderWithRatio(): void {
+    render(
+      <ActivityHeatmap
+        points={[
+          makeTimelinePoint({ bucket: new Date().toISOString(), created: 3, statusChanges: 7 }),
+        ]}
+        timeZone="UTC"
+        weeklyGoal={5}
+        isLoading={false}
+      />,
+    );
+  }
+
+  /** The text-size and colour utilities on an element, the rest left out. */
+  function textStyle(element: Element): string[] {
+    return [...element.classList].filter((name) => /^text-/.test(name)).sort();
+  }
+
+  it('keeps the ratio line a caption: no (?) of its own, and the style of “of N days”', () => {
+    renderWithRatio();
+    const ratio = screen.getByText('1.3 updates for every application added');
+    const ofDays = screen.getByText(/^of \d+ days$/);
+    const figures = screen.getByText('Added').closest('dl');
+
+    expect(ratio.tagName).toBe('P');
+    // Directly under the figures row, in the same block, which holds no button.
+    expect(ratio.previousElementSibling).toBe(figures);
+    expect(within(ratio.parentElement as HTMLElement).queryAllByRole('button')).toHaveLength(0);
+    expect(screen.getAllByRole('heading').map((heading) => heading.textContent)).not.toContain(
+      ratio.textContent,
+    );
+    expect(textStyle(ratio)).toEqual(textStyle(ofDays));
+  });
+
+  it('sets the only rule directly above Weekly pace, with the ratio line the last thing before it', () => {
+    renderWithRatio();
+    const ratio = screen.getByText('1.3 updates for every application added');
+    const titles = screen.getAllByRole('heading', { level: 3 });
+
+    expect(titles.map((title) => title.textContent)).toEqual(['Follow-through', 'Weekly pace']);
+
+    // The side column's sections: the figures, then Weekly pace. Only the
+    // second is ruled off; the pace plot's dashed goal line is not a section.
+    const column = titles[0].parentElement?.parentElement?.parentElement;
+    const sections = [...(column?.children ?? [])] as HTMLElement[];
+    const ruled = sections.filter((section) => section.classList.contains('border-t'));
+
+    expect(sections).toHaveLength(2);
+    expect(ruled).toEqual([sections[1]]);
+    expect(within(sections[1]).getAllByRole('heading')[0]).toHaveTextContent('Weekly pace');
+    expect(within(sections[0]).getAllByRole('heading')[0]).toHaveTextContent('Follow-through');
+    expect(sections[0].classList.contains('border-b')).toBe(false);
+
+    // Nothing sits between the ratio line and the rule.
+    expect(sections[0].lastElementChild?.lastElementChild).toBe(ratio);
   });
 });
