@@ -65,18 +65,33 @@ const LAYOUT =
  * height the figures leave; see `PACE_PLOT`.
  */
 const SIDE_COLUMN =
-  'col-start-2 row-start-3 flex flex-col gap-4 [@container_(min-width:40rem)]:col-start-4 [@container_(min-width:40rem)]:row-span-2 [@container_(min-width:40rem)]:row-start-1';
+  'col-start-2 row-start-3 flex flex-col gap-2 [@container_(min-width:40rem)]:col-start-4 [@container_(min-width:40rem)]:row-span-2 [@container_(min-width:40rem)]:row-start-1';
 
 /**
- * The pace plot: 80px under the grid. Beside it, the plot starts at 48px and
+ * A hairline between the figures and Weekly pace, 8px either side: the app's
+ * `border-border` rule between two regions of one surface, as in a modal's
+ * footer or a settings section's. Inside the figures the gaps are 8px under
+ * the title and 4px under the row, so the ratio line reads as the figures'
+ * caption rather than a heading for the panel below. A rule costs 1px over
+ * the 16px gap it replaces; a gap wide enough to separate on its own (24px)
+ * would cost 8px more of the pace plot.
+ */
+const PACE_SECTION = 'border-t border-border pt-2';
+
+/**
+ * The pace plot: 80px under the grid. Beside it, the plot starts at 36px and
  * grows into the column's spare height, so the column never sets the card's
  * height. Its floor there, with "of N days" under Active days and the pace
- * summary wrapped to two lines in a 240px column, is 215px; the grid and legend
+ * summary wrapped to two lines in a 240px column, is 224px; the grid and legend
  * rows are 227px at a 40rem card and 290px once the grid reaches its cap, where
- * the plot is 139px. That is why the rule is at 40rem: at 38rem the rows are
- * 208px and the column would push the card 7px taller.
+ * the plot is 118px. It was 48px until the figures took a title and the rule
+ * above Weekly pace, 21px between them, which a 48px plot could only absorb in
+ * a card 656px or wider. A 1024 window's card is 662px, or 647px beside a
+ * classic scrollbar, so it would have grown the card there; at 36px it is 43px.
+ * That is why the rule is at 40rem: at 38rem the rows are 208px and the column
+ * would push the card 16px taller.
  */
-const PACE_PLOT = 'h-20 [@container_(min-width:40rem)]:h-12';
+const PACE_PLOT = 'h-20 [@container_(min-width:40rem)]:h-9';
 
 /**
  * Activity per day over the last twelve weeks, and per week against the goal.
@@ -123,10 +138,13 @@ export function ActivityHeatmap({
           <Skeleton className="aspect-[12/7] w-full" label="Loading activity" />
           <span className="col-span-2 row-start-2 h-4" aria-hidden="true" />
           <div className={SIDE_COLUMN} aria-hidden="true">
-            {/* The figures are 87px. The pace panel is 128px under the grid
-                and fills the rest of the column beside it. */}
-            <div className="skeleton h-[5.5rem]" />
-            <div className="skeleton h-32 flex-auto [@container_(min-width:40rem)]:h-auto" />
+            {/* The titled figures are 107px. The pace panel is 128px inside
+                its rule under the grid and fills the rest of the column
+                beside it. */}
+            <div className="skeleton h-[6.75rem]" />
+            <div className={cn(PACE_SECTION, 'flex flex-auto flex-col')}>
+              <div className="skeleton h-32 flex-auto [@container_(min-width:40rem)]:h-auto" />
+            </div>
           </div>
         </div>
       ) : (
@@ -191,6 +209,7 @@ export function ActivityHeatmap({
               cells={cells}
               target={weeklyGoal}
               plotClassName={PACE_PLOT}
+              className={PACE_SECTION}
               info={<PaceTip goal={weeklyGoal} />}
             />
           </div>

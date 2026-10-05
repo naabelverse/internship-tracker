@@ -38,11 +38,11 @@ export function FiguresTip(): JSX.Element {
         <Term>Status updates</Term>: each time you moved an application to a new status, older
         applications included. Adding one doesn’t count as an update.
       </p>
-      <p>The line under them is status updates divided by applications added.</p>
       <p>
         <Term>Active days</Term>: days you added or moved at least one application, out of the days
         so far.
       </p>
+      <p>The line under the figures is status updates divided by applications added.</p>
     </InfoTip>
   );
 }

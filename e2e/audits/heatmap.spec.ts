@@ -99,6 +99,7 @@ test('the weekly pace panel sits beside the grid from a 40rem card and fills it'
   const labels = card.locator('ul[aria-hidden="true"]');
   const figures = card.locator('dl').filter({ has: page.locator('dt:text-is("Added")') });
   const paceHeading = card.getByRole('heading', { level: 3, name: 'Weekly pace' });
+  const figuresTitle = card.getByRole('heading', { level: 3, name: 'Follow-through' });
 
   await expect(bars).toHaveCount(12);
 
@@ -144,8 +145,9 @@ test('the weekly pace panel sits beside the grid from a 40rem card and fills it'
 
       expect(content.right - content.left, `a 40rem card ${at}`).toBeGreaterThanOrEqual(BESIDE_MIN);
       expect(plotBox.left, `pace right of the grid ${at}`).toBeGreaterThan(gridBox.right);
+      // The figures' section starts with its title, level with the grid's top row.
       expect(
-        Math.abs(figuresBox.top - gridBox.top),
+        Math.abs((await box(figuresTitle.locator('xpath=..'))).top - gridBox.top),
         `figures level with the grid ${at}`,
       ).toBeLessThan(1);
 
@@ -173,7 +175,8 @@ test('the weekly pace panel sits beside the grid from a 40rem card and fills it'
         legendBox.bottom,
         0,
       );
-      expect(plotBox.height, `pace plot at least 48px ${at}`).toBeGreaterThanOrEqual(47.5);
+      // 36px since the figures took a title and the rule above Weekly pace.
+      expect(plotBox.height, `pace plot at least 36px ${at}`).toBeGreaterThanOrEqual(35.5);
     }
   }
 });
@@ -258,6 +261,104 @@ test('Active days shows once, third in the figures row, which never wraps', asyn
     // No label wraps: a wrapped "Status updates" is twice the height of "Added".
     expect(updatesBox.height, `Status updates on one line ${at}`).toBeCloseTo(addedBox.height, 0);
     expect(stat.height, `Active days on one line ${at}`).toBeCloseTo(addedBox.height, 0);
+  }
+});
+
+/**
+ * The ratio line under the figures once carried its own (?) and sat 16px
+ * above "Weekly pace (?)" at the same size, so it read as a second heading.
+ * It is now the figures' caption, 4px under their row, and a rule sets
+ * Weekly pace apart. Every gap inside a group is 8px or less; the one above
+ * Weekly pace, rule included, is at least twice that.
+ */
+const GROUPING_WIDTHS = [320, 375, 768, 1024, 1440, 1920] as const;
+
+test('the ratio line captions the figures, and a rule sets Weekly pace apart', async ({ page }) => {
+  const account = newAccount('grouping');
+  const api = await apiFor(12);
+  const { accessToken } = await registerAccount(api, account);
+  await createApplication(api, accessToken, { company: 'Grouping Co', role: 'Intern' });
+  await api.dispose();
+
+  await signIn(page, account);
+
+  const card = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { level: 2, name: 'Activity' }) });
+  const titleRow = card.getByRole('heading', { level: 3, name: 'Follow-through' }).locator('..');
+  const row = card.locator('dl').filter({ has: page.locator('dt:text-is("Added")') });
+  const ratio = row.locator('xpath=following-sibling::p[1]');
+  const ofDays = row.locator('dd').filter({ hasText: /^of \d+ days$/ });
+  const paceHeader = card
+    .getByRole('heading', { level: 3, name: 'Weekly pace' })
+    .locator('xpath=../..');
+  const paceSection = paceHeader.locator('..');
+  const plot = card.getByRole('img', { name: /applications added per week/i });
+
+  for (const width of GROUPING_WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    const at = `@ ${String(width)}px`;
+    const content = await contentEdges(card);
+
+    // No figure wraps or overflows: every label and numeral is one line, as
+    // tall as Added's, and inside the card.
+    const lines = await row.locator('dt, dd').evaluateAll((items) =>
+      items.map((item) => {
+        const { height, right } = item.getBoundingClientRect();
+        return { text: item.textContent, height, right };
+      }),
+    );
+    const [addedLabel, addedFigure] = lines;
+    for (const line of lines) {
+      const tall = /^\d+$/.test(line.text ?? '') ? addedFigure.height : addedLabel.height;
+      expect(line.height, `"${String(line.text)}" on one line ${at}`).toBeCloseTo(tall, 0);
+      expect(line.right, `"${String(line.text)}" inside the card ${at}`).toBeLessThanOrEqual(
+        content.right + 0.5,
+      );
+    }
+    expect((await box(ratio)).right, `ratio inside the card ${at}`).toBeLessThanOrEqual(
+      content.right + 0.5,
+    );
+
+    // A caption: no (?) of its own, and no larger than "of N days".
+    await expect(ratio.locator('xpath=..').getByRole('button'), `no tip ${at}`).toHaveCount(0);
+    const style = async (locator: Locator): Promise<string> =>
+      locator.evaluate((el) => {
+        const { fontSize, fontWeight, color } = getComputedStyle(el);
+        return `${fontSize} ${fontWeight} ${color}`;
+      });
+    expect(await style(ratio), `the style of "of N days" ${at}`).toBe(await style(ofDays));
+
+    // Gaps inside the groups, then the one between them, rule included.
+    const title = await box(titleRow);
+    const figures = await box(row);
+    const caption = await box(ratio);
+    const header = await box(paceHeader);
+    const plotBox = await box(plot);
+    const inside = [
+      figures.top - title.bottom,
+      caption.top - figures.bottom,
+      plotBox.top - header.bottom,
+    ];
+    const between = header.top - caption.bottom;
+
+    expect(Math.max(...inside), `gaps inside a group ${at}`).toBeLessThanOrEqual(8.5);
+    expect(between, `the gap above Weekly pace ${at}`).toBeGreaterThanOrEqual(
+      2 * Math.max(...inside),
+    );
+
+    // The rule is the pace section's own top edge, inside that gap.
+    const rule = await paceSection.evaluate((el) => {
+      const { borderTopWidth, borderTopStyle } = getComputedStyle(el);
+      return { width: borderTopWidth, style: borderTopStyle, top: el.getBoundingClientRect().top };
+    });
+    expect(rule, `a hairline above Weekly pace ${at}`).toMatchObject({
+      width: '1px',
+      style: 'solid',
+    });
+    expect(rule.top, `the rule under the ratio line ${at}`).toBeGreaterThan(caption.bottom);
   }
 });
 
