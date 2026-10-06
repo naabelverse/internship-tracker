@@ -4942,7 +4942,7 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   (Kuala Lumpur 07:30 and 23:59, Los Angeles 01:00 and 22:30) with days of moves alone, the cell
   titles and summary, and the line's construction. All 12 new or changed client tests fail against
   `main`'s source. The PR #70 cases in `heatmapCells.test.ts` are unchanged and pass. A new
-  `e2e/audits/heatmap.spec.ts` test loads the real demo set into a fresh account
+  `e2e/audits/demoFigures.spec.ts` test loads the real demo set into a fresh account
   (`POST /applications/demo-data`). At 375, 1024 and 1440 it checks that every week of exactly the
   goal touches the stroke, every week under it clears it, and the number of bars reaching the line
   equals "Goal met in N". It counts shaded squares by computed colour and checks they equal Active
