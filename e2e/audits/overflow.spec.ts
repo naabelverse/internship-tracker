@@ -1,3 +1,4 @@
+// Client address 10: 3 of 5 sign-ups per 15 minutes, one per width.
 import { expect, type Page } from '@playwright/test';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';

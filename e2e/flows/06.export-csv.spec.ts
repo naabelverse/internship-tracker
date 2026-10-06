@@ -1,3 +1,4 @@
+// Client address 6: 1 of 5 sign-ups per 15 minutes.
 import { expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';

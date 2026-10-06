@@ -1,3 +1,4 @@
+// Client address 1: 1 of 5 sign-ups per 15 minutes (through the form).
 import { expect } from '@playwright/test';
 import { apiFor, newAccount } from '../support/api';
 import { waitForMailLink } from '../support/mailLog';
