@@ -4949,3 +4949,50 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   days. It then sets the goal to a week the data has, below the busiest, so the touching case
   always runs. Two assertions changed deliberately: "Follow-through" is level with "Daily
   activity" (it was level with the grid), and the explainer test lists three section titles.
+
+## The Applications search field joins the toolbar: aligned, with its icon and one clear button (6 Oct 2026)
+
+- **The 3px offset was a hidden label in a spaced stack.** `TextField` spaces its children with
+  `space-y-1.5`, and a visually hidden label is still the first child, so the input got a 6px top
+  margin with nothing above it. In the toolbar's centred row the field's box was 42px tall, so the
+  input sat 3px below the buttons at both edges (161.95–197.95 against 158.95–194.95 at every
+  width, both themes). A hidden label now renders inside the input's own box, so nothing in the
+  spaced stack precedes the input. Visible-label markup is unchanged.
+- **The toolbar is 6px shorter at every width (the user accepted this as the fix, not a
+  regression):** 42→36 at 1440 and 768, 86→80 at 1024, 130→124 at 375, and the table or card list
+  below moves up 6px. Rows and wrapping are unchanged: one row at 1440 and 768, New application
+  alone on row 2 at 1024, three rows at 375. Every field and button is now 36px tall, with the same
+  top and bottom edges on each row.
+- **Other fields:** the toolbar search is the only `TextField` with `labelHidden`. `DateField` and
+  `PasswordField` wrap `TextField`, but no caller hides their label. `Select` and `TextArea` have
+  the same pattern (the bulk-action bar's status select and the notes editor) and were left alone
+  on purpose. Measured before and after on the Settings page (11 fields) and the New application
+  modal (9) at 1440 and 375: all 40 input, label and field-box readings are identical.
+- **The icon was rendered but painted under the input.** It was an absolutely positioned sibling
+  before the field, and the field's positioned wrapper, later in the DOM, painted over it with the
+  input's opaque background. `TextField` has a `leading` slot rendered after the input. The 37px
+  text inset is unchanged: 1 + 12 + 16 + 8, the same spacing as the buttons' own icons.
+- **Clear button:** "Clear search", in `TextField`'s existing `trailing` slot, shown only while
+  there is text. It writes through the same debounced path as typing and returns focus to the
+  field. The native cancel button is hidden with `::-webkit-search-cancel-button { display: none }`.
+  Chromium does not resolve `getComputedStyle` for that pseudo-element (it answers `inline-block`
+  either way), so it was checked by pixels and the e2e test checks the stylesheet. `pr-11` keeps a
+  long query 13px clear of the button.
+- **Kept as they were, by decision:** the focus ring (the app's one `:focus-visible` convention, the
+  same ring the buttons get, 12.56:1 against the page in dark and 14.88:1 in light) and the border
+  and background tokens. The field already used the buttons' `border` and `surface`. The "fainter
+  border" in the report is not in the styles: field and buttons both measure 1.39:1 against the
+  page in dark and 1.11:1 in light. The field has no hover change, as before. Placeholder contrast
+  was already 5.40:1 in dark and 8.22:1 in light.
+- **Placeholder now names tags.** Search has always matched company, role, tags and notes
+  (`buildFilter`), so "Search company, role or notes" undersold it. It now reads "Search company,
+  role, tags or notes". Search behaviour is unchanged. Server tests for tag and notes matching
+  are added, since the placeholder now promises them. They pass on `main`, because the behaviour
+  was already there, and fail with tags and notes removed from the `$or`.
+- **Tests:** four client tests on the toolbar (icon inside the field and after the input, clear
+  button only with text, Tab, Enter and Space, name kept and placeholder) and three `TextField`
+  tests. Six fail against `main`. The seventh, a visible label stays first, is a guard that passes
+  on both. jsdom cannot see geometry, so `e2e/audits/searchField.spec.ts` (client address 14, one
+  sign-up) checks edges against Filters at four widths, the icon on top by hit test, the native
+  cancel hidden, and a long query clear of the button. It failed on `main` with a 3px top-edge
+  difference and passes on this branch.
