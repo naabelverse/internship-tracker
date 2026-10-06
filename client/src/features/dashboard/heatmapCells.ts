@@ -16,6 +16,16 @@ export interface Cell {
 }
 
 /**
+ * Everything done on a day: applications added plus status updates to the
+ * ones already there. It shades the heatmap's square and decides an active
+ * day, so a shaded square and an active day are the same thing by
+ * construction. Weekly pace does not use it: the goal counts additions only.
+ */
+export function dayActivity(cell: Pick<Cell, 'count' | 'updates'>): number {
+  return cell.count + cell.updates;
+}
+
+/**
  * The calendar date an instant falls on in `timeZone`, as `YYYY-MM-DD`.
  *
  * The analytics pipeline buckets on the user's local midnight and sends that

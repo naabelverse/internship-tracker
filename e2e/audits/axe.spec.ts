@@ -1,3 +1,4 @@
+// Client address 9: 1 of 5 sign-ups per 15 minutes.
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 import type { Result } from 'axe-core';

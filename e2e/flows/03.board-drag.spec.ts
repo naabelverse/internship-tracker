@@ -1,3 +1,4 @@
+// Client address 3: 1 of 5 sign-ups per 15 minutes.
 import { expect, type Locator, type Page } from '@playwright/test';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';

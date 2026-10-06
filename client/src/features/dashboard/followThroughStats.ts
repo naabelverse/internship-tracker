@@ -1,4 +1,4 @@
-import type { Cell } from '@/features/dashboard/heatmapCells';
+import { dayActivity, type Cell } from '@/features/dashboard/heatmapCells';
 
 export interface FollowThroughSummary {
   /** Applications added across the grid's twelve weeks. */
@@ -27,14 +27,15 @@ export function summarizeFollowThrough(cells: Cell[]): FollowThroughSummary {
 /**
  * Days spent on the search: any day an application was added or moved between
  * statuses. Follow-up counts as much as adding, so a day of status changes
- * alone is active. Out of the days so far, not all 84: the grid runs to the
- * end of this week, and days that have not happened cannot be active.
+ * alone is active. The heatmap shades by the same `dayActivity`, so its shaded
+ * squares are these days. Out of the days so far, not all 84: the grid runs to
+ * the end of this week, and days that have not happened cannot be active.
  */
 export function countActiveDays(cells: Cell[], today: string): ActiveDays {
   const elapsed = cells.filter((cell) => cell.key <= today);
 
   return {
-    active: elapsed.filter((cell) => cell.count > 0 || cell.updates > 0).length,
+    active: elapsed.filter((cell) => dayActivity(cell) > 0).length,
     elapsed: elapsed.length,
   };
 }

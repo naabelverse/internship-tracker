@@ -1,12 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { WeeklyPace } from '@/features/dashboard/WeeklyPace';
-import {
-  goalLinePercent,
-  paceSummaryText,
-  summarizePace,
-  weeklyTotals,
-} from '@/features/dashboard/paceWeeks';
+import { paceSummaryText, summarizePace, weeklyTotals } from '@/features/dashboard/paceWeeks';
 import { makeWeeksOfCells } from '../utils/factories';
 
 /*
@@ -73,16 +68,6 @@ describe('paceSummaryText', () => {
   });
 });
 
-describe('goalLinePercent', () => {
-  it('puts the goal at its share of the busiest week', () => {
-    expect(goalLinePercent(weeklyTotals(makeWeeksOfCells(WEEKS)), 5)).toBeCloseTo(100 / 3, 9);
-  });
-
-  it('tops the plot when the goal is above every week', () => {
-    expect(goalLinePercent(weeklyTotals(makeWeeksOfCells([1, 2, 3])), 6)).toBe(100);
-  });
-});
-
 describe('WeeklyPace', () => {
   it('draws one bar per week, each sized to its own total', () => {
     render(<WeeklyPace cells={makeWeeksOfCells(WEEKS)} target={5} />);
@@ -95,14 +80,31 @@ describe('WeeklyPace', () => {
     });
   });
 
-  it('draws the goal line where a week of exactly the goal would reach', () => {
+  it('sizes the goal line by the bars’ own scale: a third of the plot for 5 against 15', () => {
+    render(<WeeklyPace cells={makeWeeksOfCells(WEEKS)} target={5} />);
+
+    expect(heightPercent(screen.getByTestId('pace-goal'))).toBeCloseTo(100 / 3, 9);
+  });
+
+  /*
+    Regression: the line was a 1px top border on a box whose bottom sat at the
+    goal, so it was drawn in the pixel row above a bar of exactly the goal and
+    that bar read as falling short. The line is now built like a bar: standing
+    on the floor, the bar's own height and floor, stroke inside its top edge.
+    jsdom applies no CSS, so this pins that construction; the browser geometry
+    is in e2e/audits/heatmap.spec.ts.
+  */
+  it('draws the goal line as tall as a week of exactly the goal, so that bar touches it', () => {
     render(<WeeklyPace cells={makeWeeksOfCells(WEEKS)} target={5} />);
 
     const line = screen.getByTestId('pace-goal');
     const onGoal = bars()[3] as HTMLElement;
 
     expect(onGoal.dataset.count).toBe('5');
-    expect(parseFloat(line.style.bottom)).toBeCloseTo(heightPercent(onGoal), 9);
+    expect(line.style.height).toBe(onGoal.style.height);
+    expect(line.style.bottom).toBe('');
+    expect(line).toHaveClass('absolute', 'bottom-0', 'min-h-1', 'border-t', 'border-dashed');
+    expect(onGoal).toHaveClass('min-h-1');
   });
 
   it('keeps the goal line inside the plot when no week reaches it', () => {
@@ -110,7 +112,7 @@ describe('WeeklyPace', () => {
       <WeeklyPace cells={makeWeeksOfCells([1, 0, 2, 0, 1, 0, 0, 3, 0, 0, 1, 0])} target={5} />,
     );
 
-    expect(parseFloat(screen.getByTestId('pace-goal').style.bottom)).toBe(100);
+    expect(heightPercent(screen.getByTestId('pace-goal'))).toBe(100);
     expect(heightPercent(bars()[7] as HTMLElement)).toBeCloseTo(60, 9);
   });
 

@@ -1,3 +1,4 @@
+// Client address 7: 1 of 5 sign-ups per 15 minutes.
 import { expect } from '@playwright/test';
 import { apiFor, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';

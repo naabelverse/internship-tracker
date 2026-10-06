@@ -1,3 +1,4 @@
+// Client address 11: 0 of 5 sign-ups per 15 minutes.
 import { expect, type Page } from '@playwright/test';
 import { testForClient } from '../support/network';
 

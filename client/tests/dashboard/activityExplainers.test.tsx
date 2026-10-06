@@ -66,15 +66,44 @@ describe('the Activity info tips', () => {
     expect(trigger).toHaveFocus();
   });
 
-  it('says a square is shaded by applications added, not by status updates', async () => {
+  // Changed deliberately: shade was applications added only, and the tip said
+  // so. It is now added or moved, the same count as Active days.
+  it('says a square is shaded by applications added and status updates together', async () => {
     const user = userEvent.setup();
     renderCard(5);
 
     await user.click(screen.getByRole('button', { name: 'About the heatmap' }));
     const tip = within(screen.getByRole('dialog'));
 
-    expect(tip.getByText(/more applications you added that day/)).toBeInTheDocument();
-    expect(tip.getByText(/Status updates don’t shade a square/)).toBeInTheDocument();
+    expect(
+      tip.getByText(/counting applications added and status updates together/),
+    ).toBeInTheDocument();
+    expect(tip.getByText(/shaded squares add up to Active days/)).toBeInTheDocument();
+    expect(tip.queryByText(/don’t shade/)).not.toBeInTheDocument();
+  });
+
+  it('sets the heatmap’s tip beside its “Daily activity” title, not in the legend', () => {
+    renderCard(5);
+    const title = screen.getByRole('heading', { level: 3, name: 'Daily activity' });
+    const trigger = screen.getByRole('button', { name: 'About the heatmap' });
+
+    expect(title.parentElement).toContainElement(trigger);
+    expect(screen.getByText('Less').parentElement).not.toContainElement(trigger);
+  });
+
+  it('says plainly that weekly pace counts applications added only', async () => {
+    const user = userEvent.setup();
+    renderCard(5);
+
+    await user.click(screen.getByRole('button', { name: 'About weekly pace' }));
+    const tip = within(screen.getByRole('dialog'));
+
+    expect(
+      tip.getByText(
+        /Only applications added count here and toward your goal\. Status updates don’t/,
+      ),
+    ).toBeInTheDocument();
+    expect(tip.queryByText(/total of that week’s column/)).not.toBeInTheDocument();
   });
 
   it('defines Active days as added or moved, not added alone', async () => {
@@ -174,11 +203,16 @@ describe('the Activity figures group', () => {
     const ratio = screen.getByText('1.3 updates for every application added');
     const titles = screen.getAllByRole('heading', { level: 3 });
 
-    expect(titles.map((title) => title.textContent)).toEqual(['Follow-through', 'Weekly pace']);
+    // Changed deliberately: the heatmap now has a title of its own, first.
+    expect(titles.map((title) => title.textContent)).toEqual([
+      'Daily activity',
+      'Follow-through',
+      'Weekly pace',
+    ]);
 
     // The side column's sections: the figures, then Weekly pace. Only the
     // second is ruled off; the pace plot's dashed goal line is not a section.
-    const column = titles[0].parentElement?.parentElement?.parentElement;
+    const column = titles[1].parentElement?.parentElement?.parentElement;
     const sections = [...(column?.children ?? [])] as HTMLElement[];
     const ruled = sections.filter((section) => section.classList.contains('border-t'));
 

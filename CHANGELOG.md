@@ -38,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Activity heatmap now shades every day you worked on your search.** A
+  square is darker the more applications you added and moved between statuses
+  that day, so a day of follow-ups alone is no longer blank, and the shaded
+  squares add up to the Active days figure beside them. Weekly pace still
+  counts applications added only, and its (?) now says so.
+- **The heatmap has a small "Daily activity" title** with its (?) beside it,
+  level with "Follow-through", so the Activity card reads as three labelled
+  sections.
 - **The Activity card's figures no longer look like a heading for Weekly
   pace.** Added, Status updates and Active days sit under their own small
   "Follow-through" title with a (?) beside it. The "1.3 updates for every
@@ -67,6 +75,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A week that exactly meets your weekly goal now reaches the goal line.** The
+  dashed line was drawn just above the goal, so those weeks looked 1px short and
+  the chart showed fewer weeks reaching it than "Goal met in N of 12 weeks"
+  said.
 - **A new application no longer counts as its own status change.** The
   "Applications over time" chart's status-change line and its screen-reader
   table counted every application added as one status change too, because each

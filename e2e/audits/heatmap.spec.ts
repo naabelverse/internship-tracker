@@ -1,3 +1,4 @@
+// Client address 12: 5 of 5 sign-ups per 15 minutes; full, so a new test that signs up needs its own file.
 import { expect, type Locator } from '@playwright/test';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';
@@ -100,6 +101,7 @@ test('the weekly pace panel sits beside the grid from a 40rem card and fills it'
   const figures = card.locator('dl').filter({ has: page.locator('dt:text-is("Added")') });
   const paceHeading = card.getByRole('heading', { level: 3, name: 'Weekly pace' });
   const figuresTitle = card.getByRole('heading', { level: 3, name: 'Follow-through' });
+  const heatmapTitle = card.getByRole('heading', { level: 3, name: 'Daily activity' });
 
   await expect(bars).toHaveCount(12);
 
@@ -145,9 +147,17 @@ test('the weekly pace panel sits beside the grid from a 40rem card and fills it'
 
       expect(content.right - content.left, `a 40rem card ${at}`).toBeGreaterThanOrEqual(BESIDE_MIN);
       expect(plotBox.left, `pace right of the grid ${at}`).toBeGreaterThan(gridBox.right);
-      // The figures' section starts with its title, level with the grid's top row.
+      // Changed deliberately when the heatmap took a title: the two section
+      // titles are level, and so are the figures row and the grid's top row.
       expect(
-        Math.abs((await box(figuresTitle.locator('xpath=..'))).top - gridBox.top),
+        Math.abs(
+          (await box(figuresTitle.locator('xpath=..'))).top -
+            (await box(heatmapTitle.locator('xpath=..'))).top,
+        ),
+        `Follow-through level with Daily activity ${at}`,
+      ).toBeLessThan(1);
+      expect(
+        Math.abs(figuresBox.top - gridBox.top),
         `figures level with the grid ${at}`,
       ).toBeLessThan(1);
 
