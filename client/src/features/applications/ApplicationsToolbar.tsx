@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Popover } from '@/components/ui/Popover';
 import { TextField } from '@/components/ui/TextField';
-import { ColumnsIcon, DownloadIcon, FilterIcon, PlusIcon, SearchIcon } from '@/components/ui/icons';
+import {
+  CloseIcon,
+  ColumnsIcon,
+  DownloadIcon,
+  FilterIcon,
+  PlusIcon,
+  SearchIcon,
+} from '@/components/ui/icons';
 import { COLUMNS } from '@/features/applications/columns';
 import { useExportApplications } from '@/features/applications/useApplicationExport';
 import { hasActiveFilters, type ApplicationFilters } from '@/features/applications/filterParams';
@@ -87,6 +94,7 @@ export function ApplicationsToolbar({
 }: ApplicationsToolbarProps): JSX.Element {
   const [searchText, setSearchText] = useState(filters.search);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const exportApplications = useExportApplications();
 
   const cancelPendingSearch = (): void => {
@@ -116,21 +124,38 @@ export function ApplicationsToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-[12rem] flex-1">
-        <SearchIcon
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-content-subtle"
-          aria-hidden="true"
-        />
+      <div className="min-w-[12rem] flex-1">
+        {/*
+          The platform's own cancel button is hidden so this one is the only
+          clear control. It writes through the same debounced path as typing.
+        */}
         <TextField
+          ref={searchRef}
           label="Search applications"
           labelHidden
           type="search"
-          placeholder="Search company, role or notes"
+          placeholder="Search company, role, tags or notes"
           value={searchText}
           onChange={(event) => {
             onSearchInput(event.target.value);
           }}
-          className="h-9 pl-9"
+          leading={<SearchIcon className="h-4 w-4 text-content-subtle" aria-hidden="true" />}
+          trailing={
+            searchText !== '' && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSearchInput('');
+                  searchRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="rounded-control p-1.5 text-content-subtle transition-colors hover:text-content"
+              >
+                <CloseIcon className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )
+          }
+          className="h-9 [&::-webkit-search-cancel-button]:hidden"
         />
       </div>
 

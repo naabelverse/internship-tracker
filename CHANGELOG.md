@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Applications search field matches the toolbar beside it.** It now
+  lines up exactly with the Filters, Columns, Export CSV and New application
+  buttons (it sat 3px lower), shows its search icon (which was hidden behind
+  the field), and has a single "Clear search" button while there is text, which
+  clears the search and puts you back in the field. The placeholder now says it
+  searches tags too: "Search company, role, tags or notes". The toolbar is 6px
+  shorter, so the list starts slightly higher. What search finds is unchanged.
 - **The Activity heatmap now shades every day you worked on your search.** A
   square is darker the more applications you added and moved between statuses
   that day, so a day of follow-ups alone is no longer blank, and the shaded

@@ -167,6 +167,30 @@ describe('GET /applications search and archive behaviour', () => {
     expect(companiesIn(byRole)).toEqual(['Grab']);
   });
 
+  // The toolbar's placeholder promises "company, role, tags or notes", so the
+  // last two are held here alongside the first two.
+  it('matches a partial tag, case insensitively', async () => {
+    const { token } = await seed();
+
+    const byTag = await list(token, '?search=FINTE');
+
+    expect(companiesIn(byTag)).toEqual(['Grab']);
+  });
+
+  it('matches text inside the notes', async () => {
+    const { accessToken } = await registerUser(app);
+    await createApplicationFor(app, accessToken, {
+      company: 'Lazada',
+      role: 'Intern',
+      notes: 'Referred by a senior on the payments team.',
+    });
+    await createApplicationFor(app, accessToken, { company: 'Carousell', role: 'Intern' });
+
+    const response = await list(accessToken, '?search=Payments');
+
+    expect(companiesIn(response)).toEqual(['Lazada']);
+  });
+
   it('treats regular expression metacharacters as literal text', async () => {
     const { accessToken } = await registerUser(app);
     await createApplicationFor(app, accessToken, { company: 'A.C.M.E', role: 'Intern' });
