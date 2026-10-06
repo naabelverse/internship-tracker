@@ -90,6 +90,37 @@ export async function loginAccount(api: APIRequestContext, account: TestAccount)
   return body.data;
 }
 
+/**
+ * Fills an empty account with the demo set through the dashboard's own "Load
+ * demo data" endpoint: the same deterministic generator the demo account is
+ * reset from, dated relative to now.
+ */
+export async function loadDemoData(api: APIRequestContext, accessToken: string): Promise<void> {
+  const response = await api.post(`${V1}/applications/demo-data`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Demo data failed (${String(response.status())}): ${await response.text()}`);
+  }
+}
+
+/** Sets the account's weekly goal through the profile endpoint Settings uses. */
+export async function setWeeklyGoal(
+  api: APIRequestContext,
+  accessToken: string,
+  weeklyGoal: number,
+): Promise<void> {
+  const response = await api.patch(`${V1}/auth/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    data: { weeklyGoal },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Goal update failed (${String(response.status())}): ${await response.text()}`);
+  }
+}
+
 export interface SeedApplication {
   company: string;
   role: string;

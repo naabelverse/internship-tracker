@@ -5,7 +5,6 @@ import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
 import type { Cell } from '@/features/dashboard/heatmapCells';
 import {
   barPercent,
-  goalLinePercent,
   paceScale,
   paceSummaryText,
   summarizePace,
@@ -29,7 +28,8 @@ interface WeeklyPaceProps {
 }
 
 /**
- * Applications per week against the weekly goal, one bar per heatmap column.
+ * Applications added per week against the weekly goal, one bar per heatmap
+ * column. Status updates shade the heatmap but never count here.
  *
  * The bars sit on the same twelve-column grid and gaps as the heatmap, so at
  * the same width each one lines up under its week. They take the heatmap's
@@ -94,12 +94,18 @@ export function WeeklyPace({
           />
         ))}
 
+        {/* The goal is drawn the way a bar is: a box standing on the plot's
+            floor, as tall as a week of exactly the goal, with the same scale
+            and floor, and its dashed stroke inside its top edge. A bar at the
+            goal therefore shares the stroke's pixel row at any plot height or
+            zoom. A border above a line placed at the goal sat 1px over that
+            bar, which read as falling short. */}
         {target > 0 && (
           <span
             data-testid="pace-goal"
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 border-t border-dashed border-content-subtle"
-            style={{ bottom: `${String(goalLinePercent(totals, target))}%` }}
+            className="pointer-events-none absolute inset-x-0 bottom-0 min-h-1 border-t border-dashed border-content-subtle"
+            style={{ height: `${String(barPercent(target, scale))}%` }}
           />
         )}
       </div>

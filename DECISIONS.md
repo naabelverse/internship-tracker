@@ -4888,3 +4888,64 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   that the gap above Weekly pace is at least twice every gap inside a group, with a 1px rule in it.
   Two existing assertions changed deliberately: the figures' section, not their `dl`, is level with
   the grid (the title is now its top edge), and the plot floor reads 36px, not 48px.
+
+## The heatmap shades added or moved, the goal line sits on the goal, and the heatmap has a title (6 Oct 2026)
+
+- **Why the heatmap's definition changed (the user's decision on PR #76's open question):** shade
+  was applications added only, while Active days, beside it, counts days an application was added
+  or moved. Both numbers were right, but the card showed 55 active days next to 30 shaded squares
+  on the demo account, and no reader counting squares could get from one to the other. SPEC
+  section 6 asks for "activity per day", which the wider definition fits better, and a day spent
+  following up is a day spent on the search. Now a square's level is `dayActivity` (applications
+  added plus the corrected status updates), and the same function decides an active day, so the
+  shaded squares equal the Active days figure by construction. On the local demo seed: 30 shaded
+  of 53 active days on `main`, 53 of 53 on this branch, at every width and in both themes.
+- **Data:** the per-day `updates` `buildCells` already carries (PR #72's `statusChanges − created`,
+  so an application's opening entry never shades a square on its own). No server query changed.
+  Intensity is relative to the busiest day by the same measure. Cell titles read
+  "1 Oct 2026: 0 added, 3 status updates", and the screen-reader summary gives both totals "on N
+  active days". The heatmap's tip says shade counts both, and that the shaded squares add up to
+  Active days.
+- **Weekly pace stays additions only**, because the goal is applications added. Its tip now says so
+  plainly ("Only applications added count here and toward your goal"), because a busy column above
+  a short bar would otherwise look like a bug.
+- **Goal line: built like a bar, not offset from one.** It was a 1px top border on a 1px box whose
+  bottom sat at the goal, so the stroke filled the pixel row above a week of exactly the goal, which
+  ended 1.000px under it and read as falling short. It is now a box standing on the plot's floor,
+  `height: barPercent(target, scale)` with the bars' own scale and `min-h-1` floor, with the dashed
+  stroke inside its top edge. The browser resolves and snaps that height exactly as it does a
+  bar's, so a bar at the goal shares the stroke's pixel row at any plot height or zoom. With the
+  goal set to 4 in the browser (three demo weeks sit on it), measured at 375, 1024, 1440 and 1024
+  with a scrollbar: those bars ended 1.000px under the stroke on `main` and 0.000px on this branch,
+  and the bars reaching the line went from 2 to 5, matching "Goal met in 5 of 12 weeks". A pixel zoom at device scale 1
+  shows the stroke along those bars' top edge.
+  `goalLinePercent` is removed; its two unit cases now assert the line's own height.
+- **Accepted limits:** the shared `min-h-1` floor means that if a goal is under 4px of plot (a
+  tiny goal against a very busy week), an empty week's 4px stub reaches the line too. Without the
+  shared floor it would cross the line instead, which reads worse. A week one below the goal clears
+  the 1px stroke only if one application is more than 2px of plot. The demo is at 6.7px or more at
+  every width.
+- **Heatmap title: "Daily activity", a new first row of the existing grid.** The labels, grid,
+  legend and stacked side column are now placed by row as well as by column, because with the
+  title in row 1 auto-placement would have put the weekday labels in the spacer track. The row gap
+  is 8px (title to grid, as in the side sections). The legend and the stacked column take 8px of
+  margin, so the spacing below the grid is unchanged. Beside the grid the side column spans the
+  title row too, so "Follow-through" is level with "Daily activity" and the figures row with the
+  grid's top row. The title is `contain: inline-size`, like the legend, so it cannot widen the
+  label column. The (?) moved from the end of the legend to beside the title. No breakpoint, track
+  or width changed.
+- **Cost and the 1024 check:** the card is 24px taller at every width. Grid and cell sizes are
+  unchanged at every width. Because the side column gains the same 24px, the pace plot grows: 42.7
+  to 66.7px in a real 1024 window with a classic scrollbar, 51.4 to 75.4px at a headless 1024, 60.8
+  to 84.8px at 768, and 117.6 to 141.6px at 1440. It stays 80px at 375.
+- **Tests:** client tests pin shading equal to Active days in PR #70's zones and times
+  (Kuala Lumpur 07:30 and 23:59, Los Angeles 01:00 and 22:30) with days of moves alone, the cell
+  titles and summary, and the line's construction. All 12 new or changed client tests fail against
+  `main`'s source. The PR #70 cases in `heatmapCells.test.ts` are unchanged and pass. A new
+  `e2e/audits/heatmap.spec.ts` test loads the real demo set into a fresh account
+  (`POST /applications/demo-data`). At 375, 1024 and 1440 it checks that every week of exactly the
+  goal touches the stroke, every week under it clears it, and the number of bars reaching the line
+  equals "Goal met in N". It counts shaded squares by computed colour and checks they equal Active
+  days. It then sets the goal to a week the data has, below the busiest, so the touching case
+  always runs. Two assertions changed deliberately: "Follow-through" is level with "Daily
+  activity" (it was level with the grid), and the explainer test lists three section titles.

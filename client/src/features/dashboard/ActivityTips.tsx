@@ -7,9 +7,9 @@ function Term({ children }: { children: ReactNode }): JSX.Element {
 }
 
 /**
- * What a square is and what shades it. Shade is applications added only,
- * the heatmap's `count`, so the tip says that a day of moves alone is blank
- * on the grid while Active days still counts it.
+ * What a square is and what shades it: `dayActivity`, applications added plus
+ * status updates, the same count that makes an active day. So the tip can say
+ * the shaded squares add up to the Active days figure.
  */
 export function HeatmapTip(): JSX.Element {
   return (
@@ -19,10 +19,10 @@ export function HeatmapTip(): JSX.Element {
         Sunday.
       </p>
       <p>
-        The darker the square, the more applications you added that day, compared with your busiest
-        day. Status updates don’t shade a square, so a day of follow-ups alone looks empty but still
-        counts as an active day.
+        The darker the square, the more you did that day, counting applications added and status
+        updates together, compared with your busiest day.
       </p>
+      <p>Every shaded square is an active day, so the shaded squares add up to Active days.</p>
     </InfoTip>
   );
 }
@@ -52,13 +52,21 @@ interface PaceTipProps {
   goal: number;
 }
 
-/** What a bar is, what meets the goal, and what the average is taken over. */
+/**
+ * What a bar is, what meets the goal, and what the average is taken over. The
+ * heatmap shades status updates too, so the tip says plainly that they do not
+ * count here: otherwise a busy column over a short bar would look like a bug.
+ */
 export function PaceTip({ goal }: PaceTipProps): JSX.Element {
   return (
     <InfoTip label="About weekly pace">
       <p>
-        Each bar is one week’s applications added, the total of that week’s column in the heatmap.
-        The last bar is this week so far.
+        Each bar is the number of applications you added that week. The last bar is this week so
+        far.
+      </p>
+      <p>
+        Only applications added count here and toward your goal. Status updates don’t, so a week of
+        follow-ups can look busy on the heatmap and still have a short bar.
       </p>
       <p>
         {goal > 0

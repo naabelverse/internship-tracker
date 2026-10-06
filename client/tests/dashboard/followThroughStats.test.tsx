@@ -1,5 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActivityHeatmap } from '@/features/dashboard/ActivityHeatmap';
 import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { TimelineChart } from '@/features/dashboard/charts/TimelineChart';
@@ -271,5 +271,94 @@ describe('ActivityHeatmap shows Active days once, as the third figure', () => {
       'grid-flow-col',
       'auto-cols-[minmax(max-content,1fr)]',
     );
+  });
+});
+
+/*
+  The heatmap shades a square by applications added plus status updates, the
+  same count that makes an active day, so the shaded squares are the Active
+  days figure. Added-only shading left a day of moves alone blank: 30 shaded
+  squares beside 55 active days on the demo account. The zones and times are
+  PR #70's, on both sides of the UTC date change for local Friday 2 Oct 2026.
+*/
+describe('the heatmap shades exactly the active days', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Squares painted above level 0, read off the class that colours them. */
+  function shadedCells(): HTMLElement[] {
+    return screen
+      .getAllByTestId('heatmap-cell')
+      .filter((cell) => !cell.classList.contains('bg-heat-0'));
+  }
+
+  function activeDaysShown(): number {
+    return Number(screen.getByText('Active days').nextElementSibling?.textContent);
+  }
+
+  it.each([
+    ['Asia/Kuala_Lumpur', '07:30 local, still 1 Oct in UTC', '2026-10-01T23:30:00.000Z', '+08:00'],
+    ['Asia/Kuala_Lumpur', '23:59 local', '2026-10-02T15:59:00.000Z', '+08:00'],
+    ['America/Los_Angeles', '01:00 local', '2026-10-02T08:00:00.000Z', '-07:00'],
+    [
+      'America/Los_Angeles',
+      '22:30 local, already 3 Oct in UTC',
+      '2026-10-03T05:30:00.000Z',
+      '-07:00',
+    ],
+  ])('in %s at %s', (timeZone, _label, now, offset) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(now));
+    const day = (key: string): string => new Date(`${key}T00:00:00${offset}`).toISOString();
+
+    render(
+      <ActivityHeatmap
+        points={[
+          // Added only: two openings, so no status updates.
+          makeTimelinePoint({ bucket: day('2026-10-02'), created: 2, statusChanges: 2 }),
+          // Moves alone, which added-only shading left blank.
+          makeTimelinePoint({ bucket: day('2026-10-01'), created: 0, statusChanges: 3 }),
+          makeTimelinePoint({ bucket: day('2026-08-03'), created: 0, statusChanges: 1 }),
+          // Both on one day: one square, one active day.
+          makeTimelinePoint({ bucket: day('2026-09-29'), created: 1, statusChanges: 4 }),
+          // The week before the grid: neither.
+          makeTimelinePoint({ bucket: day('2026-07-06'), created: 0, statusChanges: 5 }),
+        ]}
+        timeZone={timeZone}
+        weeklyGoal={5}
+        isLoading={false}
+      />,
+    );
+
+    expect(activeDaysShown()).toBe(4);
+    expect(shadedCells()).toHaveLength(4);
+    expect(shadedCells().map((cell) => cell.title)).toEqual([
+      '3 Aug 2026: 0 added, 1 status update',
+      '29 Sep 2026: 1 added, 3 status updates',
+      '1 Oct 2026: 0 added, 3 status updates',
+      '2 Oct 2026: 2 added, 0 status updates',
+    ]);
+    expect(
+      screen.getByRole('img', {
+        name: 'Activity heatmap: 3 applications added and 7 status updates, on 4 active days in the last 12 weeks',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('shades the busiest day of moves alone at the top level', () => {
+    render(
+      <ActivityHeatmap
+        points={[
+          makeTimelinePoint({ bucket: new Date().toISOString(), created: 0, statusChanges: 6 }),
+        ]}
+        timeZone="UTC"
+        weeklyGoal={5}
+        isLoading={false}
+      />,
+    );
+
+    expect(shadedCells()).toHaveLength(1);
+    expect(shadedCells()[0]).toHaveClass('bg-heat-4');
   });
 });

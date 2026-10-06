@@ -19,9 +19,10 @@ export interface PaceSummary {
 const averageFormat = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 1 });
 
 /**
- * The heatmap's cells, summed a column at a time. `buildCells` lays them out
- * Monday first in runs of seven, so each run is one of the grid's week columns
- * and the last is the week in progress. The weekly goal counts applications
+ * Applications added in each of the heatmap's columns. `buildCells` lays the
+ * cells out Monday first in runs of seven, so each run is one of the grid's
+ * week columns and the last is the week in progress. Additions only: the
+ * heatmap also shades status updates, but the weekly goal counts applications
  * created since the same local Monday, so that bar matches the goal stat card.
  */
 export function weeklyTotals(cells: Cell[]): WeekTotal[] {
@@ -67,12 +68,10 @@ export function paceScale(totals: WeekTotal[], target: number): number {
   return totals.reduce((max, week) => Math.max(max, week.count), Math.max(target, 1));
 }
 
-/** A bar's height as a percentage of the plot. */
+/**
+ * A bar's height as a percentage of the plot. The goal line is sized by this
+ * too, with the same scale, so a week of exactly the goal is exactly its height.
+ */
 export function barPercent(count: number, scale: number): number {
   return (count / scale) * 100;
-}
-
-/** Where the goal line sits, as a percentage of the plot from the bottom. */
-export function goalLinePercent(totals: WeekTotal[], target: number): number {
-  return barPercent(target, paceScale(totals, target));
 }
