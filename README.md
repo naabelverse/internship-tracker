@@ -54,7 +54,8 @@ single-tenant per user, and ownership is enforced in every database query rather
   linkable and survives a refresh.
 - Debounced search across company, role, tags and notes.
 - Bulk archive, unarchive, status change and delete with row selection.
-- CSV import with per-row error reporting, and CSV/JSON export.
+- CSV import with per-row error reporting, and CSV/JSON export. Export CSV offers the table's
+  shown columns or all fields.
 
 **Visual surfaces**
 

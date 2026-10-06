@@ -4,6 +4,7 @@ import {
   createApplicationSchema,
   MAX_IMPORT_ROWS,
   type CreateApplicationInput,
+  type ExportTableColumn,
 } from '@/schemas/application.schema';
 import { createApplication } from '@/services/application.service';
 import { assertApplicationCapacity } from '@/services/usage.service';
@@ -35,6 +36,30 @@ export const EXPORT_COLUMNS = [
   'archived',
   'createdAt',
 ] as const;
+
+type ExportColumn = (typeof EXPORT_COLUMNS)[number];
+
+/**
+ * The CSV fields each table column brings into a "Shown columns" export. Source
+ * carries `sourceOther` with it, so "Other" never arrives without what it was.
+ */
+const TABLE_COLUMN_FIELDS: Record<ExportTableColumn, readonly ExportColumn[]> = {
+  company: ['company'],
+  role: ['role'],
+  status: ['status'],
+  priority: ['priority'],
+  source: ['source', 'sourceOther'],
+  location: ['location'],
+  appliedDate: ['appliedDate'],
+  deadline: ['deadline'],
+  tags: ['tags'],
+};
+
+/** The header for a set of table columns, always in `EXPORT_COLUMNS` order. */
+function exportColumnsFor(columns: readonly ExportTableColumn[]): ExportColumn[] {
+  const wanted = new Set(columns.flatMap((column) => TABLE_COLUMN_FIELDS[column]));
+  return EXPORT_COLUMNS.filter((field) => wanted.has(field));
+}
 
 const isoDate = (value: Date | undefined): string => (value ? value.toISOString() : '');
 
@@ -72,9 +97,16 @@ export interface ExportResult {
   filename: string;
 }
 
+/**
+ * Exports every application on the account. A CSV with `columns` carries only
+ * the fields those table columns map to; without it, the CSV carries every
+ * field, exactly as it did before the option existed. Cell values are the same
+ * either way, and the row set never depends on `columns`.
+ */
 export async function exportApplications(
   userId: Types.ObjectId,
   format: 'csv' | 'json',
+  columns?: readonly ExportTableColumn[],
 ): Promise<ExportResult> {
   const applications = await Application.find({ user: userId }).sort({ createdAt: -1 });
   const stamp = new Date().toISOString().slice(0, 10);
@@ -92,7 +124,10 @@ export async function exportApplications(
   }
 
   return {
-    body: toCsv(applications.map(toExportRow), EXPORT_COLUMNS),
+    body: toCsv(
+      applications.map(toExportRow),
+      columns ? exportColumnsFor(columns) : EXPORT_COLUMNS,
+    ),
     contentType: 'text/csv; charset=utf-8',
     filename: `applications-${stamp}.csv`,
   };

@@ -126,7 +126,9 @@ export interface SeedApplication {
   role: string;
   status?: string;
   source?: string;
+  sourceOther?: string;
   priority?: string;
+  tags?: string[];
 }
 
 /** Creates one application through the real endpoint, as the given session. */

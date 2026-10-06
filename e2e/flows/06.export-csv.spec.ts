@@ -29,8 +29,12 @@ test('export the applications CSV and get the expected header row', async ({ pag
   await signIn(page, account);
   await page.goto('/applications');
 
+  // Export CSV is a menu now; "All fields" is the download this flow has always
+  // checked, so the assertions below are unchanged. 09.export-columns covers
+  // "Shown columns".
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.getByRole('menuitem', { name: 'All fields' }).click();
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toMatch(/^applications-\d{4}-\d{2}-\d{2}\.csv$/);

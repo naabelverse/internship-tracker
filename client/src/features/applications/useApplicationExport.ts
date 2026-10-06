@@ -4,8 +4,14 @@ import * as applicationsApi from '@/api/applications';
 import { getErrorMessage } from '@/api/errors';
 import { saveFile, type DownloadedFile } from '@/lib/download';
 
+export interface ExportChoice {
+  /** The table's visible column ids for "Shown columns"; absent for "All fields". */
+  columns?: readonly string[];
+}
+
 /**
- * Downloads the account's applications as a CSV.
+ * Downloads the account's applications as a CSV: only the fields behind the
+ * table's visible columns, or every field when no columns are given.
  *
  * A mutation rather than a query, even though the request is a `GET`: this is an
  * action the user takes, it has a side effect outside React (a file lands on
@@ -15,9 +21,9 @@ import { saveFile, type DownloadedFile } from '@/lib/download';
  * SPEC section 17's manual pass ends with "export CSV", so this is reachable
  * from the applications toolbar rather than only from the API.
  */
-export function useExportApplications(): UseMutationResult<DownloadedFile, unknown, void> {
+export function useExportApplications(): UseMutationResult<DownloadedFile, unknown, ExportChoice> {
   return useMutation({
-    mutationFn: () => applicationsApi.exportApplications('csv'),
+    mutationFn: ({ columns }: ExportChoice) => applicationsApi.exportApplications('csv', columns),
     onSuccess: (file) => {
       saveFile(file);
       toast.success('Your applications are downloading.');

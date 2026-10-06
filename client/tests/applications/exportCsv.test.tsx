@@ -22,6 +22,16 @@ const EXPORT_URL = '/applications/export';
 
 const rows = [makeApplication({ id: 'app-1', company: 'Stripe', role: 'Backend Intern' })];
 
+/**
+ * Export CSV became a menu; "All fields" is the original download, so the cases
+ * below pick it and keep their original assertions. The menu itself, and the
+ * "Shown columns" request, are covered in exportMenu.test.tsx.
+ */
+async function exportAllFields(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(await screen.findByRole('button', { name: 'Export CSV' }));
+  await user.click(screen.getByRole('menuitem', { name: 'All fields' }));
+}
+
 function render(routes: Record<string, Responder> = {}): MockApi {
   const api = installMockApi({
     [LIST]: () => ({ status: 200, data: makeListResponse(rows, { total: 1 }) }),
@@ -77,7 +87,7 @@ describe('exporting the applications list as CSV', () => {
       [`GET ${EXPORT_URL}`]: () => ({ status: 200, data: new Blob(['company,role\n']) }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Export CSV' }));
+    await exportAllFields(user);
 
     await waitFor(() => {
       expect(api.callsTo('GET', EXPORT_URL)).toHaveLength(1);
@@ -90,7 +100,7 @@ describe('exporting the applications list as CSV', () => {
     const body = new Blob(['company,role\nStripe,Backend Intern\n'], { type: 'text/csv' });
     render({ [`GET ${EXPORT_URL}`]: () => ({ status: 200, data: body }) });
 
-    await user.click(await screen.findByRole('button', { name: 'Export CSV' }));
+    await exportAllFields(user);
 
     await waitFor(() => {
       expect(clicked).toHaveLength(1);
@@ -119,7 +129,7 @@ describe('exporting the applications list as CSV', () => {
     });
     const button = await screen.findByRole('button', { name: 'Export CSV' });
 
-    await user.click(button);
+    await exportAllFields(user);
 
     await waitFor(() => {
       expect(api.callsTo('GET', EXPORT_URL)).toHaveLength(1);

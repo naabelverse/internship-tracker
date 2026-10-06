@@ -242,9 +242,54 @@ export const listApplicationsQuerySchema = z
   })
   .strict();
 
+/**
+ * The applications table's column ids, and the only values the CSV export's
+ * `columns` parameter accepts. Each one stands for a fixed set of CSV fields in
+ * `applicationTransfer.service`, so the parameter chooses among known columns
+ * and can never project an arbitrary field.
+ */
+export const EXPORT_TABLE_COLUMNS = [
+  'company',
+  'role',
+  'status',
+  'priority',
+  'source',
+  'location',
+  'appliedDate',
+  'deadline',
+  'tags',
+] as const;
+
+export type ExportTableColumn = (typeof EXPORT_TABLE_COLUMNS)[number];
+
+const isExportTableColumn = (value: string): value is ExportTableColumn =>
+  (EXPORT_TABLE_COLUMNS as readonly string[]).includes(value);
+
+/** A comma-separated list of table column ids, e.g. `company,status,tags`. */
+const exportColumnList = z
+  .string()
+  .transform((value) => value.split(',').map((entry) => entry.trim()))
+  .superRefine((entries, context) => {
+    const unknown = entries.filter((entry) => !isExportTableColumn(entry));
+    if (unknown.length === 0) return;
+
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `unknown column ${unknown.map((entry) => `"${entry}"`).join(', ')}; expected any of ${EXPORT_TABLE_COLUMNS.join(', ')}`,
+    });
+  })
+  .transform((entries) => entries.filter(isExportTableColumn));
+
 export const exportQuerySchema = z
-  .object({ format: z.enum(['csv', 'json']).default('csv') })
-  .strict();
+  .object({
+    format: z.enum(['csv', 'json']).default('csv'),
+    columns: exportColumnList.optional(),
+  })
+  .strict()
+  .refine((query) => query.columns === undefined || query.format === 'csv', {
+    message: 'columns applies only to the csv format',
+    path: ['columns'],
+  });
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;

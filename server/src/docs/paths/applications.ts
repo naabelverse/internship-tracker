@@ -1,4 +1,5 @@
 import { APPLICATION_STATUSES, PRIORITIES, SOURCES, WORK_MODES } from '@/models/Application';
+import { EXPORT_TABLE_COLUMNS } from '@/schemas/application.schema';
 import {
   arrayOf,
   AUTHENTICATED,
@@ -127,12 +128,18 @@ export const applicationPaths: Record<string, unknown> = {
       security: AUTHENTICATED,
       parameters: [
         queryParam('format', { type: 'string', enum: ['csv', 'json'] }, 'Defaults to csv'),
+        queryParam(
+          'columns',
+          { type: 'string', example: 'company,status,source,tags' },
+          `CSV only. Comma-separated table column ids, any of ${EXPORT_TABLE_COLUMNS.join(', ')}. The file then carries only those columns' fields, in the full export's order; source also brings sourceOther. Omit it for every field. Rows are the same either way.`,
+        ),
       ],
       responses: {
         '200': {
           description: 'A file download rather than the JSON envelope',
           content: { 'text/csv': {}, 'application/json': {} },
         },
+        '400': COMMON_ERRORS['400'],
         '401': COMMON_ERRORS['401'],
       },
     },

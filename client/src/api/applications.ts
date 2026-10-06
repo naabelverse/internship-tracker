@@ -107,10 +107,17 @@ export async function bulkAction(
  * search actually opens it in. Requested as a blob for the same reason the
  * account export is: axios would otherwise parse the whole file into a
  * JavaScript value only for it to be re-serialised on the way to disk.
+ *
+ * `columns` is the table's visible column ids, for the "Shown columns" choice;
+ * the server maps each to fixed CSV fields. Without it the request is exactly
+ * the original one and the file carries every field ("All fields").
  */
-export async function exportApplications(format: 'csv' | 'json'): Promise<DownloadedFile> {
+export async function exportApplications(
+  format: 'csv' | 'json',
+  columns?: readonly string[],
+): Promise<DownloadedFile> {
   const response = await apiClient.get<Blob>('/applications/export', {
-    params: { format },
+    params: columns ? { format, columns: columns.join(',') } : { format },
     responseType: 'blob',
   });
 

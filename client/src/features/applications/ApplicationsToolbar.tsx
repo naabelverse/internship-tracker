@@ -2,16 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Popover } from '@/components/ui/Popover';
 import { TextField } from '@/components/ui/TextField';
-import {
-  CloseIcon,
-  ColumnsIcon,
-  DownloadIcon,
-  FilterIcon,
-  PlusIcon,
-  SearchIcon,
-} from '@/components/ui/icons';
-import { COLUMNS } from '@/features/applications/columns';
-import { useExportApplications } from '@/features/applications/useApplicationExport';
+import { CloseIcon, ColumnsIcon, FilterIcon, PlusIcon, SearchIcon } from '@/components/ui/icons';
+import { COLUMNS, visibleColumns } from '@/features/applications/columns';
+import { ExportMenu } from '@/features/applications/ExportMenu';
 import { hasActiveFilters, type ApplicationFilters } from '@/features/applications/filterParams';
 import { STATUS_CONFIG, SOURCE_LABELS, PRIORITY_CONFIG } from '@/lib/statusConfig';
 import { APPLICATION_STATUSES, PRIORITIES, SOURCES } from '@/types/application';
@@ -95,7 +88,6 @@ export function ApplicationsToolbar({
   const [searchText, setSearchText] = useState(filters.search);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
-  const exportApplications = useExportApplications();
 
   const cancelPendingSearch = (): void => {
     if (timerRef.current !== null) clearTimeout(timerRef.current);
@@ -259,23 +251,11 @@ export function ApplicationsToolbar({
       )}
 
       {/*
-        SPEC section 17's manual pass ends with "export CSV", so the download has
-        to be reachable from the list itself rather than only from the API. The
-        request needs the `Authorization` header, so it goes through the axios
-        client and is saved from a blob rather than being a plain link.
+        "Shown columns" is derived with the same `visibleColumns` the table
+        renders from, off the same stored choice, so the file and the table
+        cannot disagree about which columns are showing.
       */}
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => {
-          exportApplications.mutate();
-        }}
-        isLoading={exportApplications.isPending}
-        loadingLabel="Preparing"
-      >
-        <DownloadIcon className="h-4 w-4" />
-        Export CSV
-      </Button>
+      <ExportMenu shownColumns={visibleColumns(hiddenColumns).map((column) => column.id)} />
 
       <Button size="sm" onClick={onCreate}>
         <PlusIcon className="h-4 w-4" />
