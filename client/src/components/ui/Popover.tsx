@@ -24,7 +24,10 @@ interface PopoverProps {
   triggerLabel?: string;
   /** Classes for the trigger in place of the toolbar's bordered button. */
   triggerClassName?: string;
-  /** Classes for the panel's size and inset in place of the menus' scrolling list. */
+  /**
+   * Classes for the panel's size and inset in place of the menus' scrolling
+   * list. Such a panel sits on the plain card rather than `.scroll-panel`.
+   */
   panelClassName?: string;
   /**
    * `dialog` for a panel that is a picker in its own right, such as a calendar.
@@ -44,7 +47,11 @@ interface PopoverProps {
 
 const MENU_TRIGGER =
   'inline-flex h-9 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-content transition-colors hover:bg-surface-muted';
-const MENU_PANEL = 'max-h-80 w-60 overflow-y-auto p-2';
+/**
+ * The menus' scrolling list on the shared scrolling panel (`index.css`). Its
+ * 4px border plus `p-[5px]` puts content where `border p-2` did, 9px in.
+ */
+const MENU_PANEL = 'scroll-panel max-h-80 w-60 overflow-y-auto p-[5px]';
 const MENU_ITEM = '[role="menuitem"]';
 const HAS_POPUP = { group: 'true', dialog: 'dialog', menu: 'menu' } as const;
 
@@ -169,9 +176,10 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
           onKeyDown={role === 'menu' ? onMenuKeyDown : undefined}
           style={anchoredPosition}
           className={cn(
-            cardSurface,
-            'z-30 shadow-float',
-            panelClassName ?? MENU_PANEL,
+            'z-30',
+            panelClassName === undefined
+              ? MENU_PANEL
+              : cn(cardSurface, 'shadow-float', panelClassName),
             anchorRef && 'fixed',
             !anchorRef && 'absolute mt-2',
             !anchorRef && (align === 'right' ? 'right-0' : 'left-0'),

@@ -48,12 +48,25 @@ describe('the shared dropdown panel', () => {
     );
   });
 
-  it('draws the panel from the tokens the popover menus already use', () => {
-    const panel = ruleBody('.select-control::picker(select)');
+  /*
+   * The panel's card is `.scroll-panel`, shared with the toolbar's popover
+   * menus, so the select and the menus are one family. The picker rule applies
+   * it and adds only its own gap, height, padding and text colour.
+   */
+  it('is the scrolling panel the popover menus use', () => {
+    expect(ruleBody('.select-control::picker(select)')).toMatch(/@apply scroll-panel\b/);
+  });
 
-    for (const utility of ['rounded-card', 'bg-surface', 'outline-border', 'my-1']) {
+  it('draws the panel from the tokens the popover menus already use', () => {
+    const panel = ruleBody('.scroll-panel');
+
+    for (const utility of ['rounded-card', 'bg-surface', 'outline-border']) {
       expect(panel, `the panel no longer uses ${utility}`).toMatch(new RegExp(`\\b${utility}\\b`));
     }
+    expect(
+      ruleBody('.select-control::picker(select)'),
+      'the panel lost its gap to the field',
+    ).toMatch(/\bmy-1\b/);
     expect(panel, 'the panel no longer uses the float cast').toMatch(/\bshadow-float-cast\b/);
     expect(panel, 'the panel no longer draws the float lift').toMatch(
       /rgb\(var\(--atmos-lift\) \/ var\(--atmos-lift-peak\)\) 1px 2px/,
@@ -74,13 +87,15 @@ describe('the shared dropdown panel', () => {
    * ran flush against the edge and painted over the rounded corners.
    */
   it('insets a scrolling list with the border, not padding', () => {
-    const panel = ruleBody('.select-control::picker(select)');
+    const panel = ruleBody('.scroll-panel');
 
     expect(panel).toMatch(/\bborder-4\b/);
     expect(panel).toMatch(/\bborder-transparent\b/);
-    expect(panel, 'padding would put the scrollbar back against the edge').not.toMatch(
-      /(?:^|\s)p[xytrbl]?-\d/,
-    );
+    for (const body of [panel, ruleBody('.select-control::picker(select)')]) {
+      expect(body, 'padding would put the scrollbar back against the edge').not.toMatch(
+        /(?:^|\s)p[xytrbl]?-\d/,
+      );
+    }
   });
 
   /*
@@ -91,6 +106,7 @@ describe('the shared dropdown panel', () => {
    */
   it('keeps option corners concentric with the panel, and unclipped', () => {
     expect(ruleBody('.select-control option')).toMatch(/\brounded-control\b/);
-    expect(ruleBody('.select-control::picker(select)')).toMatch(/\bborder-4\b[\s\S]*\bp-px\b/);
+    expect(ruleBody('.scroll-panel')).toMatch(/\bborder-4\b/);
+    expect(ruleBody('.select-control::picker(select)')).toMatch(/\bp-px\b/);
   });
 });

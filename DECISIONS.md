@@ -5045,3 +5045,54 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   round-trip guards), 8 client tests (all fail on `main`), and `e2e/flows/09.export-columns.spec.ts`
   (client address 15, one sign-up), which parses three real downloads. `06.export-csv.spec.ts` and
   `exportCsv.test.tsx` now pick "All fields", with their assertions unchanged.
+
+## The scrolling Popover menus share the select's inset panel (7 Oct 2026)
+
+- **What was wrong:** Filters (723px of checkboxes in a 318px window) scrolls at every width and
+  height. `Popover`'s default menu panel was the plain card, `border p-2`, so, like the select
+  before PR #64, its scrollbar was drawn just inside the 1px border: a 15px classic bar whose
+  corner stood 3.73px past the curve of the edge, over both right-hand corners, in both themes.
+  Its colours were the browser's (`scrollbar-color: auto`, following `color-scheme`). Columns
+  (268px) and Export CSV (132px) use the same panel but do not scroll today. The calendar and
+  InfoTip pass their own classes and never scroll.
+- **Fix:** PR #64's construction moved into one class, `.scroll-panel` in `index.css`: a
+  transparent `border-4`, the 1px outline edge, `shadow-float-cast` plus the redrawn lift, a thin
+  `border-strong` scrollbar on a transparent track, and a `Canvas` border in forced colours. The
+  select's picker applies it with its own `my-1 max-h-96 p-px text-content`. Popover's default
+  menu panel applies it with `max-h-80 w-60 overflow-y-auto p-[5px]` (4 + 5 = the old 1 + 8). A
+  panel given its own classes keeps `cardSurface shadow-float`, so the calendar and InfoTip are
+  untouched.
+- **Why `selectPanel.test.tsx` changed (decided with the user):** it read the picker rule's own
+  text for its tokens, which now live in the shared class. Its three affected cases read the same
+  tokens from `.scroll-panel`, and a new case holds the picker to applying it. No assertion was
+  removed or loosened. Sharing the class and leaving that file untouched could not both hold.
+  A selector list (`.scroll-panel, .select-control::picker(select)`) would have kept the text,
+  but a browser without `::picker()` drops the whole list, so the menus would lose the fix there.
+- **The select did not change:** the computed picker style and option boxes are identical in 28
+  of 28 cases. Full-viewport frames of all five form selects, the table's status pill and
+  Timezone, open and scrolled, in both themes, at 1440×900 and 1366×650, are byte-identical
+  (36 of 36) between the branch and a second run on `main`. The first run on `main` differed from
+  both in 8 frames, by at most 2 levels, on the closed field's edges only.
+- **Measured** at 375, 768, 1024 and 1440 wide, 900 and 650 tall, in both themes, with real
+  scrollbars (64 panel states): every panel's position and size is unchanged, and content starts
+  9px in, as before. Filters' content width goes from 207 to 212px (the bar from 15 to 10px), and
+  its scroll range is 421px both times. The bar's corner now sits 0.51px inside the edge's curve,
+  and the right corners match the left ones again (top-corner difference 40 → 1 in light, 25 → 1
+  in dark).
+- **Columns and Export CSV:** their content and boxes are identical. Apart from compositing noise
+  of at most 3 levels, which `main` shows between two identical Export frames (up to 42,852
+  channels), only the corner arcs change: at most 13 levels at 768 to 1440. At 375 it is up to 63
+  levels on 11 to 17 arc pixels, where the arc sits over a neighbouring button's dark focus ring.
+  The date picker's 16 frames have 0 changed pixels.
+- **Behaviour:** Tab walks Filters' 22 stops, and the panel follows focus to the end; Shift+Tab,
+  Escape (focus returns to the button) and Tab-out (the panel closes) work as before. The wheel
+  scrolls the panel, not the page. In forced colours the border is `Canvas` and the edge is the
+  outline.
+- **Tests:** `popoverPanel.test.tsx` (2 of 3 cases fail on `main`; the third guards the plain
+  card) and `e2e/audits/popoverScrollbar.spec.ts` (client address 16, one sign-up). The spec
+  launches with scrollbars shown and checks colour, geometry and the pixels on and outside the
+  edge with and without the bar. On `main` all three fail (`auto`, 3.73px, 60 levels). It covers
+  1440 and 768: at 375 a new account's toolbar wraps so Filters' panel runs off the screen,
+  which is a positioning bug (issue #85).
+- **Not done:** positioning. The Columns menu at 375 opens about 117px off the left edge (issue
+  #85). This change was visual only and kept every panel where it was.
