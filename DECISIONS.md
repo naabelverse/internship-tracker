@@ -4996,3 +4996,52 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   sign-up) checks edges against Filters at four widths, the icon on top by hit test, the native
   cancel hidden, and a long query clear of the button. It failed on `main` with a 3px top-edge
   difference and passes on this branch.
+
+## Export CSV offers "Shown columns" or "All fields" (6 Oct 2026)
+
+- **Behaviour.** Export CSV is a two-choice menu. **Shown columns** carries only the table's
+  columns that are currently visible; **All fields** is the previous export, byte for byte. The
+  JSON export in Settings → Your data is untouched and remains the complete backup.
+- **Shown columns carries only table columns.** Each of the nine table columns maps to fixed CSV
+  fields, and Source also brings `sourceOther` so "Other" never arrives without its text. Fields
+  with no table column (work mode, employment type, links, notes, resume version, stipend, contact,
+  archived, createdAt) are only in All fields. Headers and cell values are exactly All fields' own,
+  in its order, whatever order the columns were asked in.
+- **The server whitelists, it does not project.** `GET /applications/export` takes an optional
+  `columns=company,status,…` checked against those nine ids. Anything else, an empty list, or
+  `columns` with `format=json` is a 400 `VALIDATION_ERROR` naming `columns` and listing the allowed
+  ids. Without the parameter the code path is the original one, so other callers keep the full file.
+- **Same source as the table.** The client derives the list with the same `visibleColumns()` over
+  the same stored choice the table renders from, so the file and the table cannot disagree. With
+  only the locked Company and Status on, "Shown columns (2)" still works.
+- **Phones.** Below 768px the list is cards, which ignore the column choice. Shown columns still
+  follows the Columns menu there, not what the cards show. Recorded as a known limitation.
+- **Rows are unchanged, on purpose.** Both choices still export every application on the account,
+  archived ones included, whatever the search or filters. Changing that would break All fields'
+  byte-identity and is its own decision: issue #83. A consequence worth stating: Shown columns has
+  no `archived` column, so archived rows cannot be told apart in it.
+- **No formula escaping, on purpose.** Neither path escapes cells beginning with `=`, `+`, `-`, `@`,
+  tab or CR, as before. Escaping one path would make the two files disagree; escaping both would
+  break All fields' byte-identity and needs import to strip the guard. Tracked in issue #82; a
+  server test pins that both paths write such values identically until that fix lands.
+- **Import.** A Shown columns file re-imports only if Role is shown (import requires company and
+  role); archived rows come back active and unshown fields take their defaults. The menu says "May
+  not import again if Role is hidden". "All fields … Can be imported again" is backed by a server
+  test that round-trips a record with every field set, dates and archived included.
+- **The menu is an opt-in `role="menu"` mode on `Popover`, not a new component.** It adds
+  `aria-haspopup="menu"`, focus on the first item when opened, arrows (wrapping), Home and End;
+  Escape and focus return were already there. Filters, Columns and the date picker pass neither
+  `role="menu"` nor `busy`, and their tests are unchanged. The trigger keeps the old button's label,
+  icon and classes with no chevron; while a download is prepared the icon becomes a same-size
+  spinner and the trigger is `aria-busy`, where the old button swapped its label to "Preparing".
+- **Panel width 240px, not 256px.** A 256px panel, right-aligned under the trigger, started at
+  x = −1.1 at 375px. The menus' standard 240px panel starts at x = 14.9.
+- **Measured on real builds, against the same 69-row in-memory account.** Toolbar on `main` and the
+  branch, light and dark: 1440, 1024 and 768 are 1 row, 36px; 375 is 3 rows, 124px. Every child
+  box is identical to `main` at all eight, and the trigger is 123.86px wide. Five real downloads
+  returned 200 with `attachment; filename="applications-2026-10-06.csv"`, and all carry the same
+  69 rows in the same order. All fields is byte-identical to `main`'s export (sha256 `0117ee81…`).
+- **Tests.** 13 server tests (11 fail on `main`; the two that pass are the absent-parameter and
+  round-trip guards), 8 client tests (all fail on `main`), and `e2e/flows/09.export-columns.spec.ts`
+  (client address 15, one sign-up), which parses three real downloads. `06.export-csv.spec.ts` and
+  `exportCsv.test.tsx` now pick "All fields", with their assertions unchanged.

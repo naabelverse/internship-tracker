@@ -87,9 +87,9 @@ export const bulk = asyncHandler(async (req, res) => {
 
 export const exportAll = asyncHandler(async (req, res) => {
   const user = getAuthenticatedUser(req);
-  const { format } = req.query as unknown as ExportQuery;
+  const { format, columns } = req.query as unknown as ExportQuery;
 
-  const result = await exportApplications(user._id, format);
+  const result = await exportApplications(user._id, format, columns);
 
   // A download, so the raw file is the body rather than the JSON envelope.
   res.setHeader('Content-Type', result.contentType);

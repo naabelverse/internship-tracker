@@ -848,7 +848,7 @@ So after deploying, in a real browser:
    here, or a request with no cookie, means 6.2 is misconfigured.
 4. Leave the tab open for longer than `ACCESS_TOKEN_TTL` (15 minutes), then click around. The refresh
    should happen invisibly — no error toast, no bounce to login.
-5. On the applications page, click **Export CSV**. The saved file must be named
+5. On the applications page, click **Export CSV**, then **All fields**. The saved file must be named
    `applications-YYYY-MM-DD.csv`. If it saved as `applications.csv`, `exposedHeaders` is not reaching
    the browser — check 6.1, and that nothing in front of the API is stripping the header.
 
@@ -1513,7 +1513,7 @@ launch.
       (comma-separated) is available if you need to serve two domains at once during a migration.
 - [ ] The `refresh_token` cookie shows `SameSite=None`, `Secure`, `HttpOnly`, `Path=/api/v1/auth`.
 - [ ] Signing in and **hard-reloading** leaves you signed in.
-- [ ] Export CSV saves as `applications-YYYY-MM-DD.csv`, not `applications.csv`.
+- [ ] Export CSV → All fields saves as `applications-YYYY-MM-DD.csv`, not `applications.csv`.
 
 **Email**
 

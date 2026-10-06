@@ -38,6 +38,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Export CSV lets you choose what goes in the file.** It opens a small menu
+  with two choices. **Shown columns** exports only the columns currently in the
+  table (the count is shown, for example "Shown columns (7)"); Source brings its
+  "Other" text with it. **All fields** is the export as it was, byte for byte.
+  Shown columns uses the same headers and value formats as All fields, and
+  fields with no table column (notes, links, stipend, contact and so on) are
+  only in All fields. A Shown columns file may not import again if Role is
+  hidden. Both choices still contain every application on the account,
+  whatever the search or filters; Settings → Export all my data is unchanged
+  and remains the complete backup. The menu works from the keyboard: Enter or
+  Space opens it, the arrow keys, Home and End move, Enter chooses, Escape
+  closes.
 - **The Applications search field matches the toolbar beside it.** It now
   lines up exactly with the Filters, Columns, Export CSV and New application
   buttons (it sat 3px lower), shows its search icon (which was hidden behind

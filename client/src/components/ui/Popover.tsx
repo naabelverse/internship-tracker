@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type FocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
 } from 'react';
@@ -25,8 +26,14 @@ interface PopoverProps {
   triggerClassName?: string;
   /** Classes for the panel's size and inset in place of the menus' scrolling list. */
   panelClassName?: string;
-  /** `dialog` for a panel that is a picker in its own right, such as a calendar. */
-  role?: 'group' | 'dialog';
+  /**
+   * `dialog` for a panel that is a picker in its own right, such as a calendar.
+   * `menu` for a list of actions rendered as `role="menuitem"` buttons: opening
+   * focuses the first item, and the arrow keys, Home and End move between them.
+   */
+  role?: 'group' | 'dialog' | 'menu';
+  /** Marks the trigger `aria-busy` while the action it leads to is running. */
+  busy?: boolean;
   /**
    * Floats the panel under this element with fixed positioning instead of under
    * the trigger, so a scrolling ancestor such as a modal body cannot clip it.
@@ -38,10 +45,30 @@ interface PopoverProps {
 const MENU_TRIGGER =
   'inline-flex h-9 items-center gap-2 rounded-control border border-border bg-surface px-3 text-sm font-medium text-content transition-colors hover:bg-surface-muted';
 const MENU_PANEL = 'max-h-80 w-60 overflow-y-auto p-2';
+const MENU_ITEM = '[role="menuitem"]';
+const HAS_POPUP = { group: 'true', dialog: 'dialog', menu: 'menu' } as const;
+
+/** Moves focus between a `menu` panel's items: arrows wrap, Home and End jump. */
+function onMenuKeyDown(event: ReactKeyboardEvent<HTMLDivElement>): void {
+  const items = [...event.currentTarget.querySelectorAll<HTMLElement>(MENU_ITEM)];
+  const current = items.findIndex((item) => item === document.activeElement);
+  const last = items.length - 1;
+  const targets: Record<string, number | undefined> = {
+    ArrowDown: current >= last ? 0 : current + 1,
+    ArrowUp: current <= 0 ? last : current - 1,
+    Home: 0,
+    End: last,
+  };
+  const next = targets[event.key];
+  if (next === undefined || items.length === 0) return;
+
+  event.preventDefault();
+  items[next]?.focus();
+}
 
 /**
- * A small disclosure used by the filter and column menus and by `DateField`'s
- * calendar. It closes on Escape, on a click outside and when focus tabs out,
+ * A small disclosure used by the filter and column menus, by `DateField`'s
+ * calendar and, as a `menu`, by the export choices. It closes on Escape, on a click outside and when focus tabs out,
  * and returns focus to the trigger, so it is keyboard usable without pulling in
  * a headless UI dependency the locked stack does not name. The ref reaches the
  * trigger.
@@ -56,6 +83,7 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
     triggerClassName,
     panelClassName,
     role = 'group',
+    busy,
     anchorRef,
   },
   forwardedRef,
@@ -106,6 +134,11 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
     };
   }, [isOpen, close]);
 
+  // A menu is operated from its items, so opening one puts focus on the first.
+  useEffect(() => {
+    if (isOpen && role === 'menu') panelRef.current?.querySelector<HTMLElement>(MENU_ITEM)?.focus();
+  }, [isOpen, role]);
+
   const onBlur = (event: FocusEvent<HTMLDivElement>): void => {
     const next = event.relatedTarget;
     if (isOpen && next instanceof Node && !containerRef.current?.contains(next)) setIsOpen(false);
@@ -118,7 +151,8 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
         type="button"
         aria-label={triggerLabel}
         aria-expanded={isOpen}
-        aria-haspopup={role === 'dialog' ? 'dialog' : 'true'}
+        aria-haspopup={HAS_POPUP[role]}
+        aria-busy={busy}
         onClick={() => {
           setIsOpen((open) => !open);
         }}
@@ -132,6 +166,7 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
           ref={panelRef}
           role={role}
           aria-label={label}
+          onKeyDown={role === 'menu' ? onMenuKeyDown : undefined}
           style={anchoredPosition}
           className={cn(
             cardSurface,
