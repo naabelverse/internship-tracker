@@ -94,6 +94,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **"Clear filters" sits beside Filters and looks like a button.** It comes
+  right after Filters, with a border and a small x like the toolbar's other
+  buttons, and appears only when filters are set: search text has its own clear
+  button in the field. On wide screens the search field stops at a set width,
+  so the button no longer pushes Filters, or its open menu, to the left. After
+  clearing, focus moves to Filters.
 - **The Filters menu's scrollbar stays inside its rounded corners.** It ran flush
   against the panel's right edge, and its square grey track covered both
   right-hand corners. The toolbar's menus now use the same panel as the

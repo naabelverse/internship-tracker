@@ -5096,3 +5096,54 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   which is a positioning bug (issue #85).
 - **Not done:** positioning. The Columns menu at 375 opens about 117px off the left edge (issue
   #85). This change was visual only and kept every panel where it was.
+
+## "Clear filters" sits beside Filters, shows for filters only, and stops moving Filters at 1440 (7 Oct 2026)
+
+- **What changed:** the toolbar's "Clear filters" now comes right after Filters, before Columns,
+  in both the DOM and the tab order. It is `Button variant="secondary" size="sm"` with a 16px x
+  (`CloseIcon`). That gives it the same box and tokens as Filters, Columns and Export CSV, so it
+  is no louder than Filters, and New application stays the only filled button. It was a `ghost`
+  button with no border or icon, placed between Columns and Export CSV.
+- **When it shows (decided with the user):** for anything that narrows the list except search
+  text (`hasFiltersBeyondSearch`). That covers the panel's boxes, Show archived, and the
+  link-only `company`, `tags`, `workMode` and date filters, so a shared `?tags=` link can still
+  be cleared from the toolbar. Search text has its own clear button in the field. Counting it made
+  the field shrink about 300 ms into typing, and at 768 it added a toolbar row (+44px). When the
+  button does show, it clears what it always did: every filter and the search text, plus sort and
+  page size (`EMPTY_FILTERS`). The empty state's "Clear filters" still uses `hasActiveFilters` and
+  still appears for a search with no results.
+- **Focus:** clicking it moves focus to the Filters button first, then clears. On `main`, focus
+  fell to the page body when the button disappeared.
+- **Why the search field is capped (option B, decided with the user):** the field took all the
+  spare width, so any button that appeared came out of it and pushed Filters left. That includes
+  the panel open under Filters: on `main`, ticking the first box moved it 129.9px left at 1440 and 1024. Moving the button alone could not fix that. From `xl` the field now stops at 24rem
+  (`xl:max-w-sm`) and Columns takes `xl:ml-auto`, so the button fills free space instead. To allow
+  that, `Popover` gained an optional wrapper `className`. The cost is the field's width at rest
+  at 1440: 604px becomes 384px. The placeholder needs 270.4px.
+- **Measured** with real scrollbars at 1440, 1024, 768 and 375, with and without a filter, in both
+  themes (identical): row count and height match `main` in every state (1/1, 2/2, 1→2 and 3/3
+  rows; 36, 80, 36→80 and 124px), with no overlap, no clipped label and no sideways page scroll.
+  The open panel's movement when the first box is ticked, `main` → branch:
+  1440 −129.9 → 0, 1024 −129.9 → −24.1, 768 +26.8 → +0.8, 375 −26.6 → −26.6.
+- **Known limitation (accepted with the user):** from 1280 to about 1375px the open panel still
+  moves, by −96.1px at 1280. The 24rem field leaves 60px spare there, and showing the button needs
+  about 156px: the badge +26.6, the button 121.4 and one 8px gap. `main` was not measured at 1280.
+  It moves −129.9px at both 1440 and 1024. At 1024 and 375 the remaining movement is the Filters
+  count badge widening the button, which `main` does as well. Tracked in #87.
+- **Two-step cap, considered and not built:** 18rem (288px) from `xl` and 24rem from about 1376px
+  would give 0 at 1280. Its cost is a 288px field at rest there instead of 384px. Correction to the
+  estimate that 288px is narrower than the placeholder needs (about 320px): the placeholder
+  measures 270.4px (220.4px of text in Archivo 14px, plus 36px left padding, 12px right and 2px of
+  border), so it would fit with 17.6px to spare.
+- **Found, not fixed:** a search that returns few rows can remove the page scrollbar. That widens
+  the toolbar by 15px, and at 1024 it moves New application back to row 1. On `main` the old
+  button hid this. `scrollbar-gutter: stable` is the usual fix (#88).
+- **Tests:** `client/tests/applications/clearFilters.test.tsx` has 7 cases. 4 fail on `main`:
+  search text alone, the position after Filters, and focus after Enter and after Space. "Show
+  archived" and the link-only filter pass on `main`, which shows the button for both. They fail
+  against a boxes-only rule, the alternative the user declined. "Shows for a status" is a sanity
+  check that no version tried makes fail. `e2e/audits/clearFilters.spec.ts` (client address 17,
+  one sign-up) runs at 1440 and checks three things: Filters does not move, Clear filters comes
+  next in the DOM and on Tab, and focus lands on Filters after Enter. On `main` all of them fail
+  (moved 129.94px, not next, not reached by Tab, focus not on Filters). It does not check the
+  panel at 375, where its placement is #85.
