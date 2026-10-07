@@ -5246,3 +5246,57 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   Headless Chromium hides scrollbars, so it finds the scrollbar by the edge it is drawn on. Locally
   it passes on the branch. On `main`'s build it fails: the page scrolls 503px, the edge is at
   1379px of 900, the column does not scroll, and there is no strip.
+
+## Cards without a deadline show no chip instead of a bare "—" (8 Oct 2026)
+
+- **What changed:** `BoardCard` and `ApplicationCardList` render `DeadlineChip` only when
+  `toDate(application.deadline)` is not null, the same test the chip uses before it falls back to
+  "—". On the board the chip row renders only when there is a chip or a tag, so a card with
+  neither has no empty row. `DeadlineChip` is unchanged: the table's Deadline column keeps its
+  "—", which reads as "none" under the column header. Nowhere else does the dash appear without a
+  label. The detail page's "Deadline" fact sits under a `<dt>`, the stat card has a title, and
+  Upcoming events always have a date.
+- **Why the board cards were uneven:** the dash was bare text in the flex row, so the row took the
+  body's 24px line box, against 20px for a row of badges. Every no-deadline card was 4px taller,
+  tags or not. Measured on the real build with real scrollbars, the same in light and dark and at
+  1440, 768 and 375 (cards are 288px wide at every size), using demo cards:
+
+  | Kind                 | Demo card            | Before         | After                         |
+  | -------------------- | -------------------- | -------------- | ----------------------------- |
+  | a. deadline and tags | AirAsia MOVE, Saved  | 128            | 128                           |
+  | b. deadline only     | Datadog, Saved       | 128            | 128                           |
+  | c. tags only         | Shopee, Saved        | 132 (24px row) | 128 (20px row)                |
+  | d. neither           | Razer, Saved         | 132            | 98 (no 10px gap, no 24px row) |
+  | "— react"            | Sea Group, Interview | 132            | 128, "react" at offset 0      |
+
+  After the change no dash is left on the board's 62 demo cards, and 11 cards render no chip row.
+
+- **The card list was added after the original brief, at the user's request.** It shows only
+  below 768px (`max-width: 767px`), so it was measured at 767, its widest width, and at 375. The
+  status select does not move: it is at x 97, y 73 on every card, before and after.
+  - **767:** every card is 114px before and after. On cards without a deadline the priority badge
+    moves 24px left into the dash's place (16px dash + 8px gap), for example Shopee 203.2 → 179.2.
+  - **375:** cards with a deadline are unchanged at 142 (one at 170, whose long overdue chip
+    wraps). Cards without a deadline were 142 or 114 and are now all 114. On four of them
+    (Shopee, Grab ×2, Sea Group) the priority badge moves from line 2 up to line 1.
+- **Accessibility:** the dash had no accessible name. The react card's tree read `text: — react`
+  and now reads `text: react`. A screen reader spoke it as a dash or skipped it, never as "no
+  deadline". A card with a deadline still says "Deadline 16 Nov 2026, in 39d", so the absence of
+  that phrase still means no deadline, and the detail page lists the deadline under its label.
+- **Unchanged, and checked on the branch build:**
+  - The board fits the window: the bottom edge is at 876 of 900, 744 of 768 and 536 of 560, with no
+    page scroll, and the horizontal scrollbar (10px) is on screen.
+  - The jump strip brings Withdrawn into view.
+  - A pointer drag from Saved to Withdrawn and a keyboard drag (Space, six ArrowRights, Space) to
+    Ghosted both land.
+  - Holding a card at the Saved list's bottom scrolls it 17 → 1213px in 1.5s.
+  - The drag preview is the card's own size: 268×98 for the short card, 268×128 for the others.
+- **Found, not changed:** the drag preview sits 60px right and 60px down of the card after the
+  pointer moves (+60, +40). `main` gives the same 60/60 at 132px and 128px, so the extra 20px is
+  pre-existing and unrelated to card height.
+- **Tests:** `client/tests/applications/noDeadlineChip.test.tsx` has 6 cases. On the board: no dash
+  without a deadline, the chip still shown with one, a tags-only row starting with the tag, and no
+  row with neither. In the card list: no dash, and the chip still shown. The four dash cases fail
+  on `main`; the two chip cases are guards and pass on both. `e2e/audits/boardScroll.spec.ts` is
+  unchanged and runs in CI. It was not run locally because it signs up and signs in, and the
+  capture session was limited to one sign-in.

@@ -5,7 +5,7 @@ import {
 } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/Badge';
 import { DeadlineChip } from '@/features/applications/DeadlineChip';
-import { companyInitials } from '@/lib/formatters';
+import { companyInitials, toDate } from '@/lib/formatters';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
 import { cn } from '@/lib/cn';
 import type { Application, ApplicationStatus } from '@/types/application';
@@ -34,6 +34,9 @@ interface BoardCardFaceProps {
  * Without `handle` and `onOpen` the buttons are inert and out of the tab order.
  */
 export function BoardCardFace({ application, onOpen, handle }: BoardCardFaceProps): JSX.Element {
+  const hasDeadline = toDate(application.deadline) !== null;
+  const tags = application.tags.slice(0, 2);
+
   return (
     <>
       <div className="flex items-start gap-2.5">
@@ -68,14 +71,21 @@ export function BoardCardFace({ application, onOpen, handle }: BoardCardFaceProp
         />
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-        <DeadlineChip deadline={application.deadline} />
-        {application.tags.slice(0, 2).map((tag) => (
-          <Badge key={tag} className="bg-surface-muted text-content-muted">
-            {tag}
-          </Badge>
-        ))}
-      </div>
+      {/*
+        No deadline means no chip rather than DeadlineChip's bare "—", which only
+        reads as "none" under the table's Deadline header. With no tags either,
+        the row goes too, so the card keeps the same padding as its neighbours.
+      */}
+      {(hasDeadline || tags.length > 0) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {hasDeadline && <DeadlineChip deadline={application.deadline} />}
+          {tags.map((tag) => (
+            <Badge key={tag} className="bg-surface-muted text-content-muted">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/*
         A real button carries the drag listeners so the keyboard sensor has
