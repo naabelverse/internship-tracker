@@ -94,6 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The Filters menu's scrollbar stays inside its rounded corners.** It ran flush
+  against the panel's right edge, and its square grey track covered both
+  right-hand corners. The toolbar's menus now use the same panel as the
+  dropdowns, with a thin scrollbar in the theme's colours.
 - **A week that exactly meets your weekly goal now reaches the goal line.** The
   dashed line was drawn just above the goal, so those weeks looked 1px short and
   the chart showed fewer weeks reaching it than "Goal met in N of 12 weeks"
