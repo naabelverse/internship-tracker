@@ -82,7 +82,9 @@ export function BoardPage(): JSX.Element {
   }
 
   return (
-    <div className="space-y-5">
+    // From `board-fit` up the shell gives this page a fixed height (AppLayout);
+    // a column flex hands what the header leaves over to the board.
+    <div className="space-y-5 board-fit:flex board-fit:min-h-0 board-fit:flex-1 board-fit:flex-col">
       <PageHeader
         title="Board"
         description="Drag a card, or focus one and press space, to move it between columns."

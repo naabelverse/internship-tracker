@@ -1,5 +1,8 @@
-import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
+import {
+  useDraggable,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
+} from '@dnd-kit/core';
 import { Badge } from '@/components/ui/Badge';
 import { DeadlineChip } from '@/features/applications/DeadlineChip';
 import { companyInitials } from '@/lib/formatters';
@@ -17,32 +20,22 @@ export interface CardDragData {
   company: string;
 }
 
-interface BoardCardProps {
+interface BoardCardFaceProps {
   application: Application;
-  cardIndex: number;
-  onOpen: (id: string) => void;
+  /** Opens the application. Left out on the drag preview, whose buttons do nothing. */
+  onOpen?: (id: string) => void;
+  /** The Move button's drag wiring. Left out on the drag preview. */
+  handle?: { listeners: DraggableSyntheticListeners; attributes: DraggableAttributes };
 }
 
-export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): JSX.Element {
-  const data: CardDragData = {
-    status: application.status,
-    version: application.version,
-    company: application.company,
-  };
-
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: application.id,
-    data,
-  });
-
+/**
+ * What a card shows, shared by the card in its column and the copy that follows
+ * the pointer during a drag (`BoardDragLayer`), so the two cannot drift apart.
+ * Without `handle` and `onOpen` the buttons are inert and out of the tab order.
+ */
+export function BoardCardFace({ application, onOpen, handle }: BoardCardFaceProps): JSX.Element {
   return (
-    <li
-      ref={setNodeRef}
-      data-card-id={application.id}
-      data-card-index={cardIndex}
-      style={{ transform: CSS.Translate.toString(transform) }}
-      className={cn(cardSurface, 'p-3', isDragging && 'opacity-60 ring-2 ring-primary')}
-    >
+    <>
       <div className="flex items-start gap-2.5">
         <span
           aria-hidden="true"
@@ -54,8 +47,9 @@ export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): J
         <div className="min-w-0 flex-1">
           <button
             type="button"
+            tabIndex={onOpen ? undefined : -1}
             onClick={() => {
-              onOpen(application.id);
+              onOpen?.(application.id);
             }}
             className="block w-full truncate text-left text-sm font-medium text-content transition-colors hover:text-primary"
           >
@@ -90,13 +84,48 @@ export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): J
       */}
       <button
         type="button"
-        {...listeners}
-        {...attributes}
+        tabIndex={handle ? undefined : -1}
+        {...handle?.listeners}
+        {...handle?.attributes}
         aria-label={`Move ${application.company} from ${STATUS_CONFIG[application.status].label}`}
         className="mt-2.5 w-full cursor-grab rounded-control border border-border px-2 py-1 text-xs text-content-subtle transition-colors hover:bg-surface-muted hover:text-content"
       >
         Move
       </button>
+    </>
+  );
+}
+
+interface BoardCardProps {
+  application: Application;
+  cardIndex: number;
+  onOpen: (id: string) => void;
+}
+
+export function BoardCard({ application, cardIndex, onOpen }: BoardCardProps): JSX.Element {
+  const data: CardDragData = {
+    status: application.status,
+    version: application.version,
+    company: application.company,
+  };
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: application.id,
+    data,
+  });
+
+  return (
+    // Mid-drag the card stays put and goes transparent, leaving the gap it
+    // always left, while `BoardDragLayer` draws the copy under the pointer. The
+    // card itself used to be the thing that moved, and the column's scrolling
+    // list clipped it the moment it left that column.
+    <li
+      ref={setNodeRef}
+      data-card-id={application.id}
+      data-card-index={cardIndex}
+      className={cn(cardSurface, 'p-3', isDragging && 'opacity-0')}
+    >
+      <BoardCardFace application={application} onOpen={onOpen} handle={{ listeners, attributes }} />
     </li>
   );
 }

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The Board names every column above it.** A row of buttons, one per column
+  with its count ("Offer 5"), sits over the board. Clicking one scrolls the board
+  to that column, so the columns past the right edge are no longer hidden with
+  nothing to say they are there. On a phone the row scrolls sideways itself.
 - **The Activity card explains what it shows.** A line under the heading says
   it covers the last 12 weeks against your weekly goal, and a small (?) beside
   the heatmap, the figures and Weekly pace opens a short note on how each is
@@ -38,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Board fits the window, so its sideways scrollbar is always on screen.**
+  On a window at least 768px wide and 560px tall, the board takes the height left
+  under the header and each column scrolls on its own under its name and count,
+  which stay in place. Before, the scrollbar sat under the tallest column, about
+  1,500px down the page. Smaller windows, such as phones, keep the board in the
+  page as before, with no scrolling inside a column. Dragging a card near the top
+  or bottom of a tall column scrolls that column.
 - **Export CSV lets you choose what goes in the file.** It opens a small menu
   with two choices. **Shown columns** exports only the columns currently in the
   table (the count is shown, for example "Shown columns (7)"); Source brings its
@@ -94,6 +105,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A card you drag on the Board stays visible.** It disappeared as soon as it
+  left its own column, so you dropped it without seeing it. It now follows the
+  pointer across the board. Where it lands, and the keyboard and Move-button
+  moves, are unchanged.
 - **"Clear filters" sits beside Filters and looks like a button.** It comes
   right after Filters, with a border and a small x like the toolbar's other
   buttons, and appears only when filters are set: search text has its own clear

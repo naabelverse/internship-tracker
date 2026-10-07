@@ -9,7 +9,11 @@ import {
   type CollisionDetection,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import { useRef } from 'react';
 import { BoardColumn } from '@/features/board/BoardColumn';
+import { BoardDragLayer } from '@/features/board/BoardDragLayer';
+import { BoardJumpStrip } from '@/features/board/BoardJumpStrip';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { buildColumns } from '@/features/board/boardColumns';
 import { boardKeyboardCoordinates } from '@/features/board/keyboardCoordinates';
 import type { CardDragData } from '@/features/board/BoardCard';
@@ -51,6 +55,19 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
     useSensor(KeyboardSensor, { coordinateGetter: boardKeyboardCoordinates }),
   );
 
+  const boardRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+
+  /** Brings a column to the board's left edge, or as far as the board scrolls. */
+  function jumpTo(index: number): void {
+    const board = boardRef.current;
+    const column = board?.querySelector<HTMLElement>(`[data-column-index="${String(index)}"]`);
+    if (!board || !column) return;
+
+    // The board is `relative`, so a column's offsetLeft is measured from it.
+    board.scrollTo({ left: column.offsetLeft, behavior: reduceMotion ? 'auto' : 'smooth' });
+  }
+
   function onDragEnd({ active, over }: DragEndEvent): void {
     if (!over) return;
 
@@ -74,12 +91,26 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
         is `position: absolute`, and `DeadlineChip` renders one inside every card,
         so without a positioned wrapper those boxes escape this scroll container
         and extend the document instead. See ApplicationsTable for the full note.
+
+        From `board-fit` up it takes the height the page leaves it, so its
+        sideways scrollbar is on screen and each column scrolls on its own;
+        below that it is as tall as its longest column, as it always was.
       */}
-      <div className="relative flex gap-3 overflow-x-auto pb-2" data-testid="kanban-board">
-        {columns.map((column) => (
-          <BoardColumn key={column.status} column={column} onOpen={onOpen} />
-        ))}
+      <div className="board-fit:flex board-fit:min-h-0 board-fit:flex-1 board-fit:flex-col">
+        <BoardJumpStrip columns={columns} onJump={jumpTo} />
+
+        <div
+          ref={boardRef}
+          className="relative flex gap-3 overflow-x-auto pb-2 board-fit:min-h-0 board-fit:flex-1 board-fit:scrollbar-themed"
+          data-testid="kanban-board"
+        >
+          {columns.map((column) => (
+            <BoardColumn key={column.status} column={column} onOpen={onOpen} />
+          ))}
+        </div>
       </div>
+
+      <BoardDragLayer applications={applications} boardRef={boardRef} />
     </DndContext>
   );
 }

@@ -19,8 +19,9 @@ import { cn } from '@/lib/cn';
  *   wrapper component cannot take that over without owning the form.
  * - `Popover` is a floating overlay — `shadow-float`, absolute or fixed
  *   positioning, its own stacking context — not a card in the page flow.
- * - `BoardCard` is draggable and swaps to a `ring-2` treatment mid-drag, so its
- *   surface is state-dependent in a way the padding scale does not describe.
+ * - `BoardCard` is draggable: mid-drag it goes transparent and its copy in
+ *   `BoardDragLayer` takes a `ring-2` treatment, so the surface is
+ *   state-dependent in a way the padding scale does not describe.
  *
  * Forcing those three into `Card` would be a false consolidation: it would make
  * the count look tidier while describing them wrongly. Sharing the string keeps
