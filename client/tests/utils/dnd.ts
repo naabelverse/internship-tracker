@@ -38,6 +38,16 @@ export function mockBoardLayout(): () => void {
       return rect(Number(columnAttribute) * COLUMN_WIDTH, 0, COLUMN_WIDTH, COLUMN_HEIGHT);
     }
 
+    // The copy of the dragged card in dnd-kit's DragOverlay, which dnd-kit
+    // measures in place of its wrapper (`getMeasurableNode`). A browser opens it
+    // exactly over the card it copies, and the keyboard getter starts from that
+    // box, so measure it as that card rather than as a box at the origin.
+    const preview = this.getAttribute('data-drag-preview');
+    if (preview) {
+      const card = this.ownerDocument.querySelector(`[data-card-id="${preview}"]`);
+      if (card) return card.getBoundingClientRect();
+    }
+
     const cardAttribute = this.getAttribute('data-card-index');
     if (cardAttribute !== null) {
       const column = this.closest('[data-column-index]');

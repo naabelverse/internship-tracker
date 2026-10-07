@@ -206,6 +206,15 @@ export default {
       ringColor: {
         DEFAULT: token('color-ring'),
       },
+      /*
+       * Where the board is tall enough to be given the viewport's height, with
+       * columns that scroll on their own and its sideways scrollbar kept on
+       * screen. Below either bound it stays in the page's normal flow, so a
+       * phone or a landscape phone never gets a nested scroll that can trap it.
+       */
+      screens: {
+        'board-fit': { raw: '(min-width: 768px) and (min-height: 560px)' },
+      },
     },
   },
   plugins: [],

@@ -4,6 +4,8 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { VerificationBanner } from '@/features/auth/VerificationBanner';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
+import { cn } from '@/lib/cn';
+import { paths } from '@/routes/paths';
 
 /**
  * The application shell: a static sidebar from `lg` up, an off-canvas drawer
@@ -68,6 +70,17 @@ export function AppLayout(): JSX.Element {
   // hidden behind the overlay on a phone.
   useEffect(closeNav, [location.pathname, closeNav]);
 
+  /*
+   * The board is given exactly the height left under the top bar, the banner
+   * and its own header, so its sideways scrollbar sits on screen rather than
+   * under columns as tall as their longest list. A flex column rather than a
+   * calc() because the banner and the board's "Showing 100 of N" line come and
+   * go. `svh` is the height with the browser's toolbars showing, so nothing is
+   * cut off under them. Only from `board-fit` up: below it the page flows as
+   * before, and there is no nested scroll to trap a phone.
+   */
+  const fillsViewport = location.pathname.startsWith(paths.board);
+
   return (
     <div className="min-h-screen bg-canvas">
       <Seo title={meta.title} description={meta.description} />
@@ -81,7 +94,12 @@ export function AppLayout(): JSX.Element {
 
       <Sidebar isOpen={isNavOpen} onClose={closeNav} />
 
-      <div className="lg:pl-64">
+      <div
+        className={cn(
+          'lg:pl-64',
+          fillsViewport && 'board-fit:flex board-fit:h-svh board-fit:flex-col',
+        )}
+      >
         <Topbar
           isNavOpen={isNavOpen}
           onOpenNav={() => {
@@ -94,7 +112,13 @@ export function AppLayout(): JSX.Element {
             a week never seeing it. */}
         <VerificationBanner />
 
-        <main id="main-content" className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <main
+          id="main-content"
+          className={cn(
+            'mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8',
+            fillsViewport && 'board-fit:flex board-fit:min-h-0 board-fit:flex-1 board-fit:flex-col',
+          )}
+        >
           <Outlet />
         </main>
       </div>

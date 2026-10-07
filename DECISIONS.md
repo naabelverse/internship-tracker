@@ -5147,3 +5147,102 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   next in the DOM and on Tab, and focus lands on Filters after Enter. On `main` all of them fail
   (moved 129.94px, not next, not reached by Tab, focus not on Filters). It does not check the
   panel at 375, where its placement is #85.
+
+## The Board fits the window, names its columns, and draws the dragged card in an overlay (7 Oct 2026)
+
+- **What changed:** where the window is at least 768px wide and 560px tall (the new `board-fit`
+  screen in `tailwind.config.ts`), the board takes the height left under the top bar, any banner
+  and its header. Each column's list scrolls under the column's name and count, which stay put.
+  A row of buttons above the board ("Jump to column", `BoardJumpStrip`) names every column with its
+  count and scrolls the board to the one clicked. A dragged card is drawn in dnd-kit's
+  `DragOverlay` (`BoardDragLayer`) instead of being moved in place.
+- **The height rule (decided with the user):** both bounds or nothing. Below either one, on
+  phones in portrait and on a landscape phone (844×390), the board stays in the page's normal flow
+  as before, so there is no scroll inside a column that could trap the page. The height comes from
+  a flex column from `AppLayout` down, on the board route only, not from a `calc()`. The
+  verification banner and the "Showing 100 of N" line come and go, and a fixed offset would clip
+  the board by their height. The shell is `100svh`, the height with the browser's toolbars
+  showing, so nothing is cut off under them.
+- **Measured** on the built app with real scrollbars, in both themes (identical). This is the
+  vertical scroll needed before the sideways scrollbar is on screen, `main` → branch, with the
+  demo data:
+  - 1440×900: 1591 → 0
+  - 1024×768: 1723 → 0
+  - 768×1024: 1467 → 0
+
+  On the branch the page doesn't scroll at those sizes. The scrollbar sits 24px above the window's
+  bottom, and with Saved scrolled to its end its header is still hit-tested on top and its last
+  card is not cut off. At 375×812 and 844×390 the board matches `main`: 2335px tall, columns
+  2312px, cards 270px wide. It sits lower by the strip, 54px at 375 and 44px at 844.
+
+- **Costs:**
+  - Cards are 268px wide in the fitted layout, not 270. A column's list reaches 8px into the
+    column's right padding and keeps a stable 10px gutter for the thin scrollbar. So every
+    column's cards are the same width whether or not its list scrolls; otherwise they'd be 260px
+    in scrolling columns and 270px in the rest.
+  - The page's own scrollbar goes on the board route, so the content area there is 15px wider
+    than on other routes.
+  - The board and its lists use the scroll panel's themed scrollbar (`.scrollbar-themed`, the
+    same `border-strong` thumb). It is 10px thick rather than the browser's 15px.
+- **The strip (decided with the user):** one row that scrolls sideways itself rather than wrapping.
+  It is 40px tall and fits on one row from 768px up (712 of 712px at 1024). At 375 it shows 3 of
+  its 8 buttons, plus a 10px scrollbar where scrollbars are classic. Wrapped, it would have been 3
+  rows and 120px, a fifth of the board. Focus stays on the button after a jump. Moving it into the
+  column would give keyboard users a shortcut past every card's two buttons, but that's new focus
+  handling, which this change was asked not to alter. It remains a possible follow-up.
+- **A side effect fixed on the way:** each card's `DeadlineChip` has `sr-only` text, which is
+  `position: absolute` and was placed against the board (`relative`). Once the lists scrolled,
+  those boxes sat where an unscrolled list would put them and gave the board about 2,300px of
+  vertical scroll of its own. Each list is now `relative` as well. The board's vertical overflow
+  is 0 at every size.
+- **DragOverlay (the user's rule: add it only if columns made clipping worse):** measured as the
+  share of the dragged card actually painted (hit-tested on a 9×5 grid) for three fixed gestures at
+  1440×900:
+
+  | Gesture               | `main` | columns only | with the overlay |
+  | --------------------- | ------ | ------------ | ---------------- |
+  | sideways onto Applied | 0%     | 0%           | 100%             |
+  | down inside Saved     | 100%   | **60%**      | 100%             |
+  | onto Assessment, low  | 0%     | 0%           | 100%             |
+
+  It was worse, so the overlay went in. It also fixes the sideways case, which was already broken on
+  `main`: the column's `overflow-y-auto` list clipped a card as soon as it left. The card stays in
+  its slot at `opacity-0`, leaving the gap it always left. The copy has the moving card's old look
+  (`opacity-60`, primary ring), and `dropAnimation={null}` keeps drops instant. Collision detection
+  and `onDragEnd` are untouched. `BoardCardFace` holds what a card shows, so the card and its copy
+  cannot drift apart. `@dnd-kit/utilities` is no longer used and has been removed from the client's
+  dependencies (`@dnd-kit/core` still pulls it in).
+
+- **Auto-scroll inside a tall column:** dnd-kit scrolls only the scroll containers around the
+  droppable being hovered (`useScrollableAncestors(overNode)`). A column's droppable is the whole
+  `<section>`, and its scrolling list is a child of it, so dnd-kit never scrolls a list. On `main`
+  the window scrolled instead. `useColumnAutoScroll` scrolls the list under the pointer within 56px
+  of its top or bottom edge, up to 14px a frame. It works for pointer drags only: a keyboard drag
+  steps a whole column and a drop lands anywhere on the column. Measured: holding a card at the
+  bottom of Saved scrolls it 17 → 1213px in 1.5s, and the same for a tall target column. Sideways
+  auto-scroll is dnd-kit's own and unchanged: Saved to Withdrawn took about 1s.
+- **Unchanged, and checked:** keyboard moves step one column per arrow press. Seven ArrowLefts from
+  Withdrawn land in Saved, and the board scrolls 300px per press. Enter starts a move like Space.
+  Escape cancels and returns focus to the same Move button. After a keyboard drop, focus is on
+  `<body>` on both `main` and the branch.
+- **Test utility changed on purpose:** `mockBoardLayout` in `client/tests/utils/dnd.ts` now measures
+  the overlay's copy as the card it copies. A browser opens the overlay exactly there, and dnd-kit
+  measures that copy in place of its wrapper (`getMeasurableNode`). Without it jsdom reported a box
+  at the origin, the keyboard getter started from column 0, and the two keyboard cases in
+  `dragAndDrop.test.tsx` failed. No assertion changed.
+- **Found, not fixed:** dnd-kit's default announcements read the card's database id and the raw
+  status key ("Draggable item 6ac6… was moved over droppable area withdrawn"). Tracked in #90.
+- **Tests:** `client/tests/board/jumpStrip.test.tsx` has 3 cases: names and counts in order, a
+  smooth scroll of the board to the column with focus left on the button, and no smooth scroll under
+  reduced motion. All 3 fail on `main` (no strip). `e2e/audits/boardScroll.spec.ts` (client address
+  18, one sign-up) covers the following:
+  - At 1440×900 and 768×1024: no page scroll, the board's bottom edge on screen, the tall column
+    scrolling, and no vertical scroll on the board.
+  - The header staying put with the list scrolled to its end, and the last card not cut off.
+  - The strip reaching Withdrawn.
+  - The dragged copy hit-tested over the next column, and a held card scrolling the list.
+  - At 844×390 and 375×812: no scroll inside a column, and the page scrolling.
+
+  Headless Chromium hides scrollbars, so it finds the scrollbar by the edge it is drawn on. Locally
+  it passes on the branch. On `main`'s build it fails: the page scrolls 503px, the edge is at
+  1379px of 900, the column does not scroll, and there is no strip.

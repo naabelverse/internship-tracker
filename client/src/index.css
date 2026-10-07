@@ -400,6 +400,16 @@
   }
 
   /*
+   * The scroll panel's thin, themed scrollbar on its own, for a scroll area
+   * that is not a floating panel: the board's sideways scroll, its columns and
+   * its jump strip.
+   */
+  .scrollbar-themed {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border-strong)) transparent;
+  }
+
+  /*
    * The open panel of every `<select>` in the app, which is `Select` and
    * `StatusSelect` — both carry this class, so there is one panel design.
    *
