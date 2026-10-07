@@ -140,7 +140,7 @@ export function toQueryParams(filters: ApplicationFilters): Record<string, strin
   return Object.fromEntries(toSearchParams(filters));
 }
 
-/** True when anything narrows the list, which drives the "clear filters" affordance. */
+/** True when anything narrows the list, which drives the empty state's "Clear filters". */
 export function hasActiveFilters(filters: ApplicationFilters): boolean {
   return (
     filters.search !== '' ||
@@ -154,4 +154,13 @@ export function hasActiveFilters(filters: ApplicationFilters): boolean {
     filters.priority.length > 0 ||
     filters.tags.length > 0
   );
+}
+
+/**
+ * True when anything other than search text narrows the list, which drives the
+ * toolbar's "Clear filters". Search text has its own clear button in the field,
+ * and counting it made the toolbar re-flow about 300 ms into typing.
+ */
+export function hasFiltersBeyondSearch(filters: ApplicationFilters): boolean {
+  return hasActiveFilters({ ...filters, search: '' });
 }

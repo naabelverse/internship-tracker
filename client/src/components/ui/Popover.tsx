@@ -22,6 +22,8 @@ interface PopoverProps {
   align?: 'left' | 'right';
   /** The trigger's accessible name, for a trigger that shows only an icon. */
   triggerLabel?: string;
+  /** Classes for the wrapper, such as a margin that places it within a toolbar. */
+  className?: string;
   /** Classes for the trigger in place of the toolbar's bordered button. */
   triggerClassName?: string;
   /**
@@ -87,6 +89,7 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
     children,
     align = 'left',
     triggerLabel,
+    className,
     triggerClassName,
     panelClassName,
     role = 'group',
@@ -152,7 +155,7 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
   };
 
   return (
-    <div ref={containerRef} className="relative" onBlur={onBlur}>
+    <div ref={containerRef} className={cn('relative', className)} onBlur={onBlur}>
       <button
         ref={setTriggerRef}
         type="button"

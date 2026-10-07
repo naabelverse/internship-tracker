@@ -5,7 +5,10 @@ import { TextField } from '@/components/ui/TextField';
 import { CloseIcon, ColumnsIcon, FilterIcon, PlusIcon, SearchIcon } from '@/components/ui/icons';
 import { COLUMNS, visibleColumns } from '@/features/applications/columns';
 import { ExportMenu } from '@/features/applications/ExportMenu';
-import { hasActiveFilters, type ApplicationFilters } from '@/features/applications/filterParams';
+import {
+  hasFiltersBeyondSearch,
+  type ApplicationFilters,
+} from '@/features/applications/filterParams';
 import { STATUS_CONFIG, SOURCE_LABELS, PRIORITY_CONFIG } from '@/lib/statusConfig';
 import { APPLICATION_STATUSES, PRIORITIES, SOURCES } from '@/types/application';
 
@@ -76,6 +79,12 @@ function CheckboxFilter<T extends string>({
  * with the effect form, clearing the filters re-seeded the input and re-ran the
  * write in the same commit, where the debounced value was still the old term, and
  * the search the user had just cleared was written straight back into the URL.
+ *
+ * "Clear filters" sits right after Filters, the control it undoes, and shows only
+ * for filters beyond the search text, which has its own clear button. From `xl`
+ * the search field stops at 24rem and Columns, Export and New application keep
+ * to the right edge, so the button takes free space when it appears instead of
+ * pushing Filters, and its open panel, to the left.
  */
 export function ApplicationsToolbar({
   filters,
@@ -88,6 +97,7 @@ export function ApplicationsToolbar({
   const [searchText, setSearchText] = useState(filters.search);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const filtersRef = useRef<HTMLButtonElement | null>(null);
 
   const cancelPendingSearch = (): void => {
     if (timerRef.current !== null) clearTimeout(timerRef.current);
@@ -116,7 +126,7 @@ export function ApplicationsToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="min-w-[12rem] flex-1">
+      <div className="min-w-[12rem] flex-1 xl:max-w-sm">
         {/*
           The platform's own cancel button is hidden so this one is the only
           clear control. It writes through the same debounced path as typing.
@@ -152,6 +162,7 @@ export function ApplicationsToolbar({
       </div>
 
       <Popover
+        ref={filtersRef}
         label="Filters"
         trigger={
           <>
@@ -209,9 +220,26 @@ export function ApplicationsToolbar({
         )}
       </Popover>
 
+      {hasFiltersBeyondSearch(filters) && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            // The button goes with the filters it clears, so focus moves to the
+            // Filters button first rather than falling to the page body.
+            filtersRef.current?.focus();
+            onClearFilters();
+          }}
+        >
+          <CloseIcon className="h-4 w-4" />
+          Clear filters
+        </Button>
+      )}
+
       <Popover
         label="Columns"
         align="right"
+        className="xl:ml-auto"
         trigger={
           <>
             <ColumnsIcon className="h-4 w-4" />
@@ -243,12 +271,6 @@ export function ApplicationsToolbar({
           ))
         }
       </Popover>
-
-      {hasActiveFilters(filters) && (
-        <Button variant="ghost" size="sm" onClick={onClearFilters}>
-          Clear filters
-        </Button>
-      )}
 
       {/*
         "Shown columns" is derived with the same `visibleColumns` the table
