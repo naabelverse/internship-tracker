@@ -5353,3 +5353,61 @@ scrolling on touch. The handle is made obvious instead.
   heading and a drop. It deliberately does not assert that dragging the card body does nothing, so
   widening the drag area later is not blocked. It runs in CI only, because it signs up and signs
   in, and the capture session was limited to one sign-in.
+
+## Calendar day cards show the time alone (9 Oct 2026)
+
+- **What changed:** the line under each card in the day panel reads "Technical · Video · 21:20"
+  and "Application deadline · 22:45", not "… · 24 Sep 2026, 22:45". The heading above already
+  names the day. A new `formatTime` sits next to `formatDateTime` in `lib/formatters.ts` and uses
+  the same date-fns `format` (`HH:mm`, so 00 to 23, never 24). `formatDateTime` is untouched, so
+  the Upcoming panel, the detail timeline and the version-conflict dialog look exactly as before.
+- **Timezone: the browser's, as before (user's call).** The brief assumed the cards used the
+  account timezone. They never did: the whole Calendar page (grid grouping, heading, panel filter,
+  card time) uses the browser's, through date-fns. The cards keep doing so, which means a card's
+  time and the day it sits under always agree. Moving the page to the account timezone is a
+  separate issue.
+- **Date-only deadlines show no time.** `isDateOnly` treats a deadline stored at exactly
+  00:00:00.000 UTC as a date with no time. The card then reads "Application deadline" alone,
+  where it used to show an invented time: "08:00" in Kuala Lumpur, "00:00" in UTC, and "17:00" on
+  the previous day in Los Angeles. The trade-off: a deadline really set for 00:00:00.000 UTC
+  loses its time too. It applies to deadlines only, so an interview at UTC midnight keeps its
+  time. Which writers produce that exact value:
+  - **The form:** always. A deadline is a date input, saved as `YYYY-MM-DDT00:00:00.000Z`.
+  - **The API:** when sent a date alone (`2026-07-05`, which `z.coerce.date()` reads as UTC
+    midnight) or that instant spelled out. Any other time is kept.
+  - **CSV import:** the same schema, so a `2026-07-05` cell is date-only. A file exported by the
+    app round-trips exactly, because the export writes `toISOString()`.
+  - **The demo seed:** practically never. A deadline is `now` minus whole days and hours, plus
+    whole days, so it keeps the seed moment's minutes, seconds and milliseconds (local runs gave
+    times like 22:45:04.417).
+- **Accessibility:** the time sits in `<time dateTime={at}>` with the date as screen-reader-only
+  text before it, so Chromium's accessible name for a card is unchanged:
+  "Sea Group Site Reliability Intern Online assessment · Video · 24 Sep 2026, 09:45". A date-only
+  card's name ends "Application deadline, 24 Sep 2026", and that date uses the same local-day logic
+  as the grouping, so it always matches the heading.
+- **Heading year (user's call, an exception to "leave the heading").** The year is added when the
+  day's year differs from today's **or** from the shown month's. The brief said "not in the
+  current year". Read as today's year alone, picking a greyed 28 December 2026 cell while viewing
+  January 2027 would still read "Monday 28 December" under a "January 2027" title, which is the
+  case the change was meant to cover. So the panel takes the shown month as a prop. "Thursday
+  24 September" (this year, this month) is unchanged.
+- **Layout, measured on the real build with real scrollbars, the same in light and dark,
+  using the demo day 24 September 2026 (4 events):** at 1440 the panel is 320px wide, so the two
+  interview lines wrapped to two rows. Those cards drop from 90px to 74px, and the deadline cards
+  stay at 74px. The panel itself stays 495px, because it stretches to the month grid's height. At
+  768 and 375 every line was already one row: cards stay at 74px and the panels at 394px and
+  386px. At 375 the month title sits 573px above the panel heading.
+- **Tests:** `client/tests/calendar/calendar.test.tsx` adds 9 cases:
+  - the card's visible text is the time alone, its `<time>` carries the instant, and its name
+    keeps the date;
+  - a date-only deadline shows no time and keeps its grid day for screen readers;
+  - a deadline with a time keeps it;
+  - near-midnight instants sit under the day they name in the runner's timezone, with three
+    different account timezones, which must change nothing;
+  - the heading's year in three cases.
+
+  The suite was run under `TZ=UTC`, `Asia/Kuala_Lumpur` and `America/Los_Angeles`. In Git Bash a
+  `TZ` value with a slash never reaches Node, so the zones were set from PowerShell, and Node
+  confirmed each one. On `main`, 8 of the 9 fail in all three zones. The ninth ("Sunday 5 July",
+  no year) is a guard. No existing assertion changed. The old cases matched only
+  `/Application deadline/` and `/Technical/`.

@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Calendar day cards show the time alone.** Under a heading such as
+  "Thursday 24 September", a card now reads "Technical · Video · 21:20" instead
+  of repeating the date. A deadline saved without a time (the form only takes a
+  date) shows no time at all, rather than the "08:00" or "00:00" it used to
+  invent. Screen readers still hear the full date and time on every card. The
+  heading adds the year when the day is outside this year or outside the month
+  on show, for example "Monday 28 December 2026" picked from January 2027.
 - **The Board shows where to grab a card.** The Move bar at the foot of each
   card, the only part that drags, now carries a grip mark, shows a grab cursor
   on hover and a grabbing cursor while a card is moving. The line under the

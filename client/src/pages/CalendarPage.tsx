@@ -112,6 +112,7 @@ export function CalendarPage(): JSX.Element {
 
           <DayEventsPanel
             date={selectedDate}
+            month={month}
             events={selectedEvents}
             onOpenApplication={(applicationId) => {
               void navigate(paths.applicationDetail(applicationId));
