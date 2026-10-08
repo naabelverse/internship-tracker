@@ -105,6 +105,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cards without a deadline no longer show a stray "—".** On the Board and in
+  the Applications card list on a phone, a card with no deadline showed a bare
+  dash where the due chip would be, which looked like a broken chip ("— react").
+  Now there is simply no chip: tags start at the left, a Board card with neither
+  a deadline nor tags is shorter with no empty row, and in the card list the
+  priority badge takes the dash's place. The table's Deadline column keeps its
+  "—" under its header.
 - **A card you drag on the Board stays visible.** It disappeared as soon as it
   left its own column, so you dropped it without seeing it. It now follows the
   pointer across the board. Where it lands, and the keyboard and Move-button

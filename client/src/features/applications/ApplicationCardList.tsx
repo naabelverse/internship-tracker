@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/Badge';
 import { EditIcon } from '@/components/ui/icons';
 import { DeadlineChip } from '@/features/applications/DeadlineChip';
 import { StatusSelect } from '@/features/applications/StatusSelect';
-import { companyInitials } from '@/lib/formatters';
+import { companyInitials, toDate } from '@/lib/formatters';
 import { PRIORITY_CONFIG } from '@/lib/statusConfig';
 import { cn } from '@/lib/cn';
 import { paths } from '@/routes/paths';
@@ -72,7 +72,10 @@ export function ApplicationCardList({
                     onStatusChange(application.id, status);
                   }}
                 />
-                <DeadlineChip deadline={application.deadline} />
+                {/* No deadline, no chip: DeadlineChip's "—" needs the table's header to read as "none". */}
+                {toDate(application.deadline) !== null && (
+                  <DeadlineChip deadline={application.deadline} />
+                )}
                 <Badge className="bg-surface-muted text-content-muted">
                   <span
                     aria-hidden="true"
