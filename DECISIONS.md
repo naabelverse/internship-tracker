@@ -5383,7 +5383,7 @@ scrolling on touch. The handle is made obvious instead.
 - **Accessibility:** the time sits in `<time dateTime={at}>` with the date as screen-reader-only
   text before it, so Chromium's accessible name for a card is unchanged:
   "Sea Group Site Reliability Intern Online assessment · Video · 24 Sep 2026, 09:45". A date-only
-  card's name ends "Application deadline, 24 Sep 2026", and that date uses the same local-day logic
+  card's name ends "Application deadline , 24 Sep 2026", and that date uses the same local-day logic
   as the grouping, so it always matches the heading.
 - **Heading year (user's call, an exception to "leave the heading").** The year is added when the
   day's year differs from today's **or** from the shown month's. The brief said "not in the
