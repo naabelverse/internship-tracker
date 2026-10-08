@@ -19,6 +19,23 @@ export function formatDateTime(value: string | undefined | null, fallback = '—
   return date ? format(date, 'd MMM yyyy, HH:mm') : fallback;
 }
 
+/** `21:20`: the time half of `formatDateTime`, in the same timezone. `HH` runs 00 to 23, never 24. */
+export function formatTime(value: string | undefined | null, fallback = '—'): string {
+  const date = toDate(value);
+  return date ? format(date, 'HH:mm') : fallback;
+}
+
+/**
+ * Whether a stored deadline is a date with no time. The form, a date-only CSV
+ * cell and a date-only API value all store the day at exactly 00:00:00.000 UTC,
+ * so that instant is read as "no time". The trade-off: a deadline genuinely set
+ * for 00:00:00.000 UTC is indistinguishable from one, and loses its time too.
+ */
+export function isDateOnly(value: string): boolean {
+  const date = toDate(value);
+  return date !== null && date.getTime() % 86_400_000 === 0;
+}
+
 /** "in 3 days" / "2 days ago", as SPEC section 6 asks for on deadlines. */
 export function formatRelative(value: string | undefined | null, fallback = '—'): string {
   const date = toDate(value);

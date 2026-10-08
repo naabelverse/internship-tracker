@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { EVENT_TONE } from '@/features/calendar/monthModel';
 import { INTERVIEW_MODE_LABELS, INTERVIEW_TYPE_LABELS } from '@/lib/statusConfig';
-import { formatDateTime } from '@/lib/formatters';
+import { formatDate, formatTime, isDateOnly } from '@/lib/formatters';
 import { cn } from '@/lib/cn';
 import type { CalendarEvent } from '@/types/calendar';
 import type { InterviewMode, InterviewType } from '@/types/application';
@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card';
 
 interface DayEventsPanelProps {
   date: Date | null;
+  /** The month the grid shows, which can differ from `date`'s for a borrowed cell. */
+  month: Date;
   events: CalendarEvent[];
   onOpenApplication: (applicationId: string) => void;
 }
@@ -25,19 +27,55 @@ function describe(event: CalendarEvent): string {
 }
 
 /**
+ * "Sunday 5 July", with the year only when the day is outside this year or
+ * outside the shown month's year (a December cell borrowed by January), since
+ * the cards below carry no year of their own.
+ */
+function heading(date: Date, month: Date, now = new Date()): string {
+  const year = date.getFullYear();
+  const showYear = year !== now.getFullYear() || year !== month.getFullYear();
+  return format(date, showYear ? 'EEEE d MMMM yyyy' : 'EEEE d MMMM');
+}
+
+/**
+ * The time alone, since the heading names the day. The date stays in the
+ * accessible name as screen-reader text, and a date-only deadline shows no time.
+ */
+function EventTime({ event }: { event: CalendarEvent }): JSX.Element {
+  if (event.kind === 'deadline' && isDateOnly(event.at)) {
+    return (
+      <time dateTime={event.at}>
+        <span className="sr-only">, {formatDate(event.at)}</span>
+      </time>
+    );
+  }
+
+  return (
+    <>
+      {' · '}
+      <time dateTime={event.at}>
+        <span className="sr-only">{formatDate(event.at)}, </span>
+        {formatTime(event.at)}
+      </time>
+    </>
+  );
+}
+
+/**
  * The day list SPEC section 6 asks for. Clicking an event navigates to the Phase 6
  * detail page for its application rather than opening a second summary surface,
  * so there is one place a deadline or interview is edited.
  */
 export function DayEventsPanel({
   date,
+  month,
   events,
   onOpenApplication,
 }: DayEventsPanelProps): JSX.Element {
   return (
     <Card as="section" aria-labelledby="day-events-heading">
       <h2 id="day-events-heading" className="panel-title">
-        {date === null ? 'Pick a day' : format(date, 'EEEE d MMMM')}
+        {date === null ? 'Pick a day' : heading(date, month)}
       </h2>
 
       {date === null && (
@@ -72,7 +110,8 @@ export function DayEventsPanel({
                   {event.role}
                 </span>
                 <span className="mt-0.5 block text-xs text-content-subtle">
-                  {describe(event)} · {formatDateTime(event.at)}
+                  {describe(event)}
+                  <EventTime event={event} />
                 </span>
               </button>
             </li>

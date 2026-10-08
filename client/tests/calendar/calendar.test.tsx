@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { format } from 'date-fns';
 import { App } from '@/App';
 import CalendarPage from '@/pages/CalendarPage';
 import {
@@ -8,6 +9,7 @@ import {
   makeApplication,
   makeCalendarEvent,
   makeSession,
+  makeUser,
   successBody,
 } from '../utils/factories';
 import { createGate, installMockApi, type MockApi, type Responder } from '../utils/mockAdapter';
@@ -42,12 +44,16 @@ const interview = makeCalendarEvent({
   mode: 'video',
 });
 
-function renderCalendar(routes: Record<string, Responder> = {}, month = '2026-02'): MockApi {
+function renderCalendar(
+  routes: Record<string, Responder> = {},
+  month = '2026-02',
+  session = makeSession(),
+): MockApi {
   const mock = installMockApi({
     [CALENDAR]: () => ({ status: 200, data: successBody({ events: [deadline, interview] }) }),
     ...routes,
   });
-  signIn(makeSession());
+  signIn(session);
   renderWithProviders(<App />, { route: `/applications/calendar?month=${month}` });
 
   return mock;
@@ -204,5 +210,158 @@ describe('day selection', () => {
     await user.click(within(panel).getAllByRole('button')[0]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Stripe' })).toBeInTheDocument();
+  });
+});
+
+/** What a sighted user reads: the text with the screen-reader-only spans removed. */
+function visibleText(element: Element): string {
+  const copy = element.cloneNode(true) as Element;
+  copy.querySelectorAll('.sr-only').forEach((node) => {
+    node.remove();
+  });
+  return copy.textContent ?? '';
+}
+
+/** The card's last line: the description and the time. */
+function cardLine(card: HTMLElement): Element {
+  const line = card.lastElementChild;
+  if (line === null) throw new Error('card has no lines');
+  return line;
+}
+
+function respondWith(...events: ReturnType<typeof makeCalendarEvent>[]): Record<string, Responder> {
+  return { [CALENDAR]: () => ({ status: 200, data: successBody({ events }) }) };
+}
+
+describe('day panel cards', () => {
+  it('shows the time alone, keeping the full date for screen readers and in <time>', async () => {
+    const at = new Date(2026, 1, 11, 21, 20).toISOString();
+    const user = userEvent.setup();
+    renderCalendar(
+      respondWith(
+        makeCalendarEvent({
+          kind: 'interview',
+          at,
+          company: 'Figma',
+          interviewType: 'technical',
+          mode: 'video',
+        }),
+      ),
+    );
+
+    await user.click(await screen.findByRole('gridcell', { name: /^11 February 2026/ }));
+
+    const panel = screen.getByRole('region', { name: 'Wednesday 11 February' });
+    const card = within(panel).getByRole('button', {
+      name: /Technical · Video · 11 Feb 2026, 21:20$/,
+    });
+    expect(visibleText(cardLine(card))).toBe('Technical · Video · 21:20');
+    expect(cardLine(card).querySelector('time')).toHaveAttribute('datetime', at);
+  });
+
+  it('shows no time on a date-only deadline, and its grid day for screen readers', async () => {
+    // Stored the way the form stores a deadline: the day at midnight UTC. It sits
+    // under whichever local day that instant falls on, and the card must agree.
+    const at = '2026-02-11T00:00:00.000Z';
+    const local = new Date(at);
+    const user = userEvent.setup();
+    renderCalendar(respondWith(makeCalendarEvent({ kind: 'deadline', at, company: 'Stripe' })));
+
+    await user.click(
+      await screen.findByRole('gridcell', { name: new RegExp(`^${format(local, 'd MMMM yyyy')}`) }),
+    );
+
+    const panel = screen.getByRole('region', { name: format(local, 'EEEE d MMMM') });
+    const card = within(panel).getByRole('button', {
+      name: new RegExp(`Application deadline ?, ${format(local, 'd MMM yyyy')}$`),
+    });
+    expect(visibleText(cardLine(card))).toBe('Application deadline');
+    expect(cardLine(card).querySelector('time')).toHaveAttribute('datetime', at);
+  });
+
+  it('keeps the time on a deadline that has one', async () => {
+    const at = new Date(2026, 1, 11, 22, 45).toISOString();
+    const user = userEvent.setup();
+    renderCalendar(respondWith(makeCalendarEvent({ kind: 'deadline', at, company: 'Stripe' })));
+
+    await user.click(await screen.findByRole('gridcell', { name: /^11 February 2026/ }));
+
+    const card = within(screen.getByRole('region')).getByRole('button');
+    expect(visibleText(cardLine(card))).toBe('Application deadline · 22:45');
+  });
+
+  /**
+   * Fixed instants near midnight, read in the runner's own timezone, which is the
+   * browser timezone in the app. Run the suite under TZ=UTC, Asia/Kuala_Lumpur and
+   * America/Los_Angeles: each run checks the zone it is in, and the account
+   * timezones differ from it, which must change nothing.
+   */
+  const NEAR_MIDNIGHT = [
+    makeCalendarEvent({ kind: 'interview', at: '2026-02-11T16:30:00.000Z', company: 'Grab' }),
+    makeCalendarEvent({ kind: 'interview', at: '2026-02-12T07:50:00.000Z', company: 'Shopee' }),
+  ];
+  const BY_ZONE: Record<string, { cell: string; heading: string; times: string[] }[]> = {
+    UTC: [
+      { cell: '11 February 2026', heading: 'Wednesday 11 February', times: ['16:30'] },
+      { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['07:50'] },
+    ],
+    'Asia/Kuala_Lumpur': [
+      { cell: '11 February 2026', heading: 'Wednesday 11 February', times: [] },
+      { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['00:30', '15:50'] },
+    ],
+    'America/Los_Angeles': [
+      { cell: '11 February 2026', heading: 'Wednesday 11 February', times: ['08:30', '23:50'] },
+      { cell: '12 February 2026', heading: 'Thursday 12 February', times: [] },
+    ],
+  };
+  const runnerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const expected = BY_ZONE[runnerZone === 'Etc/UTC' ? 'UTC' : runnerZone];
+
+  it
+    .skipIf(expected === undefined)
+    .each(['Asia/Kuala_Lumpur', 'America/Los_Angeles', 'Pacific/Kiritimati'])(
+    'puts each time under the day it names in the browser timezone, whatever the account says (%s)',
+    async (accountZone) => {
+      const user = userEvent.setup();
+      renderCalendar(
+        respondWith(...NEAR_MIDNIGHT),
+        '2026-02',
+        makeSession({ user: makeUser({ timezone: accountZone }) }),
+      );
+
+      for (const day of expected ?? []) {
+        await user.click(await screen.findByRole('gridcell', { name: new RegExp(`^${day.cell}`) }));
+        const panel = screen.getByRole('region', { name: day.heading });
+        const times = within(panel)
+          .queryAllByRole('button')
+          .map((card) => visibleText(cardLine(card)).replace('Interview · ', ''));
+        expect(times).toEqual(day.times);
+      }
+    },
+  );
+});
+
+describe('day panel heading', () => {
+  beforeEach(() => {
+    // Only `Date` is faked, so user-event and the query client keep real timers.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 9, 12));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ['2026-07', '5 July 2026', 'Sunday 5 July'],
+    ['2027-01', '28 December 2026', 'Monday 28 December 2026'],
+    ['2027-03', '3 March 2027', 'Wednesday 3 March 2027'],
+  ])('viewing %s and picking %s reads "%s"', async (month, cell, name) => {
+    const user = userEvent.setup();
+    renderCalendar(respondWith(), month);
+
+    await user.click(await screen.findByRole('gridcell', { name: new RegExp(`^${cell}`) }));
+
+    expect(screen.getByRole('heading', { level: 2, name })).toBeInTheDocument();
   });
 });
