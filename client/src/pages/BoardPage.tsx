@@ -87,7 +87,7 @@ export function BoardPage(): JSX.Element {
     <div className="space-y-5 board-fit:flex board-fit:min-h-0 board-fit:flex-1 board-fit:flex-col">
       <PageHeader
         title="Board"
-        description="Drag a card, or focus one and press space, to move it between columns."
+        description="Drag a card by its Move bar to move it between columns."
       />
 
       {query.isPending && <BoardSkeleton />}
