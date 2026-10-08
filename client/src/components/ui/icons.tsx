@@ -228,6 +228,18 @@ export const FileIcon = (props: IconProps): JSX.Element => (
   </Icon>
 );
 
+/** Two columns of three dots: the conventional "you can drag this" mark. */
+export const GripIcon = (props: IconProps): JSX.Element => (
+  <Icon fill="currentColor" {...props}>
+    <circle cx="9" cy="5" r="1.5" />
+    <circle cx="15" cy="5" r="1.5" />
+    <circle cx="9" cy="12" r="1.5" />
+    <circle cx="15" cy="12" r="1.5" />
+    <circle cx="9" cy="19" r="1.5" />
+    <circle cx="15" cy="19" r="1.5" />
+  </Icon>
+);
+
 export const EditIcon = (props: IconProps): JSX.Element => (
   <Icon {...props}>
     <path d="M4 20h4l10.5-10.5a2.1 2.1 0 00-3-3L5 17v3z" />

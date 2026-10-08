@@ -5300,3 +5300,56 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   on `main`; the two chip cases are guards and pass on both. `e2e/audits/boardScroll.spec.ts` is
   unchanged and runs in CI. It was not run locally because it signs up and signs in, and the
   capture session was limited to one sign-in.
+
+## The Board's Move bar wears a grip mark and the subtitle names it (8 Oct 2026)
+
+Users pressed the card body to drag and concluded dragging was broken. Only the Move button
+carries dnd-kit's listeners. The handle-only design stays, because dragging a whole card fights
+scrolling on touch. The handle is made obvious instead.
+
+- **Handle:** a decorative `GripIcon` (six dots, added to the hand-drawn set in `icons.tsx`, since
+  the app has no icon library) sits before the "Move" label. It is `aria-hidden` and
+  `focusable="false"`. The accessible name stays `Move {company} from {column}`, which
+  `board.test.tsx` already checks, untouched. The button keeps `cursor-grab`, its existing hover
+  (`surface-muted` fill, `content` text) and the global `:focus-visible` ring. The icon takes
+  `currentColor`, which against the card measures 8.22:1 (light) and 5.4:1 (dark) at rest, and
+  16.83:1 and 11.64:1 on hover.
+- **Grabbing cursor:** one base-layer rule in `index.css` sets `cursor: grabbing !important` on
+  `:root` and every descendant while a `[data-drag-preview]` exists, because mid-drag the pointer
+  is over the preview, not the handle. The drag preview component is untouched. The preview
+  unmounts on every ending, so the rule clears itself. Checked in a real browser after Escape, a
+  release over the page heading, a drop in Applied and a drop in Withdrawn: the body, the page
+  heading and a sidebar link went back to `auto`, `auto` and `pointer`.
+- **Subtitle:** "Drag a card by its Move bar to move it between columns." The old sentence was
+  never an accessible description or dnd-kit's instructions: the handle's `aria-describedby`
+  points to dnd-kit's built-in text ("To pick up a draggable item, press the space bar…"),
+  which is unchanged, so screen-reader users lose nothing. Sighted keyboard users lose the visible
+  "press space" hint, which was accepted.
+- **Layout:** card heights are unchanged from `main` (128 / 128 / 128 / 98) and the Move button is
+  unchanged (242×26 at 1440 and 768, 244×26 at 414 and 375), in both themes. The shorter subtitle
+  fits on one line at 414 (two before), so the header there is 20px shorter (67.95 → 47.95) and the
+  board starts 20px higher. At 375 it still wraps to two lines. At 1440 and 768 it was already one
+  line.
+- **Found, not changed:**
+  - A plain click on the Move button does nothing: no menu, no dialog, focus stays on it. The label
+    "Move" suggests more than the button does.
+  - On touch (CDP emulation at 375px only, not a real phone), the handle never starts a drag: a
+    sideways swipe neither drags nor scrolls. The handle's `touch-action` is `auto`. Filed as #95,
+    because the fix changes drag behaviour.
+  - Releasing a dragged card over the page heading, outside every column, does not cancel. The
+    collision detection falls back to `closestCenter`, and the card lands in the nearest column
+    (Applied, from Saved). Reproduced on `main`'s build.
+  - The drag announcements read raw ids ("Draggable item 6ac7aa97… was moved over droppable area
+    applied."). Added to #90.
+- **Tests:** `client/tests/board/moveHandle.test.tsx` checks:
+  - the new subtitle is shown and the old one is not;
+  - the handle holds an `aria-hidden`, non-focusable `svg`, has the visible text "Move" and keeps
+    the name `Move Stripe from Applied`;
+  - dnd-kit's keyboard instructions are still the handle's accessible description.
+
+  The first two fail on `main`; the third is a guard. `e2e/audits/moveHandle.spec.ts` (client 19,
+  one sign-up) checks the computed cursors: `grab` on the handle and not on the card,
+  `grabbing` everywhere mid-drag, and the resting cursors back after Escape, a release over the
+  heading and a drop. It deliberately does not assert that dragging the card body does nothing, so
+  widening the drag area later is not blocked. It runs in CI only, because it signs up and signs
+  in, and the capture session was limited to one sign-in.

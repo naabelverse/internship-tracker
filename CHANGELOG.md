@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The Board shows where to grab a card.** The Move bar at the foot of each
+  card, the only part that drags, now carries a grip mark, shows a grab cursor
+  on hover and a grabbing cursor while a card is moving. The line under the
+  heading now reads "Drag a card by its Move bar to move it between columns."
+  Screen readers still hear the keyboard steps (Space, arrow keys, Space).
 - **The Board fits the window, so its sideways scrollbar is always on screen.**
   On a window at least 768px wide and 560px tall, the board takes the height left
   under the header and each column scrolls on its own under its name and count,

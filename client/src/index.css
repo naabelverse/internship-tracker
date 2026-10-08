@@ -247,6 +247,17 @@
   :focus-visible {
     @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-canvas;
   }
+
+  /*
+   * A board drag. The pointer rides over the drag preview, not the Move handle
+   * it pressed, so the handle's own cursor cannot show the grab in progress.
+   * The preview exists only mid-drag, so every ending (drop, Escape, release
+   * outside a column) unmounts it and hands each element its own cursor back.
+   */
+  :root:has([data-drag-preview]),
+  :root:has([data-drag-preview]) * {
+    cursor: grabbing !important;
+  }
 }
 
 @layer components {

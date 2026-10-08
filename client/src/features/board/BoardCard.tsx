@@ -4,6 +4,7 @@ import {
   type DraggableSyntheticListeners,
 } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/Badge';
+import { GripIcon } from '@/components/ui/icons';
 import { DeadlineChip } from '@/features/applications/DeadlineChip';
 import { companyInitials, toDate } from '@/lib/formatters';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '@/lib/statusConfig';
@@ -98,8 +99,10 @@ export function BoardCardFace({ application, onOpen, handle }: BoardCardFaceProp
         {...handle?.listeners}
         {...handle?.attributes}
         aria-label={`Move ${application.company} from ${STATUS_CONFIG[application.status].label}`}
-        className="mt-2.5 w-full cursor-grab rounded-control border border-border px-2 py-1 text-xs text-content-subtle transition-colors hover:bg-surface-muted hover:text-content"
+        className="mt-2.5 flex w-full cursor-grab items-center justify-center gap-1 rounded-control border border-border px-2 py-1 text-xs text-content-subtle transition-colors hover:bg-surface-muted hover:text-content"
       >
+        {/* The only part of the card that drags, so it carries the grip mark. */}
+        <GripIcon className="h-3.5 w-3.5 shrink-0" />
         Move
       </button>
     </>
