@@ -1,6 +1,9 @@
 import { format } from 'date-fns';
-import { EVENT_TONE } from '@/features/calendar/monthModel';
-import { INTERVIEW_MODE_LABELS, INTERVIEW_TYPE_LABELS } from '@/lib/statusConfig';
+import {
+  EVENT_KIND_CONFIG,
+  INTERVIEW_MODE_LABELS,
+  INTERVIEW_TYPE_LABELS,
+} from '@/lib/statusConfig';
 import { formatDate, formatTime, isDateOnly } from '@/lib/formatters';
 import { cn } from '@/lib/cn';
 import type { CalendarEvent } from '@/types/calendar';
@@ -92,17 +95,25 @@ export function DayEventsPanel({
         <ul className="mt-3 space-y-2">
           {events.map((event) => (
             <li key={event.id}>
+              {/*
+               * These cards sit on the panel's own surface with no fill step, so
+               * the border alone draws them: `border-strong` (2.15:1 light, 1.72:1
+               * dark against the panel) rather than the app-wide `border` (1.30,
+               * 1.27). The dot is the Upcoming panel's solid one; the grid's chip
+               * tint paints only its 15% fill on a dot, about 1.3:1.
+               */}
               <button
                 type="button"
                 onClick={() => {
                   onOpenApplication(event.applicationId);
                 }}
-                className="w-full rounded-control border border-border px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+                className="w-full rounded-control border border-border-strong px-3 py-2 text-left transition-colors hover:bg-surface-muted"
               >
                 <span className="flex items-center gap-2">
                   <span
                     aria-hidden="true"
-                    className={cn('h-2 w-2 rounded-full', EVENT_TONE[event.kind])}
+                    data-event-dot={event.kind}
+                    className={cn('h-2 w-2 rounded-full', EVENT_KIND_CONFIG[event.kind].dot)}
                   />
                   <span className="truncate text-sm font-medium text-content">{event.company}</span>
                 </span>

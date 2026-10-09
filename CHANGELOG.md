@@ -117,6 +117,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Calendar day cards are easier to see.** The coloured dot beside each
+  company in the day panel was barely visible, about 1.3:1 against the card in
+  both themes. It is now the same solid red or blue as the dashboard's Upcoming
+  panel (6.5:1 to 7.3:1). The card outline is stronger too (2.15:1 against the
+  panel in light, 1.72:1 in dark, up from about 1.3:1). The month grid, the
+  Upcoming panel and the cards' size and text are unchanged.
 - **Cards without a deadline no longer show a stray "—".** On the Board and in
   the Applications card list on a phone, a card with no deadline showed a bare
   dash where the due chip would be, which looked like a broken chip ("— react").
