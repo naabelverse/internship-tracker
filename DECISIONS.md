@@ -5411,3 +5411,59 @@ scrolling on touch. The handle is made obvious instead.
   confirmed each one. On `main`, 8 of the 9 fail in all three zones. The ninth ("Sunday 5 July",
   no year) is a guard. No existing assertion changed. The old cases matched only
   `/Application deadline/` and `/Technical/`.
+
+## Calendar day-panel dots go solid and its cards take `border-strong` (9 Oct 2026)
+
+Refs #100, #103.
+
+- **Dots:** the day panel's dot now takes `EVENT_KIND_CONFIG[kind].dot`, the Upcoming panel's
+  solid `bg-danger` or `bg-info`, instead of the grid's chip tint `EVENT_TONE`. On a chip the
+  coloured text carries the colour and the 15% fill is a background. On a dot only the 15% fill
+  paints, which measured 1.27 to 1.35:1. Solid dots measure 7.02 (deadline) and 6.79
+  (interview) in light, and 6.46 and 7.31 in dark, against the card at rest. Against the hover
+  fill they measure 6.14 / 5.94 and 5.80 / 6.55. `EVENT_TONE` and the grid's chips are untouched.
+  The dot stays `aria-hidden`, because the card's third line already names the kind. It gains
+  `data-event-dot`, matching `UpcomingRow`, so tests can find it. Red and blue differ in hue,
+  not lightness (1.03 / 1.13:1 against each other), as they already do in the Upcoming panel.
+- **Card box (option A, user's choice):** `border-border` became `border-border-strong` on the
+  day-panel cards only. The card paints no fill, so it sits on the panel's `surface` with a
+  fill step of 1.00 and the border is its whole boundary. Measured on the real build, the
+  border against the panel went from 1.30 to 2.15 in light and from 1.27 to 1.72 in dark.
+  **No existing token reaches 3:1**, and `border-strong` is the strongest; adding a token was
+  out of scope. Two other options were measured and declined:
+  - A `canvas` fill (1.17 / 1.09) leaves hover only 1.03:1 from rest in light.
+  - A `surface-muted/40` tint (1.06 / 1.04) also weakens hover.
+
+  `shadow-card` was ruled out because `tailwind.config.ts` reserves it for things that float.
+
+- **Trade-off:** these cards' border now differs from the app's other cards, which keep
+  `border-border`. They are buttons in a list inside a card, not cards on the page, and
+  `border-strong` is what the ThemeToggle, attachment drop zone and empty states already use on
+  a surface. Whether the app-wide token should be stronger is issue #103. The token itself is
+  unchanged.
+- **States, from pixels:**
+  - Hover is unchanged at 1.14 (light) / 1.11 (dark) between the rest and hover fills.
+  - The keyboard focus ring is unchanged at 17.45 / 11.48 against the panel.
+  - There is no pressed style (`:active` looks like hover) and no open state, since a click
+    navigates to the application.
+
+  In dark the card box is still subtle (1.72 border, no fill step), only less so.
+
+- **Layout and other surfaces, measured on the real build with real scrollbars, using the demo
+  day 25 September 2026 (2 deadlines, 2 interviews):**
+  - The panel and every card have identical positions and sizes before and after, at 1440, 768
+    and 375, in both themes. Cards are 74px tall.
+  - All six Upcoming panel frames are byte-identical.
+  - Five of six month-grid frames are byte-identical. The sixth (1440 light) differs in 2 pixels
+    at its bottom-left rounded corner, each by one channel value: anti-aliasing, not a change.
+- **Tests:** `client/tests/calendar/dayEventsPanel.test.tsx` adds 10 cases:
+  - solid dot classes;
+  - dot `aria-hidden`;
+  - two distinct dots;
+  - dot contrast of 3:1 or more, computed from the class the panel renders and the theme
+    tokens, against rest and hover fills in both themes;
+  - card border class.
+
+  Against the old styling, 7 of the 10 fail. The `aria-hidden` and distinct-dots cases are
+  guards: the old dot was already hidden and distinct. No existing assertion changed. No e2e
+  spec was added, because the unit tests cover the colours from the tokens.
