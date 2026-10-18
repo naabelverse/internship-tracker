@@ -1,6 +1,12 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { daysUntil, formatDateTime, formatRelative } from '@/lib/formatters';
+import {
+  daysUntil,
+  formatDate,
+  formatDateTime,
+  formatRelative,
+  isDateOnly,
+} from '@/lib/formatters';
 import { EVENT_KIND_CONFIG } from '@/lib/statusConfig';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -60,7 +66,10 @@ export function UpcomingRow({ event, to }: UpcomingRowProps): JSX.Element {
           {formatRelative(event.at)}
         </span>
         <span className="block text-[0.625rem] text-content-subtle">
-          {formatDateTime(event.at)}
+          {/* A date-only deadline has no time to show; 08:00 in UTC+8 would be invented (#99). */}
+          {event.kind === 'deadline' && isDateOnly(event.at)
+            ? formatDate(event.at)
+            : formatDateTime(event.at)}
         </span>
       </span>
     </>
