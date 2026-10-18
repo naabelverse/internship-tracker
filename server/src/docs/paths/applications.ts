@@ -124,9 +124,12 @@ export const applicationPaths: Record<string, unknown> = {
   '/api/v1/applications/export': {
     get: {
       tags: TAG,
-      summary: 'Download every application as CSV or JSON',
+      summary: 'Download the applications the list shows, as CSV or JSON',
+      description:
+        'Takes the list filters and sort (everything but page and limit) and returns every matching row, so a download matches the view it was made from. Archived rows follow the list: hidden unless archived=true.',
       security: AUTHENTICATED,
       parameters: [
+        ...listParameters.filter(({ name }) => name !== 'page' && name !== 'limit'),
         queryParam('format', { type: 'string', enum: ['csv', 'json'] }, 'Defaults to csv'),
         queryParam(
           'columns',

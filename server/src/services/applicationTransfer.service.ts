@@ -4,9 +4,10 @@ import {
   createApplicationSchema,
   MAX_IMPORT_ROWS,
   type CreateApplicationInput,
+  type ExportQuery,
   type ExportTableColumn,
 } from '@/schemas/application.schema';
-import { createApplication } from '@/services/application.service';
+import { buildFilter, createApplication } from '@/services/application.service';
 import { assertApplicationCapacity } from '@/services/usage.service';
 import { ApiError } from '@/utils/ApiError';
 import { parseCsv, toCsv, type CsvCell } from '@/utils/csv';
@@ -98,17 +99,21 @@ export interface ExportResult {
 }
 
 /**
- * Exports every application on the account. A CSV with `columns` carries only
- * the fields those table columns map to; without it, the CSV carries every
- * field, exactly as it did before the option existed. Cell values are the same
- * either way, and the row set never depends on `columns`.
+ * Exports the applications the list would show for the same search, filters and
+ * archived setting, in the list's order (issue #83). A CSV with `columns`
+ * carries only the fields those table columns map to; without it, every field.
+ * The row set never depends on `columns`. The complete backup is the account
+ * export in Settings, not this.
  */
 export async function exportApplications(
   userId: Types.ObjectId,
-  format: 'csv' | 'json',
-  columns?: readonly ExportTableColumn[],
+  query: ExportQuery,
 ): Promise<ExportResult> {
-  const applications = await Application.find({ user: userId }).sort({ createdAt: -1 });
+  const { format, columns, sort } = query;
+  const applications = await Application.find(buildFilter(userId, query)).sort({
+    [sort.field]: sort.direction === 'asc' ? 1 : -1,
+    _id: 1,
+  });
   const stamp = new Date().toISOString().slice(0, 10);
 
   if (format === 'json') {

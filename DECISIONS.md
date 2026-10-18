@@ -5467,3 +5467,26 @@ Refs #100, #103.
   Against the old styling, 7 of the 10 fail. The `aria-hidden` and distinct-dots cases are
   guards: the old dot was already hidden and distinct. No existing assertion changed. No e2e
   spec was added, because the unit tests cover the colours from the tokens.
+
+## Export CSV carries the rows the list shows, and says how many (18 Oct 2026)
+
+Fixes #83. The owner chose both behaviours on 18 Oct 2026.
+
+- **Both choices follow the view.** Shown columns and All fields both apply the list's search,
+  filters, "Show archived" and sort, and never its paging. `exportQuerySchema` is now the list
+  schema without `page` and `limit`, plus `format` and `columns`, and the service reuses the
+  list's `buildFilter`, so the two cannot drift apart.
+- **The complete backup is Settings → Export all my data**, a separate endpoint this change
+  does not touch. An `/applications/export` call with no parameters now hides archived rows,
+  exactly as `GET /applications` does. This changes the API, and the OpenAPI entry says so.
+- **Each menu choice states the row count** from the list's own `meta.total` ("18
+  applications, as listed."), so it costs no extra request. The count sits in each item's
+  description rather than in a caption, because a `role="menu"` may only hold menu items.
+- **Tests:**
+  - `application.exportColumns.test.ts`: the default row count changed from 3 to 2 on
+    purpose, since the archived row is now hidden. The full-field round trip exports with
+    `archived=true`, as a user would from the archived view. A new table covers search,
+    status, Show archived and sort on both choices.
+  - `exportMenu.test.tsx`: the descriptions now carry the count, and a new case checks that
+    the request sends the view without `page`.
+  - Against the old source, 7 server cases and 2 client cases fail.

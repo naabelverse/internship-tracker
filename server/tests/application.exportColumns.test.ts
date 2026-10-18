@@ -67,7 +67,27 @@ describe('GET /applications/export with columns', () => {
 
     expect(response.status).toBe(200);
     expect(response.text.split(/\r?\n/)[0]).toBe(FULL_HEADER);
-    expect(parse(response.text).rows).toHaveLength(3);
+    // The archived row is hidden, as it is in the list without archived=true (#83).
+    expect(parse(response.text).rows).toHaveLength(2);
+  });
+
+  // Issue #83: the file carries the rows the list shows for the same query.
+  it.each([
+    ['the default view', 'format=csv', ['=1+1', 'Career Fair Co']],
+    ['a search', 'format=csv&search=career', ['Career Fair Co']],
+    ['a status filter', 'format=csv&status=interview&archived=true', ['Quote "Co", Ltd']],
+    ['Show archived', 'format=csv&archived=true', ['Quote "Co", Ltd']],
+    ['a sort', 'format=csv&sort=company:asc', ['=1+1', 'Career Fair Co']],
+  ])('follows %s, on both choices', async (_case, query, companies) => {
+    const token = await seededAccount();
+
+    const full = parse((await exportCsv(token, query)).text);
+    const shown = parse((await exportCsv(token, `${query}&columns=company,status`)).text);
+
+    // The stored company, without the formula guard #82 puts on "=1+1".
+    const stored = (row: Record<string, string>): string => row.company.replace(/^'/, '');
+    expect(full.rows.map(stored)).toEqual(companies);
+    expect(shown.rows.map(stored)).toEqual(companies);
   });
 
   it('exports only the requested columns', async () => {
@@ -190,7 +210,8 @@ describe('GET /applications/export with columns', () => {
       contact: { name: 'Wei Ling', email: 'hiring@example.com' },
       archived: true,
     });
-    const exported = await exportCsv(accessToken, 'format=csv');
+    // Archived, so it is exported from the archived view, as "Show archived" would (#83).
+    const exported = await exportCsv(accessToken, 'format=csv&archived=true');
 
     const second = await registerUser(app);
     const imported = await request(app)
