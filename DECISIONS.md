@@ -5467,3 +5467,16 @@ Refs #100, #103.
   Against the old styling, 7 of the 10 fail. The `aria-hidden` and distinct-dots cases are
   guards: the old dot was already hidden and distinct. No existing assertion changed. No e2e
   spec was added, because the unit tests cover the colours from the tokens.
+
+## A Board drag released outside every column cancels (18 Oct 2026)
+
+Fixes #97.
+
+- **Pointer drags now resolve by `pointerWithin` alone**, so a release over no column is no
+  drop, and the card and its status stay put, as they do on Escape. The `closestCenter`
+  fallback had always found some column, so a release over the page heading silently changed
+  the status.
+- **Keyboard drags keep `closestCenter`.** dnd-kit gives them `pointerCoordinates: null`, which
+  is what the collision function switches on, rather than on an empty `pointerWithin` result.
+- **Test:** `dragAndDrop.test.tsx` releases 200px above the Interview column. Against the old
+  code it sends the PATCH and fails; the keyboard cases are unchanged and pass.
