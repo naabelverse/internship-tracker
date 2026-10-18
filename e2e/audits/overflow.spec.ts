@@ -1,4 +1,4 @@
-// Client address 10: 3 of 5 sign-ups per 15 minutes, one per width.
+// Client address 10: 4 of 5 sign-ups per 15 minutes, one per width plus the resize case.
 import { expect, type Page } from '@playwright/test';
 import { apiFor, createApplication, newAccount, registerAccount } from '../support/api';
 import { testForClient } from '../support/network';
@@ -142,3 +142,35 @@ viewport ${String(width)}px`);
     expect(failures, 'these routes scroll the document horizontally').toEqual([]);
   });
 }
+
+/**
+ * Issue #79. Chart.js pins each canvas to its last width in pixels, so a chart
+ * card that is a grid item with `min-width: auto` stayed wide when the window
+ * narrowed without a reload: 1440 then 375 scrolled the dashboard to 713px. A
+ * page loaded at 375 never showed it, which is why the sweep above missed it.
+ */
+test('the dashboard narrows with the window, without a reload', async ({ page }) => {
+  const account = newAccount('overflow-resize');
+  const api = await apiFor(10);
+  const { accessToken } = await registerAccount(api, account);
+  for (const [index, status] of ['applied', 'interview', 'offer'].entries()) {
+    await createApplication(api, accessToken, {
+      company: `Resize Co ${String(index)}`,
+      role: 'Intern',
+      status,
+    });
+  }
+  await api.dispose();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page, account);
+  await page.goto('/dashboard');
+  await expect(page.getByTestId('timeline-chart')).toBeVisible();
+  await page.waitForTimeout(500);
+
+  await page.setViewportSize({ width: 375, height: 900 });
+  // Chart.js resizes from a ResizeObserver callback, a frame or two later.
+  await page.waitForTimeout(500);
+
+  expect(await reportOverflow(page, 'dashboard after 1440 → 375', 375)).toBe(0);
+});
