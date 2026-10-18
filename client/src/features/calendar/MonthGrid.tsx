@@ -58,7 +58,9 @@ export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): 
                     onSelectDay(day.date);
                   }}
                   className={cn(
-                    'min-h-[5.5rem] border-b border-r border-border p-1.5 text-left align-top transition-colors',
+                    // A button centres its content vertically by default; flex-col pins
+                    // the day number to the top whether or not the day has events.
+                    'flex min-h-[5.5rem] flex-col items-start border-b border-r border-border p-1.5 text-left transition-colors',
                     day.inMonth ? 'bg-surface' : 'bg-surface-muted/40',
                     isSelected && 'ring-2 ring-inset ring-primary',
                     'hover:bg-surface-muted',
@@ -76,7 +78,7 @@ export function MonthGrid({ days, selectedDate, onSelectDay }: MonthGridProps): 
                     {format(day.date, 'd')}
                   </span>
 
-                  <span className="mt-1 block space-y-1">
+                  <span className="mt-1 block w-full space-y-1">
                     {day.events.slice(0, 2).map((event) => (
                       <span
                         key={event.id}
