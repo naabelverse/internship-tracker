@@ -16,7 +16,7 @@ describe('month grid day cells', () => {
     const events = [makeCalendarEvent({ at: new Date(2026, 1, 11, 9).toISOString() })];
     render(
       <MonthGrid
-        days={buildMonthGrid(month, events, month)}
+        days={buildMonthGrid(month, events, 'UTC', month)}
         selectedDate={null}
         onSelectDay={() => undefined}
       />,

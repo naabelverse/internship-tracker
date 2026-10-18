@@ -5492,6 +5492,52 @@ Fixes #82 (CSV formula injection).
   export → import round trip covering `=`, `+`, `@`, `-`, an apostrophe before a trigger, a
   plain leading apostrophe, and a numeric stipend. Against the old `csv.ts`, both cases fail.
 
+## Date-only deadlines read as calendar dates; the Calendar reads the account timezone (18 Oct 2026)
+
+Fixes #99, #98 and #102.
+
+- **A date-only deadline is a calendar date, still stored at 00:00 UTC.** That is what the
+  form, a date-only CSV cell and a date-only API value already write, so nothing changed in
+  storage and no migration was needed. The reading changed: `formatDate`, `formatRelative`
+  and `daysUntil` in `client/src/lib/formatters.ts` turn such a value into local midnight of
+  the date it names, rather than converting the instant. Every caller gets the fix at once:
+  the board and table chips, the detail page, the Upcoming panel and `appliedDate`, which is
+  stored the same way. West of UTC, 5 July no longer shows as 4 July.
+- **The alternatives were weighed and not taken.** A `YYYY-MM-DD` string field means a
+  schema change, a migration and every consumer at once, for the same result on screen.
+  "End of day in the account timezone" invents 23:59 instead of 08:00, and needs the user's
+  zone on every write path.
+- **Existing timed deadlines are left alone.** A deadline with a real time (API callers, the
+  old demo seed) still shows its time on its local day, and `isDateOnly`'s documented
+  trade-off stands: a deadline set for exactly 00:00:00.000 UTC reads as date-only.
+- **The Upcoming row shows the date alone for a date-only deadline**, so it no longer
+  invents 08:00 in UTC+8. Interviews keep `formatDateTime`.
+- **The demo seed writes date-only deadlines**, so the demo stops showing seed-moment times
+  such as 22:45.
+- **`nextActionDate` keeps a date-only deadline through the day it names.** Before this, it
+  dropped today's deadline at 00:00 UTC. The day ends at UTC midnight, not the account's,
+  which is marked as a `ponytail:` ceiling in `application.service.ts`. The field only sorts
+  and filters, and it is recomputed only on writes anyway.
+- **The whole Calendar page moved to the account timezone together (option c in #98)**:
+  grouping, today, the panel filter, and the interview card's time and screen-reader date
+  (`formatDateIn` / `formatTimeIn`). Moving only the card time would let it disagree with the
+  day it sits under. Grid cells stay plain calendar days, and events are matched to them by a
+  `YYYY-MM-DD` key (`eventDayKey`). A date-only deadline keys on its own date in every zone.
+- **The fetch window grew by two days on each side**, because the account's zone can sit up
+  to 26 hours from the browser's. The grid drops what falls outside it.
+- **`localDayKey` moved from `heatmapCells.ts` to `lib/formatters.ts`**, now that two
+  features use it.
+- **Tests:**
+  - `calendar.test.tsx` no longer depends on the runner's zone. Its fixtures are fixed UTC
+    instants under an explicit account zone, and the near-midnight table runs UTC,
+    Kuala Lumpur, Los Angeles and Kiritimati on every runner. This closes #102 without
+    setting `TZ` in CI.
+  - The old "browser timezone, whatever the account says" case was replaced on purpose,
+    because it pinned the behaviour #98 changes.
+  - `client/tests/lib/deadlineDates.test.tsx` sets `TZ=America/Los_Angeles` for its own
+    worker, so #99 is proven west of UTC in CI too.
+  - Against the old source, 9 client cases and 1 server case fail.
+
 ## Toolbar menus stay on screen, the toolbar stops re-flowing, and Filters holds still at 1280 (19 Oct 2026)
 
 Fixes issues #85, #87 and #88. All numbers are from a real build with real scrollbars (Chromium,
