@@ -117,6 +117,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Calendar dates line up.** In the month grid, a day with no events showed
+  its number halfway down the cell while a day with events showed it at the
+  top, so the dates zig-zagged across each week. Every date now sits in the
+  top-left corner of its cell.
 - **Calendar day cards are easier to see.** The coloured dot beside each
   company in the day panel was barely visible, about 1.3:1 against the card in
   both themes. It is now the same solid red or blue as the dashboard's Upcoming
