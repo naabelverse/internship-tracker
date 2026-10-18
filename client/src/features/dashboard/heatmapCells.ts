@@ -1,4 +1,5 @@
 import { statusUpdates } from '@/features/dashboard/statusUpdates';
+import { localDayKey } from '@/lib/formatters';
 import type { TimelinePoint } from '@/types/analytics';
 
 /** The grid's length, which SPEC section 6 fixes at the last twelve weeks. */
@@ -23,27 +24,6 @@ export interface Cell {
  */
 export function dayActivity(cell: Pick<Cell, 'count' | 'updates'>): number {
   return cell.count + cell.updates;
-}
-
-/**
- * The calendar date an instant falls on in `timeZone`, as `YYYY-MM-DD`.
- *
- * The analytics pipeline buckets on the user's local midnight and sends that
- * as a UTC instant, so local 2 Oct in Kuala Lumpur arrives as
- * `2026-10-01T16:00:00Z`. Its first ten characters name the wrong day for any
- * zone east of UTC; only reading it back in the same zone names the right one.
- */
-export function localDayKey(instant: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(instant);
-  const part = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((entry) => entry.type === type)?.value ?? '';
-
-  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /**
