@@ -5467,3 +5467,21 @@ Refs #100, #103.
   Against the old styling, 7 of the 10 fail. The `aria-hidden` and distinct-dots cases are
   guards: the old dot was already hidden and distinct. No existing assertion changed. No e2e
   spec was added, because the unit tests cover the colours from the tokens.
+
+## The app-wide border token stays as it is (19 Oct 2026)
+
+Closes issue #103 without a change, by the owner's choice after the candidates were measured.
+
+- **Where it stands:** `--color-border` measures 1.11 against the canvas and 1.30 against the
+  surface in light, and 1.39 / 1.27 in dark. In light, a card's white fill (1.17 against the
+  canvas) draws its edge more than the border does. In dark, the border carries the edge.
+- **Candidates measured,** as steps along the line from `border` to `border-strong`:
+  - halfway: 1.40 / 1.65 light, 1.61 / 1.47 dark;
+  - `border-strong`: 1.83 / 2.15 light, 1.88 / 1.72 dark;
+  - 3:1 on both surfaces needs 111 136 168 in light and 86 111 144 in dark. Both are darker than
+    `border-strong`, on every card, input and divider, since `*` defaults to `border-border`.
+- **Why kept:** none of the steps short of that reaches 3:1, and the one that does is a heavy
+  outline everywhere. Cards are identified by their content and, in light, by the fill step, so
+  this is a visibility observation rather than a 1.4.11 failure, as the issue itself recorded.
+  Surfaces with no fill step move to `border-strong` locally, as the Calendar day panel did for
+  #100.
