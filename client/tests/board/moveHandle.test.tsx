@@ -58,6 +58,9 @@ describe('board move handle', () => {
 
     const handle = await screen.findByRole('button', { name: 'Move Stripe from Applied' });
 
-    expect(handle).toHaveAccessibleDescription(/press the space bar/i);
+    // The board's own wording since issue #90, not dnd-kit's generic "item".
+    expect(handle).toHaveAccessibleDescription(
+      /To move this application, press Space or Enter\..*arrow keys.*Escape to cancel/,
+    );
   });
 });
