@@ -96,6 +96,7 @@ export function ApplicationsToolbar({
 }: ApplicationsToolbarProps): JSX.Element {
   const [searchText, setSearchText] = useState(filters.search);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastWriteRef = useRef(filters.search);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const filtersRef = useRef<HTMLButtonElement | null>(null);
 
@@ -105,8 +106,12 @@ export function ApplicationsToolbar({
   };
 
   // A filter cleared or a link opened elsewhere re-seeds the input and drops any
-  // write the user's earlier keystrokes had queued.
+  // write the user's earlier keystrokes had queued. The echo of this field's own
+  // write is skipped: the router commits it in a transition, so it can land after
+  // a later keystroke or Clear and would put the old term back (issue #91).
   useEffect(() => {
+    if (filters.search === lastWriteRef.current) return;
+    lastWriteRef.current = filters.search;
     setSearchText(filters.search);
     cancelPendingSearch();
   }, [filters.search]);
@@ -118,6 +123,7 @@ export function ApplicationsToolbar({
     cancelPendingSearch();
 
     timerRef.current = setTimeout(() => {
+      lastWriteRef.current = value;
       onFiltersChange({ search: value }, { replace: true });
     }, 300);
   };
