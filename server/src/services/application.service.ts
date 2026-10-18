@@ -34,12 +34,24 @@ export function deriveCompanyLogoUrl(website: string | undefined): string | unde
   }
 }
 
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * The moment a deadline stops being actionable. A date-only one (stored at
+ * 00:00 UTC) still counts through the day it names (issue #99).
+ */
+function deadlineEnd(deadline: Date): number {
+  const at = deadline.getTime();
+  // ponytail: ends with the UTC day, not the account's; take the user's zone if this field ever drives anything time-critical.
+  return at % MS_PER_DAY === 0 ? at + MS_PER_DAY : at;
+}
+
 /** The soonest thing the user has to act on: an upcoming deadline or interview. */
 export function computeNextActionDate(application: ApplicationDocument): Date | undefined {
   const now = Date.now();
   const candidates: Date[] = [];
 
-  if (application.deadline && application.deadline.getTime() >= now) {
+  if (application.deadline && deadlineEnd(application.deadline) > now) {
     candidates.push(application.deadline);
   }
 

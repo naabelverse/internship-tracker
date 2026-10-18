@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { format } from 'date-fns';
 import { App } from '@/App';
 import CalendarPage from '@/pages/CalendarPage';
 import {
@@ -18,19 +17,18 @@ import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 const CALENDAR = 'GET /calendar';
 
 /**
- * Built from local components rather than a fixed UTC instant: an instant near
- * midnight lands on a different calendar day depending on the runner's timezone,
- * and the grid quite correctly buckets by local day.
+ * The calendar reads every instant in the account's zone (issue #98), so a fixed
+ * UTC instant and a fixed account zone give the same grid on any runner, in any
+ * `TZ`. The default account here is UTC so the instants read as written.
  */
-function localInstant(day: number, hour: number): string {
-  return new Date(2026, 1, day, hour, 0, 0).toISOString();
-}
+const sessionIn = (timezone: string): ReturnType<typeof makeSession> =>
+  makeSession({ user: makeUser({ timezone }) });
 
 const deadline = makeCalendarEvent({
   id: 'deadline:a1',
   applicationId: 'a1',
   kind: 'deadline',
-  at: localInstant(11, 9),
+  at: '2026-02-11T09:00:00.000Z',
   company: 'Stripe',
 });
 
@@ -38,7 +36,7 @@ const interview = makeCalendarEvent({
   id: 'interview:i1',
   applicationId: 'a2',
   kind: 'interview',
-  at: localInstant(11, 14),
+  at: '2026-02-11T14:00:00.000Z',
   company: 'Figma',
   interviewType: 'technical',
   mode: 'video',
@@ -47,7 +45,7 @@ const interview = makeCalendarEvent({
 function renderCalendar(
   routes: Record<string, Responder> = {},
   month = '2026-02',
-  session = makeSession(),
+  session = sessionIn('UTC'),
 ): MockApi {
   const mock = installMockApi({
     [CALENDAR]: () => ({ status: 200, data: successBody({ events: [deadline, interview] }) }),
@@ -165,7 +163,7 @@ describe('month navigation', () => {
     expect(new Date(january.from).getTime()).toBeLessThan(new Date('2026-02-01').getTime());
   });
 
-  it('covers the leading and trailing days borrowed from adjacent months', async () => {
+  it('covers the borrowed days, with room for any account zone on either side', async () => {
     const mock = renderCalendar();
     await screen.findByText('February 2026');
 
@@ -173,12 +171,16 @@ describe('month navigation', () => {
       expect(calendarCalls(mock)).toHaveLength(1);
     });
 
-    // February 2026 opens on a Sunday, so the grid starts in late January. The
-    // request has to reach that far or those cells would look empty when they
-    // are not.
+    // February 2026 opens on a Sunday, so the grid runs 26 Jan to 1 Mar. The
+    // request has to reach that far, plus the 26 hours that can separate the
+    // account's zone from the browser's, or edge cells would look empty.
     const [range] = calendarCalls(mock);
-    expect(new Date(range.from).getTime()).toBeLessThan(new Date('2026-02-01').getTime());
-    expect(new Date(range.to).getTime()).toBeGreaterThan(new Date('2026-02-28').getTime());
+    expect(new Date(range.from).getTime()).toBeLessThanOrEqual(
+      new Date('2026-01-25T00:00:00Z').getTime(),
+    );
+    expect(new Date(range.to).getTime()).toBeGreaterThanOrEqual(
+      new Date('2026-03-03T00:00:00Z').getTime(),
+    );
   });
 });
 
@@ -235,7 +237,7 @@ function respondWith(...events: ReturnType<typeof makeCalendarEvent>[]): Record<
 
 describe('day panel cards', () => {
   it('shows the time alone, keeping the full date for screen readers and in <time>', async () => {
-    const at = new Date(2026, 1, 11, 21, 20).toISOString();
+    const at = '2026-02-11T21:20:00.000Z';
     const user = userEvent.setup();
     renderCalendar(
       respondWith(
@@ -259,28 +261,33 @@ describe('day panel cards', () => {
     expect(cardLine(card).querySelector('time')).toHaveAttribute('datetime', at);
   });
 
-  it('shows no time on a date-only deadline, and its grid day for screen readers', async () => {
-    // Stored the way the form stores a deadline: the day at midnight UTC. It sits
-    // under whichever local day that instant falls on, and the card must agree.
-    const at = '2026-02-11T00:00:00.000Z';
-    const local = new Date(at);
-    const user = userEvent.setup();
-    renderCalendar(respondWith(makeCalendarEvent({ kind: 'deadline', at, company: 'Stripe' })));
+  // Issue #99: stored the way the form stores a deadline, the day at 00:00 UTC.
+  // It names 11 February everywhere: not 10 February at 16:00 in Los Angeles,
+  // and not 11 February "at 08:00" in Kuala Lumpur.
+  it.each(['America/Los_Angeles', 'Asia/Kuala_Lumpur', 'Pacific/Kiritimati'])(
+    'puts a date-only deadline on the date it names, with no time, for an account in %s',
+    async (accountZone) => {
+      const at = '2026-02-11T00:00:00.000Z';
+      const user = userEvent.setup();
+      renderCalendar(
+        respondWith(makeCalendarEvent({ kind: 'deadline', at, company: 'Stripe' })),
+        '2026-02',
+        sessionIn(accountZone),
+      );
 
-    await user.click(
-      await screen.findByRole('gridcell', { name: new RegExp(`^${format(local, 'd MMMM yyyy')}`) }),
-    );
+      await user.click(await screen.findByRole('gridcell', { name: /^11 February 2026, 1 event/ }));
 
-    const panel = screen.getByRole('region', { name: format(local, 'EEEE d MMMM') });
-    const card = within(panel).getByRole('button', {
-      name: new RegExp(`Application deadline ?, ${format(local, 'd MMM yyyy')}$`),
-    });
-    expect(visibleText(cardLine(card))).toBe('Application deadline');
-    expect(cardLine(card).querySelector('time')).toHaveAttribute('datetime', at);
-  });
+      const panel = screen.getByRole('region', { name: 'Wednesday 11 February' });
+      const card = within(panel).getByRole('button', {
+        name: /Application deadline ?, 11 Feb 2026$/,
+      });
+      expect(visibleText(cardLine(card))).toBe('Application deadline');
+      expect(cardLine(card).querySelector('time')).toHaveAttribute('datetime', at);
+    },
+  );
 
   it('keeps the time on a deadline that has one', async () => {
-    const at = new Date(2026, 1, 11, 22, 45).toISOString();
+    const at = '2026-02-11T22:45:00.000Z';
     const user = userEvent.setup();
     renderCalendar(respondWith(makeCalendarEvent({ kind: 'deadline', at, company: 'Stripe' })));
 
@@ -291,45 +298,52 @@ describe('day panel cards', () => {
   });
 
   /**
-   * Fixed instants near midnight, read in the runner's own timezone, which is the
-   * browser timezone in the app. Run the suite under TZ=UTC, Asia/Kuala_Lumpur and
-   * America/Los_Angeles: each run checks the zone it is in, and the account
-   * timezones differ from it, which must change nothing.
+   * Issue #98: fixed instants near midnight, read in the account's zone, the one
+   * the reminder emails use. The runner's own zone plays no part, so every row
+   * runs on every runner (issue #102: CI used to check only its own UTC row).
    */
   const NEAR_MIDNIGHT = [
     makeCalendarEvent({ kind: 'interview', at: '2026-02-11T16:30:00.000Z', company: 'Grab' }),
     makeCalendarEvent({ kind: 'interview', at: '2026-02-12T07:50:00.000Z', company: 'Shopee' }),
   ];
-  const BY_ZONE: Record<string, { cell: string; heading: string; times: string[] }[]> = {
-    UTC: [
-      { cell: '11 February 2026', heading: 'Wednesday 11 February', times: ['16:30'] },
-      { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['07:50'] },
+  const BY_ACCOUNT_ZONE: [string, { cell: string; heading: string; times: string[] }[]][] = [
+    [
+      'UTC',
+      [
+        { cell: '11 February 2026', heading: 'Wednesday 11 February', times: ['16:30'] },
+        { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['07:50'] },
+      ],
     ],
-    'Asia/Kuala_Lumpur': [
-      { cell: '11 February 2026', heading: 'Wednesday 11 February', times: [] },
-      { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['00:30', '15:50'] },
+    [
+      'Asia/Kuala_Lumpur',
+      [
+        { cell: '11 February 2026', heading: 'Wednesday 11 February', times: [] },
+        { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['00:30', '15:50'] },
+      ],
     ],
-    'America/Los_Angeles': [
-      { cell: '11 February 2026', heading: 'Wednesday 11 February', times: ['08:30', '23:50'] },
-      { cell: '12 February 2026', heading: 'Thursday 12 February', times: [] },
+    [
+      'America/Los_Angeles',
+      [
+        { cell: '11 February 2026', heading: 'Wednesday 11 February', times: ['08:30', '23:50'] },
+        { cell: '12 February 2026', heading: 'Thursday 12 February', times: [] },
+      ],
     ],
-  };
-  const runnerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const expected = BY_ZONE[runnerZone === 'Etc/UTC' ? 'UTC' : runnerZone];
+    [
+      'Pacific/Kiritimati',
+      [
+        { cell: '11 February 2026', heading: 'Wednesday 11 February', times: [] },
+        { cell: '12 February 2026', heading: 'Thursday 12 February', times: ['06:30', '21:50'] },
+      ],
+    ],
+  ];
 
-  it
-    .skipIf(expected === undefined)
-    .each(['Asia/Kuala_Lumpur', 'America/Los_Angeles', 'Pacific/Kiritimati'])(
-    'puts each time under the day it names in the browser timezone, whatever the account says (%s)',
-    async (accountZone) => {
+  it.each(BY_ACCOUNT_ZONE)(
+    'puts each time under the day it names in the account timezone (%s)',
+    async (accountZone, expected) => {
       const user = userEvent.setup();
-      renderCalendar(
-        respondWith(...NEAR_MIDNIGHT),
-        '2026-02',
-        makeSession({ user: makeUser({ timezone: accountZone }) }),
-      );
+      renderCalendar(respondWith(...NEAR_MIDNIGHT), '2026-02', sessionIn(accountZone));
 
-      for (const day of expected ?? []) {
+      for (const day of expected) {
         await user.click(await screen.findByRole('gridcell', { name: new RegExp(`^${day.cell}`) }));
         const panel = screen.getByRole('region', { name: day.heading });
         const times = within(panel)

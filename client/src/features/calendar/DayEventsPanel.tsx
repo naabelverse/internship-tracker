@@ -4,7 +4,7 @@ import {
   INTERVIEW_MODE_LABELS,
   INTERVIEW_TYPE_LABELS,
 } from '@/lib/statusConfig';
-import { formatDate, formatTime, isDateOnly } from '@/lib/formatters';
+import { formatDate, formatDateIn, formatTimeIn, isDateOnly } from '@/lib/formatters';
 import { cn } from '@/lib/cn';
 import type { CalendarEvent } from '@/types/calendar';
 import type { InterviewMode, InterviewType } from '@/types/application';
@@ -15,6 +15,8 @@ interface DayEventsPanelProps {
   /** The month the grid shows, which can differ from `date`'s for a borrowed cell. */
   month: Date;
   events: CalendarEvent[];
+  /** The account's IANA zone, which the grid grouped the events in. */
+  timeZone: string;
   onOpenApplication: (applicationId: string) => void;
 }
 
@@ -43,8 +45,9 @@ function heading(date: Date, month: Date, now = new Date()): string {
 /**
  * The time alone, since the heading names the day. The date stays in the
  * accessible name as screen-reader text, and a date-only deadline shows no time.
+ * Both are read in the account's zone, the one the grid placed the event by.
  */
-function EventTime({ event }: { event: CalendarEvent }): JSX.Element {
+function EventTime({ event, timeZone }: { event: CalendarEvent; timeZone: string }): JSX.Element {
   if (event.kind === 'deadline' && isDateOnly(event.at)) {
     return (
       <time dateTime={event.at}>
@@ -57,8 +60,8 @@ function EventTime({ event }: { event: CalendarEvent }): JSX.Element {
     <>
       {' · '}
       <time dateTime={event.at}>
-        <span className="sr-only">{formatDate(event.at)}, </span>
-        {formatTime(event.at)}
+        <span className="sr-only">{formatDateIn(event.at, timeZone)}, </span>
+        {formatTimeIn(event.at, timeZone)}
       </time>
     </>
   );
@@ -73,6 +76,7 @@ export function DayEventsPanel({
   date,
   month,
   events,
+  timeZone,
   onOpenApplication,
 }: DayEventsPanelProps): JSX.Element {
   return (
@@ -122,7 +126,7 @@ export function DayEventsPanel({
                 </span>
                 <span className="mt-0.5 block text-xs text-content-subtle">
                   {describe(event)}
-                  <EventTime event={event} />
+                  <EventTime event={event} timeZone={timeZone} />
                 </span>
               </button>
             </li>
