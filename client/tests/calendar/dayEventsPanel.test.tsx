@@ -21,7 +21,13 @@ function renderPanel(): HTMLElement {
     }),
   );
   const { container } = render(
-    <DayEventsPanel date={day} month={day} events={events} onOpenApplication={() => undefined} />,
+    <DayEventsPanel
+      date={day}
+      month={day}
+      events={events}
+      timeZone="UTC"
+      onOpenApplication={() => undefined}
+    />,
   );
 
   return container;

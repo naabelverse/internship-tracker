@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { format, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -11,11 +11,14 @@ import { MonthGrid } from '@/features/calendar/MonthGrid';
 import {
   MONTH_PARAM,
   buildMonthGrid,
+  eventDayKey,
   formatMonthParam,
+  gridDayKey,
   parseMonth,
   shiftMonth,
 } from '@/features/calendar/monthModel';
 import { useCalendarQuery } from '@/features/calendar/useCalendarQuery';
+import { useSession } from '@/hooks/useSession';
 import { paths } from '@/routes/paths';
 
 function CalendarSkeleton(): JSX.Element {
@@ -37,13 +40,17 @@ export function CalendarPage(): JSX.Element {
   const month = useMemo(() => parseMonth(searchParams.get(MONTH_PARAM)), [searchParams]);
   const query = useCalendarQuery(month);
 
+  // The account's zone, not the browser's, so the calendar names the same day as
+  // the reminder emails and the heatmap (issue #98).
+  const timeZone = useSession().user?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const events = useMemo(() => query.data ?? [], [query.data]);
-  const days = useMemo(() => buildMonthGrid(month, events), [month, events]);
+  const days = useMemo(() => buildMonthGrid(month, events, timeZone), [month, events, timeZone]);
 
   const selectedEvents =
     selectedDate === null
       ? []
-      : events.filter((event) => isSameDay(new Date(event.at), selectedDate));
+      : events.filter((event) => eventDayKey(event, timeZone) === gridDayKey(selectedDate));
 
   function goToMonth(step: number): void {
     const next = shiftMonth(month, step);
@@ -114,6 +121,7 @@ export function CalendarPage(): JSX.Element {
             date={selectedDate}
             month={month}
             events={selectedEvents}
+            timeZone={timeZone}
             onOpenApplication={(applicationId) => {
               void navigate(paths.applicationDetail(applicationId));
             }}

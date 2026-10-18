@@ -69,6 +69,16 @@ describe('applications CRUD', () => {
       );
     });
 
+    // Issue #99: a date-only deadline is the whole day it names, so today's still counts.
+    it('keeps a date-only deadline for today as the next action', async () => {
+      const { accessToken } = await registerUser(app);
+      const today = `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
+
+      const created = await createApplicationFor(app, accessToken, { deadline: today });
+
+      expect(created.application.nextActionDate).toBe(today);
+    });
+
     it('leaves nextActionDate unset when the deadline has passed', async () => {
       const { accessToken } = await registerUser(app);
 
