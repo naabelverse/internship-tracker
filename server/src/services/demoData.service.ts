@@ -277,8 +277,13 @@ function buildOne(
 
   // A spread of past and upcoming deadlines, so the amber and red chips and the
   // upcoming panel both have something to show.
+  // Date-only, as the form stores one: the day at 00:00 UTC. A seed-moment time
+  // such as 22:45 would show on every demo deadline (issue #99).
   const deadline = picker.chance(0.55)
-    ? new Date(createdAt.getTime() + picker.int(10, 60) * MS_PER_DAY)
+    ? new Date(
+        Math.floor((createdAt.getTime() + picker.int(10, 60) * MS_PER_DAY) / MS_PER_DAY) *
+          MS_PER_DAY,
+      )
     : undefined;
 
   return {
