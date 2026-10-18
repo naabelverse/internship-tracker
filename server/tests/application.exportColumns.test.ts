@@ -145,20 +145,18 @@ describe('GET /applications/export with columns', () => {
     );
   });
 
-  // Issue #82 covers formula escaping. Until it lands, both choices write a
-  // formula-like value exactly as stored; this pins that the subset path neither
-  // escapes nor drops what the full file carries, so the two cannot disagree.
-  // The fix for #82 changes this expectation on purpose, for both paths at once.
-  it('writes formula-like values the same way on both paths (Refs #82)', async () => {
+  // Issue #82: a spreadsheet runs a cell starting with =, +, - or @ as a formula.
+  // Both choices go through the same serialiser, so both escape identically.
+  it('escapes formula-like values the same way on both paths (#82)', async () => {
     const token = await seededAccount();
 
     const full = await exportCsv(token, 'format=csv');
     const shown = await exportCsv(token, 'format=csv&columns=company,role,location,tags');
 
-    const fullRow = full.text.split(/\r?\n/).find((line) => line.startsWith('=1+1'));
-    const shownRow = shown.text.split(/\r?\n/).find((line) => line.startsWith('=1+1'));
-    expect(shownRow).toBe('=1+1,+cmd,@home,-2+3');
-    expect(fullRow?.startsWith('=1+1,+cmd,')).toBe(true);
+    const fullRow = full.text.split(/\r?\n/).find((line) => line.startsWith("'=1+1"));
+    const shownRow = shown.text.split(/\r?\n/).find((line) => line.startsWith("'=1+1"));
+    expect(shownRow).toBe("'=1+1,'+cmd,'@home,'-2+3");
+    expect(fullRow?.startsWith("'=1+1,'+cmd,")).toBe(true);
   });
 
   it.each([
