@@ -2,14 +2,14 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, localDayKey } from '@/lib/formatters';
 import { ActiveDaysStat } from '@/features/dashboard/ActiveDaysStat';
 import { FiguresTip, HeatmapTip, PaceTip } from '@/features/dashboard/ActivityTips';
 import { FollowThrough } from '@/features/dashboard/FollowThrough';
 import { WeeklyPace } from '@/features/dashboard/WeeklyPace';
 import { HEAT_LEVEL_CLASSES, heatLevel } from '@/features/dashboard/heatLevels';
 import { countActiveDays, summarizeFollowThrough } from '@/features/dashboard/followThroughStats';
-import { buildCells, dayActivity, localDayKey, type Cell } from '@/features/dashboard/heatmapCells';
+import { buildCells, dayActivity, type Cell } from '@/features/dashboard/heatmapCells';
 import type { TimelinePoint } from '@/types/analytics';
 
 interface ActivityHeatmapProps {
