@@ -132,6 +132,18 @@ describe('dashboard', () => {
       expect(screen.getByText('3/5')).toBeInTheDocument();
     });
 
+    // Issue #80: Total counts archived rows and the Applications count does not.
+    it('says on the Total card that it includes archived applications', async () => {
+      const user = userEvent.setup();
+      renderDashboard();
+
+      await user.click(await screen.findByRole('button', { name: 'About Total' }));
+
+      expect(
+        screen.getByText('Every application on your account, archived ones included.'),
+      ).toBeVisible();
+    });
+
     it('derives each delta from the period comparison', async () => {
       renderDashboard();
       await screen.findByText('Total');
