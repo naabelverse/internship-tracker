@@ -219,6 +219,47 @@ describe('POST /applications/import', () => {
     expect(stored?.contact).toMatchObject({ name: 'Wei Ling', email: 'hiring@example.com' });
   });
 
+  // Issue #82: the export guards formula-like cells with one apostrophe, and the
+  // import removes exactly that one, so a file round-trips to the stored values.
+  it('round-trips formula-like values through export and import unchanged', async () => {
+    const owner = await registerUser(app);
+    const tricky = {
+      company: '=HYPERLINK("http://evil.example")',
+      role: '+1 referral',
+      location: '@home',
+      tags: ['-remote', 'ops'],
+      notes: "'=not a formula",
+      resumeVersion: "'Tis the CV",
+      contact: { name: '+60 12-345 6789' },
+      stipend: { amount: 1500, currency: 'MYR', period: 'month' },
+    };
+    await createApplicationFor(app, owner.accessToken, tricky);
+
+    const exported = await request(app)
+      .get(`${APPLICATIONS_BASE}/export?format=csv`)
+      .set('Authorization', `Bearer ${owner.accessToken}`);
+    const row = exported.text.split(/\r?\n/)[1];
+    expect(row).toContain(`"'=HYPERLINK(""http://evil.example"")"`);
+    expect(row).toContain("'+1 referral,");
+    expect(row).toContain(",''=not a formula,'Tis the CV,1500,");
+
+    const importer = await registerUser(app);
+    const response = await importCsv(importer.accessToken, exported.text);
+    expect(response.body.data).toMatchObject({ imported: 1, skipped: 0 });
+
+    const stored = await Application.findOne({ user: importer.userId });
+    expect(stored).toMatchObject({
+      company: tricky.company,
+      role: tricky.role,
+      location: tricky.location,
+      tags: tricky.tags,
+      notes: tricky.notes,
+      resumeVersion: tricky.resumeVersion,
+      contact: { name: tricky.contact.name },
+      stipend: tricky.stipend,
+    });
+  });
+
   it('refuses a file with more rows than one import allows', async () => {
     const { accessToken, userId } = await registerUser(app);
 

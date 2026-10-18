@@ -5468,6 +5468,30 @@ Refs #100, #103.
   guards: the old dot was already hidden and distinct. No existing assertion changed. No e2e
   spec was added, because the unit tests cover the colours from the tokens.
 
+## CSV export escapes formula-like cells, and import removes exactly that guard (18 Oct 2026)
+
+Fixes #82 (CSV formula injection).
+
+- **The rule lives in `server/src/utils/csv.ts`, the one serialiser both CSV choices and the
+  importer share.** A text cell matching `^'*[=+\-@\t\r]` gets one leading apostrophe on export,
+  and import removes one apostrophe from any cell that starts with one and matches the same
+  pattern. Counting the apostrophe run as part of the trigger is what makes the pair exactly
+  reversible: a note the user really wrote as `'=x` is exported as `''=x` and imports back as
+  `'=x`. Papa's `escapeFormulae` was not used, because it does not handle that case and the
+  trigger set should be ours and tested.
+- **Numbers and booleans are never escaped** (`stipendAmount`, `archived`), because only string
+  cells go through the guard. ISO dates never start with a trigger.
+- **Legitimate leading `-` and `+` are escaped too** (`-remote`, `+60 …`). That is the cost of the
+  standard mitigation: a spreadsheet shows the apostrophe only in the formula bar, and the
+  round trip through import is unchanged.
+- **Assumption: a hand-made CSV with a cell like `'-remote` imports as `-remote`.** The importer
+  cannot tell our guard from a user's own apostrophe in a file we did not write. A spreadsheet
+  hides that apostrophe anyway, so this is the reading the user saw.
+- **Tests:** `application.exportColumns.test.ts`'s pinned "written raw" case was changed on
+  purpose to expect the guard on both paths. `application.transfer.test.ts` adds an
+  export → import round trip covering `=`, `+`, `@`, `-`, an apostrophe before a trigger, a
+  plain leading apostrophe, and a numeric stipend. Against the old `csv.ts`, both cases fail.
+
 ## The app-wide border token stays as it is (19 Oct 2026)
 
 Closes issue #103 without a change, by the owner's choice after the candidates were measured.
