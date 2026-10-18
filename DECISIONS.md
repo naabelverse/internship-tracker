@@ -5467,3 +5467,52 @@ Refs #100, #103.
   Against the old styling, 7 of the 10 fail. The `aria-hidden` and distinct-dots cases are
   guards: the old dot was already hidden and distinct. No existing assertion changed. No e2e
   spec was added, because the unit tests cover the colours from the tokens.
+
+## Toolbar menus stay on screen, the toolbar stops re-flowing, and Filters holds still at 1280 (19 Oct 2026)
+
+Fixes issues #85, #87 and #88. All numbers are from a real build with real scrollbars (Chromium,
+demo account), read from `getBoundingClientRect()` on `main` and on the branch with one script.
+
+- **#85, cause:** `Popover`'s default menu panel was placed with CSS alone (`absolute` plus
+  `right-0` or `left-0`), and only panels given an `anchorRef` went through `useAnchoredPosition`,
+  which clamps to the gutter. At 375 on `main`: Columns at x = -116.9, Export CSV at 14.9 (1px into
+  the gutter), and Filters from 254.6 to 494.6 with the page 495px wide. That last one is bug 2 of
+  the issue, and it happened on the demo account too, not only on a new one.
+- **#85, fix:** every `Popover` panel is now `fixed` and placed by the hook. Without an `anchorRef`
+  it anchors to its own trigger with an 8px gap (the old `mt-2`). At 375 the three panels are now
+  16-256, 16-256 and 104-344 of a 360px page. At 768, 1024 and 1440 every panel's left and top are
+  identical to `main` (Columns 200.4 / 605.1 / 864.4, as in the issue).
+- **Two changes to the shared hook, found while measuring:**
+  - The right-hand clamp used `window.innerWidth`, which counts a classic scrollbar, so a panel
+    clamped at the right could sit up to 15px under it. It now uses the root's own width.
+  - A fixed panel did not follow its trigger when a re-render moved it. At 1024 the Filters count
+    badge moves the trigger 24px left, and the panel stayed behind. The hook now places again after
+    every render of its owner. It keeps the old object when the coordinates are unchanged, so that
+    pass settles instead of looping. Measured after the change: the panel's left edge equals the
+    trigger's before and after ticking a filter at every width.
+- **#87:** the search field's cap is 18rem from `xl` and 24rem from 1376px, the two-step option in
+  the issue. `min-[1376px]:` is not generated here, because the `board-fit` screen is a `raw`
+  query, which turns Tailwind's `min-*` variants off. So it is `[@media(min-width:1376px)]:`, and
+  the built CSS puts that rule after the `xl` one. Filters' shift when the first filter is ticked:
+  1280 -96.1 → -0.1, 1375 -1.1 → 0, 1440 0 → 0. 1024 stays at -24, which is the count badge, as
+  the issue noted. The field at rest is 288px at 1280 to 1375, which still fits the 270.4px
+  placeholder.
+- **#88:** `scrollbar-gutter: stable` on the root, but only while the Applications toolbar is
+  mounted (`html:has([data-stable-gutter])`). With the gutter app-wide, the reserved strip showed
+  the canvas 15px wide beside the auth screen's right-hand panel and the Board's top bar, on pages
+  that never scroll. Searching "go" on `main`: 768 toolbar 705 → 720px, 1024 two rows → one row
+  (field 344.6 → 202.9px), 1440 1105 → 1120px. On the branch all three are unchanged. The cost:
+  when the list is short enough not to scroll, the empty 15px gutter shows the canvas beside the top
+  bar, where the scrollbar track was. `overflow-y: scroll` was not used, because it would stop the
+  modal's `body { overflow: hidden }` reaching the viewport, so the page behind a modal would
+  scroll.
+- **Tests:**
+  - `client/tests/components/popoverPanel.test.tsx` stubs a 360px page and checks three things: a
+    right-aligned menu is clamped to 16px, a left-aligned one to 104px, and a panel follows a
+    re-render that moves its trigger. All three fail against the old `Popover` and hook.
+  - `client/tests/applications/toolbarMenus.test.tsx` holds the gutter rule and that the toolbar
+    carries its marker. That is a contract check, since jsdom has no scrollbars.
+  - `e2e/audits/clearFilters.spec.ts` adds the 1280 check and a 375 check that each menu's panel
+    sits inside the gutter. Run locally against both builds, it fails on `main` with -116.9 for
+    Columns, 14.9 for Export CSV, a 509.6 right edge for Filters, and a 1280 shift. It passes on
+    the branch.

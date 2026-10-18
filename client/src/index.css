@@ -232,6 +232,17 @@
     @apply bg-canvas;
   }
 
+  /*
+   * On the Applications list, keep the classic scrollbar's 15px reserved
+   * whether or not the page scrolls, so a search that shortens the list does
+   * not widen the layout and re-flow the toolbar under the user (#88). Scoped
+   * to that page because an empty gutter shows the canvas: app-wide it drew a
+   * 15px strip beside the auth screen's panel and the Board's top bar.
+   */
+  html:has([data-stable-gutter]) {
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply min-h-screen bg-canvas font-sans text-content antialiased;
     /*

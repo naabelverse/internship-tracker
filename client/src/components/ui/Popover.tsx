@@ -40,9 +40,10 @@ interface PopoverProps {
   /** Marks the trigger `aria-busy` while the action it leads to is running. */
   busy?: boolean;
   /**
-   * Floats the panel under this element with fixed positioning instead of under
-   * the trigger, so a scrolling ancestor such as a modal body cannot clip it.
-   * The panel stays here in the DOM, so an enclosing focus trap still holds it.
+   * Floats the panel under this element instead of under the trigger, such as
+   * a field wider than its calendar button. Either way the panel is fixed, so a
+   * scrolling ancestor such as a modal body cannot clip it, and it stays here in
+   * the DOM, so an enclosing focus trap still holds it.
    */
   anchorRef?: RefObject<HTMLElement>;
 }
@@ -102,7 +103,17 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const anchoredPosition = useAnchoredPosition(anchorRef, panelRef, isOpen, align);
+  // Every panel is placed by the hook, so every panel stays inside the viewport's
+  // gutter. Without an `anchorRef` it floats under its own trigger, `mt-2` apart
+  // as the menus always were; positioned with CSS alone, a menu whose trigger
+  // wrapped near a phone's edge opened off the screen (issue #85).
+  const anchoredPosition = useAnchoredPosition(
+    anchorRef ?? triggerRef,
+    panelRef,
+    isOpen,
+    align,
+    anchorRef ? undefined : 8,
+  );
 
   const setTriggerRef = useCallback(
     (node: HTMLButtonElement | null) => {
@@ -155,7 +166,7 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
   };
 
   return (
-    <div ref={containerRef} className={cn('relative', className)} onBlur={onBlur}>
+    <div ref={containerRef} className={className} onBlur={onBlur}>
       <button
         ref={setTriggerRef}
         type="button"
@@ -179,13 +190,10 @@ export const Popover = forwardRef<HTMLButtonElement, PopoverProps>(function Popo
           onKeyDown={role === 'menu' ? onMenuKeyDown : undefined}
           style={anchoredPosition}
           className={cn(
-            'z-30',
+            'fixed z-30',
             panelClassName === undefined
               ? MENU_PANEL
               : cn(cardSurface, 'shadow-float', panelClassName),
-            anchorRef && 'fixed',
-            !anchorRef && 'absolute mt-2',
-            !anchorRef && (align === 'right' ? 'right-0' : 'left-0'),
           )}
         >
           {children(close)}
