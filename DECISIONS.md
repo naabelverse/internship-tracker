@@ -5538,6 +5538,19 @@ Fixes #99, #98 and #102.
     worker, so #99 is proven west of UTC in CI too.
   - Against the old source, 9 client cases and 1 server case fail.
 
+## A Board drag released outside every column cancels (18 Oct 2026)
+
+Fixes #97.
+
+- **Pointer drags now resolve by `pointerWithin` alone**, so a release over no column is no
+  drop, and the card and its status stay put, as they do on Escape. The `closestCenter`
+  fallback had always found some column, so a release over the page heading silently changed
+  the status.
+- **Keyboard drags keep `closestCenter`.** dnd-kit gives them `pointerCoordinates: null`, which
+  is what the collision function switches on, rather than on an empty `pointerWithin` result.
+- **Test:** `dragAndDrop.test.tsx` releases 200px above the Interview column. Against the old
+  code it sends the PATCH and fails; the keyboard cases are unchanged and pass.
+
 ## Export CSV carries the rows the list shows, and says how many (18 Oct 2026)
 
 Fixes #83. The owner chose both behaviours on 18 Oct 2026.

@@ -67,6 +67,22 @@ describe('pointer drag', () => {
   });
 });
 
+describe('pointer drag released outside every column', () => {
+  // Issue #97: above the board's columns, nearest to Interview. It used to land
+  // there by the nearest-centre fallback and save the status change.
+  it('cancels, leaving the card and its status where they were', async () => {
+    const mock = renderBoard();
+
+    await screen.findByText('Stripe');
+    await pointerDrag(moveHandle(), { clientX: columnCentre(3).clientX, clientY: -200 });
+
+    await waitFor(() => {
+      expect(within(columnOf('applied')).getByText('Stripe')).toBeInTheDocument();
+    });
+    expect(mock.callsTo('PATCH', '/applications/app-1')).toHaveLength(0);
+  });
+});
+
 describe('drag rollback', () => {
   it('shows the card in the destination column, then snaps it back when the drop fails', async () => {
     const gate = createGate();
