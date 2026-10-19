@@ -1,7 +1,10 @@
 import request from 'supertest';
 import type { Express } from 'express';
+import mongoose from 'mongoose';
+import { z } from 'zod';
 import { env } from '@/config/env';
-import { attachSentryErrorHandler, isSentryEnabled } from '@/config/sentry';
+import { attachSentryErrorHandler, isSentryEnabled, shouldReportToSentry } from '@/config/sentry';
+import { ApiError } from '@/utils/ApiError';
 import {
   APPLICATIONS_BASE,
   buildTestApp,
@@ -104,5 +107,26 @@ describe('Sentry stays out of the way when no DSN is configured', () => {
   it('does not default the trace sample rate to anything but off', () => {
     // Traces are billed per event and this is a free-tier deployment.
     expect(env.SENTRY_TRACES_SAMPLE_RATE).toBe(0);
+  });
+});
+
+/**
+ * Regression: the filter read `error.statusCode` and defaulted to 500, so a
+ * ZodError from an empty login body was reported to Sentry as unhandled while
+ * the client got a 400. It must judge by the status the client actually gets.
+ */
+describe('Sentry reports only what the client sees as a 5xx', () => {
+  it('skips errors that become a 4xx without carrying a status', () => {
+    const zodError = z.object({ email: z.string() }).safeParse({}).error;
+    const castError = new mongoose.Error.CastError('ObjectId', 'not-an-id', '_id');
+
+    expect(shouldReportToSentry(zodError)).toBe(false);
+    expect(shouldReportToSentry(castError)).toBe(false);
+    expect(shouldReportToSentry(new ApiError(404, 'Not found', 'NOT_FOUND'))).toBe(false);
+  });
+
+  it('reports real faults', () => {
+    expect(shouldReportToSentry(new Error('boom'))).toBe(true);
+    expect(shouldReportToSentry(new ApiError(503, 'Down', 'UNAVAILABLE'))).toBe(true);
   });
 });
