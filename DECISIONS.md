@@ -5746,3 +5746,17 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   this is a visibility observation rather than a 1.4.11 failure, as the issue itself recorded.
   Surfaces with no fill step move to `border-strong` locally, as the Calendar day panel did for
   #100.
+
+## DMARC moves to `p=quarantine` on day one rather than after 2–4 weeks (19 Oct 2026)
+
+- **What the docs say:** DEPLOYMENT.md §7.2 "DMARC rollout" holds `p=none` for 2–4 weeks and
+  tightens only once aggregate reports show clean mail.
+- **What was done:** `_dmarc.naabel.com` went from `v=DMARC1; p=none;` to
+  `v=DMARC1; p=quarantine; pct=100;` on the day the domain was verified.
+- **Why:** the wait exists to find senders you did not know about. `naabel.com` was bought that
+  day through Railway, and its only sender is Resend on `tracker.naabel.com`, which passes DMARC
+  through an aligned DKIM signature. There were no other senders to find, and the record also
+  publishes no `rua`, so waiting would not have produced any reports to read.
+- **Checked:** after the change, a reset email still reached the Gmail Inbox with SPF, DKIM and
+  DMARC all PASS.
+- **Not done:** `p=reject` waits. Add an `rua` address before it if a second sender ever appears.

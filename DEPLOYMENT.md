@@ -1533,8 +1533,8 @@ launch.
 - [ ] `npm run seed -w server` has run; "Try the demo" signs in and every dashboard chart has data.
 - [ ] An uploaded attachment survives a redeploy — proof that `STORAGE_DRIVER=s3` is really in
       effect.
-- [ ] The uptime monitor is live on `/health` at 5-minute intervals and has sent a test alert.
-- [ ] If Sentry is enabled, a deliberately triggered 500 has appeared in the issue stream.
+- [x] The uptime monitor is live on `/health` at 5-minute intervals and has sent a test alert.
+- [x] If Sentry is enabled, a deliberately triggered 500 has appeared in the issue stream.
 - [x] `scripts/backup.sh` has been run once **and a restore from that archive has been tested**.
 - [x] `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts` is a real address — the `{{CONTACT_EMAIL}}`
       placeholder must not be live on Terms, Privacy, the footer or `SECURITY.md`.
