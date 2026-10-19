@@ -5585,3 +5585,26 @@ Fixes issue #61.
   the free-text source is a niche field; matching it silently is enough.
 - **Test:** `server/tests/application.list.test.ts` searches `glint` and expects only the row
   whose `sourceOther` is "Glints". It fails without the fix.
+
+## The search field ignores the late echo of its own URL write (19 Oct 2026)
+
+Fixes issue #91, which was filed as a possible test timing weakness. It is a real race in the
+component, which the test only exposed under load.
+
+- **Cause:** the router runs with `v7_startTransition`, so the search field's debounced URL write
+  commits in a transition. When typing is slow enough for the 300 ms timer to fire before Clear
+  search is clicked, the click empties the field first and the transition commits afterwards.
+  The re-seed effect then saw `filters.search` change to "stri", put it back in the field and
+  cancelled the queued write of the empty value. The field and the URL both kept the old term.
+  That matches the failure in #91 exactly (the field held "stri", and the test took 1200 ms
+  instead of its usual 400 ms).
+- **Fix:** the toolbar remembers the last value it wrote (`lastWriteRef`), and the effect skips a
+  `filters.search` equal to it. A change from anywhere else (Clear filters, a link, back and
+  forward) still re-seeds the field and drops a pending write. The one case it no longer re-seeds
+  is an outside change to exactly the term the field last wrote, where the URL already says what
+  the field wrote.
+- **Not changed:** the existing searchField test. It was right; the component was wrong.
+- **Test:** `client/tests/applications/searchField.test.tsx` renders the toolbar directly, types,
+  lets the write happen, clicks Clear and then delivers the late echo. Without the fix it fails
+  with the field holding "stri", as in #91. A second case holds that an outside change still
+  re-seeds the field.
