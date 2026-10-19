@@ -37,6 +37,8 @@ const previewGone = (page: Page): Promise<void> =>
  *
  * - The Move handle shows `grab`; the rest of the card does not, because only
  *   the handle drags.
+ * - The handle has `touch-action: none`, and the drag preview follows the
+ *   pointer with no offset.
  * - Mid-drag every element shows `grabbing` (the pointer is over the preview,
  *   not the handle), and each element gets its own cursor back however the
  *   drag ends: Escape, a release over the page header, a drop in a column.
@@ -66,7 +68,27 @@ test('the Move handle shows grab, a drag shows grabbing, and every ending clears
   await expect(handle).toHaveAccessibleName('Move Handle card from Saved');
 
   expect(await handle.evaluate((element) => getComputedStyle(element).cursor)).toBe('grab');
+  // Issue #95: with `touch-action: auto` a finger on the handle was taken for a
+  // pan and the drag was cancelled before it started.
+  expect(await handle.evaluate((element) => getComputedStyle(element).touchAction)).toBe('none');
   const resting = await cursors(page);
+
+  // Issue #94: the copy follows the pointer exactly. It sat 20px lower while it
+  // was rendered inside the page's `space-y-5` and took its margin.
+  const cardBox = await page.locator('li[data-card-id]').boundingBox();
+  const handleBox = await handle.boundingBox();
+  if (!cardBox || !handleBox) throw new Error('The card has no layout box');
+  const pressAt = { x: handleBox.x + handleBox.width / 2, y: handleBox.y + handleBox.height / 2 };
+  await page.mouse.move(pressAt.x, pressAt.y);
+  await page.mouse.down();
+  await page.mouse.move(pressAt.x + 8, pressAt.y, { steps: 2 });
+  await page.mouse.move(pressAt.x + 60, pressAt.y + 40, { steps: 8 });
+  const previewBox = await page.locator('[data-drag-preview]').boundingBox();
+  expect.soft(previewBox?.x, 'preview x after +60').toBeCloseTo(cardBox.x + 60, 0);
+  expect.soft(previewBox?.y, 'preview y after +40').toBeCloseTo(cardBox.y + 40, 0);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await previewGone(page);
   expect(resting.card).not.toBe('grab');
   expect(resting.card).not.toBe('grabbing');
 

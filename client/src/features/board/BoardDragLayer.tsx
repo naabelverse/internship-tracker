@@ -1,5 +1,6 @@
 import { DragOverlay, useDndContext } from '@dnd-kit/core';
 import type { RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { cardSurface } from '@/components/ui/Card';
 import { BoardCardFace } from '@/features/board/BoardCard';
 import { useColumnAutoScroll } from '@/features/board/useColumnAutoScroll';
@@ -22,6 +23,10 @@ interface BoardDragLayerProps {
  * `dropAnimation` is off so a drop lands at once, as it did before; collision
  * detection reads the pointer, so where a card lands is unchanged. The copy is
  * `aria-hidden`: the card it stands for keeps focus and the live announcements.
+ *
+ * It is portalled to `body`. Rendered in place it was a child of the page's
+ * `space-y-5`, whose 20px `margin-top` a fixed box still takes, so the copy sat
+ * 20px below the pointer (issue #94).
  */
 export function BoardDragLayer({ applications, boardRef }: BoardDragLayerProps): JSX.Element {
   useColumnAutoScroll(boardRef);
@@ -29,7 +34,7 @@ export function BoardDragLayer({ applications, boardRef }: BoardDragLayerProps):
   const { active } = useDndContext();
   const dragged = active ? applications.find((application) => application.id === active.id) : null;
 
-  return (
+  return createPortal(
     <DragOverlay dropAnimation={null}>
       {dragged ? (
         <div
@@ -40,6 +45,7 @@ export function BoardDragLayer({ applications, boardRef }: BoardDragLayerProps):
           <BoardCardFace application={dragged} />
         </div>
       ) : null}
-    </DragOverlay>
+    </DragOverlay>,
+    document.body,
   );
 }

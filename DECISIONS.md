@@ -5683,3 +5683,48 @@ demo account), read from `getBoundingClientRect()` on `main` and on the branch w
     sits inside the gutter. Run locally against both builds, it fails on `main` with -116.9 for
     Columns, 14.9 for Export CSV, a 509.6 right edge for Filters, and a 1280 shift. It passes on
     the branch.
+
+## Board drags: named announcements, a preview on the pointer, and a handle that takes a finger (19 Oct 2026)
+
+Fixes issues #90 and #94. Addresses #95, which still needs a check on a real phone.
+
+- **#90:** `DndContext` gets `accessibility` with the board's own announcements
+  (`boardAnnouncements.ts`), built from `CardDragData.company`, the card's starting status and
+  `STATUS_CONFIG[...].label`. For example: "Picked up Shopee, in Saved.", "Shopee is over Applied.",
+  "Shopee dropped in Applied." and "Move cancelled. Shopee is back in Saved." No message carries
+  the database id or a raw status key. The hidden instructions now say "application" and name the
+  keys the board uses (Space or Enter, left and right arrows, Escape).
+- **#90, found while testing:** dnd-kit reports the card's own column as the first "over" right
+  after pick-up, which replaced "Picked up…" in the assertive live region in the same tick, so it
+  could never be read. That was already true of the defaults. The first report is skipped when it
+  is the starting column, and a later move back to that column is still announced. That needs a
+  little state per board, so the announcements come from `createBoardAnnouncements()`, memoised in
+  `KanbanBoard`.
+- **#90, test changed deliberately:** `moveHandle.test.tsx` pinned dnd-kit's default instruction
+  wording ("press the space bar"). The wording was what #90 asked to change, so the assertion now
+  matches the board's own sentence. It still checks that the instructions are the handle's
+  description.
+- **#94, cause:** the `DragOverlay` wrapper rendered inside `BoardPage`'s `space-y-5`, which gives
+  it `margin-top: 20px`. A fixed box still takes its margin, so the copy sat 20px below the pointer
+  at every card height. It was measured on the real build: the wrapper had `top: 236.95px` and
+  `translate(60px, 40px)` but drew at y = 296.95, and its `margin-top` read 20px. No ancestor made
+  a containing block.
+- **#94, fix:** `BoardDragLayer` portals the overlay to `body`. The copy now lands at exactly +60,
+  +40 for a +60, +40 pointer move.
+- **#95:** the Move button gets `touch-none`, dnd-kit's documented requirement for a
+  `PointerSensor` handle. No `TouchSensor` was added. Under Chrome DevTools touch emulation at 375,
+  a 160px finger drag from the handle went like this:
+  - On `main`: the preview appeared for a moment, then the browser cancelled the pointer stream,
+    so there was no drag and no scroll.
+  - On the branch: the drag stays active, and the board auto-scrolls as the finger nears its edge.
+
+  This is emulation, not a phone. #95 stays open until it is checked on a real device. The cost is
+  that a swipe that starts on the Move bar no longer scrolls the page. That bar is the only thing
+  on the card that drags.
+
+- **Tests:**
+  - `client/tests/board/announcements.test.tsx` reads the live region after a keyboard pick-up,
+    move, drop and cancel. All three cases fail without the `accessibility` prop.
+  - `e2e/audits/moveHandle.spec.ts` checks `touch-action: none` on the handle, and that the
+    preview sits at the card's box plus the pointer's travel. Run locally, it passes on the branch
+    and fails on `main` at the touch-action check.

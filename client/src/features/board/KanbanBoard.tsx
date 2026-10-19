@@ -9,7 +9,8 @@ import {
   type CollisionDetection,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
+import { boardInstructions, createBoardAnnouncements } from '@/features/board/boardAnnouncements';
 import { BoardColumn } from '@/features/board/BoardColumn';
 import { BoardDragLayer } from '@/features/board/BoardDragLayer';
 import { BoardJumpStrip } from '@/features/board/BoardJumpStrip';
@@ -58,6 +59,7 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
   );
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const announcements = useMemo(createBoardAnnouncements, []);
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
   /** Brings a column to the board's left edge, or as far as the board scrolls. */
@@ -85,7 +87,12 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
   const columns = buildColumns(applications);
 
   return (
-    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragEnd={onDragEnd}
+      accessibility={{ announcements, screenReaderInstructions: boardInstructions }}
+    >
       {/*
         SPEC section 6: at 375 px this scrolls sideways rather than squeezing.
 
