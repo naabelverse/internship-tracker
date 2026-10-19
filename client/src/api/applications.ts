@@ -108,16 +108,23 @@ export async function bulkAction(
  * account export is: axios would otherwise parse the whole file into a
  * JavaScript value only for it to be re-serialised on the way to disk.
  *
- * `columns` is the table's visible column ids, for the "Shown columns" choice;
- * the server maps each to fixed CSV fields. Without it the request is exactly
- * the original one and the file carries every field ("All fields").
+ * `filters` is the list's current view: the file carries the rows that view
+ * shows, in its order, and paging is dropped so it carries all of them (issue
+ * #83). `columns` is the table's visible column ids, for the "Shown columns"
+ * choice; without it the file carries every field ("All fields").
  */
 export async function exportApplications(
   format: 'csv' | 'json',
+  filters: ApplicationFilters,
   columns?: readonly string[],
 ): Promise<DownloadedFile> {
+  const params: Record<string, string> = { ...toQueryParams(filters), format };
+  delete params.page;
+  delete params.limit;
+  if (columns) params.columns = columns.join(',');
+
   const response = await apiClient.get<Blob>('/applications/export', {
-    params: columns ? { format, columns: columns.join(',') } : { format },
+    params,
     responseType: 'blob',
   });
 

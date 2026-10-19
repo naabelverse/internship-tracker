@@ -14,6 +14,8 @@ import { APPLICATION_STATUSES, PRIORITIES, SOURCES } from '@/types/application';
 
 interface ApplicationsToolbarProps {
   filters: ApplicationFilters;
+  /** Rows in the current view, for the Export menu; unknown while the list loads. */
+  total?: number;
   hiddenColumns: string[];
   onFiltersChange: (patch: Partial<ApplicationFilters>, options?: { replace?: boolean }) => void;
   onClearFilters: () => void;
@@ -88,6 +90,7 @@ function CheckboxFilter<T extends string>({
  */
 export function ApplicationsToolbar({
   filters,
+  total,
   hiddenColumns,
   onFiltersChange,
   onClearFilters,
@@ -283,7 +286,11 @@ export function ApplicationsToolbar({
         renders from, off the same stored choice, so the file and the table
         cannot disagree about which columns are showing.
       */}
-      <ExportMenu shownColumns={visibleColumns(hiddenColumns).map((column) => column.id)} />
+      <ExportMenu
+        shownColumns={visibleColumns(hiddenColumns).map((column) => column.id)}
+        filters={filters}
+        total={total}
+      />
 
       <Button size="sm" onClick={onCreate}>
         <PlusIcon className="h-4 w-4" />

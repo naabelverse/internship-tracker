@@ -154,15 +154,22 @@ async function loadOwned(userId: Types.ObjectId, id: string): Promise<Applicatio
   return application;
 }
 
-function buildFilter(
+/** The list's filters, which the export applies too so both name the same rows. */
+export function buildFilter(
   userId: Types.ObjectId,
-  query: ListApplicationsQuery,
+  query: Omit<ListApplicationsQuery, 'page' | 'limit' | 'sort'>,
 ): FilterQuery<ApplicationAttributes> {
   const filter: FilterQuery<ApplicationAttributes> = { user: userId };
 
   if (query.search) {
     const pattern = containsRegex(query.search);
-    filter.$or = [{ company: pattern }, { role: pattern }, { tags: pattern }, { notes: pattern }];
+    filter.$or = [
+      { company: pattern },
+      { role: pattern },
+      { tags: pattern },
+      { notes: pattern },
+      { sourceOther: pattern },
+    ];
   }
 
   if (query.status?.length) filter.status = { $in: query.status };
