@@ -5537,6 +5537,42 @@ Fixes #99, #98 and #102.
     worker, so #99 is proven west of UTC in CI too.
   - Against the old source, 9 client cases and 1 server case fail.
 
+## A Board drag released outside every column cancels (18 Oct 2026)
+
+Fixes #97.
+
+- **Pointer drags now resolve by `pointerWithin` alone**, so a release over no column is no
+  drop, and the card and its status stay put, as they do on Escape. The `closestCenter`
+  fallback had always found some column, so a release over the page heading silently changed
+  the status.
+- **Keyboard drags keep `closestCenter`.** dnd-kit gives them `pointerCoordinates: null`, which
+  is what the collision function switches on, rather than on an empty `pointerWithin` result.
+- **Test:** `dragAndDrop.test.tsx` releases 200px above the Interview column. Against the old
+  code it sends the PATCH and fails; the keyboard cases are unchanged and pass.
+
+## Export CSV carries the rows the list shows, and says how many (18 Oct 2026)
+
+Fixes #83. The owner chose both behaviours on 18 Oct 2026.
+
+- **Both choices follow the view.** Shown columns and All fields both apply the list's search,
+  filters, "Show archived" and sort, and never its paging. `exportQuerySchema` is now the list
+  schema without `page` and `limit`, plus `format` and `columns`, and the service reuses the
+  list's `buildFilter`, so the two cannot drift apart.
+- **The complete backup is Settings → Export all my data**, a separate endpoint this change
+  does not touch. An `/applications/export` call with no parameters now hides archived rows,
+  exactly as `GET /applications` does. This changes the API, and the OpenAPI entry says so.
+- **Each menu choice states the row count** from the list's own `meta.total` ("18
+  applications, as listed."), so it costs no extra request. The count sits in each item's
+  description rather than in a caption, because a `role="menu"` may only hold menu items.
+- **Tests:**
+  - `application.exportColumns.test.ts`: the default row count changed from 3 to 2 on
+    purpose, since the archived row is now hidden. The full-field round trip exports with
+    `archived=true`, as a user would from the archived view. A new table covers search,
+    status, Show archived and sort on both choices.
+  - `exportMenu.test.tsx`: the descriptions now carry the count, and a new case checks that
+    the request sends the view without `page`.
+  - Against the old source, 7 server cases and 2 client cases fail.
+
 ## Search matches the "Other: please specify" text (19 Oct 2026)
 
 Fixes issue #61.
