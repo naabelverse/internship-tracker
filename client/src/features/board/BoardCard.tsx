@@ -91,7 +91,10 @@ export function BoardCardFace({ application, onOpen, handle }: BoardCardFaceProp
       {/*
         A real button carries the drag listeners so the keyboard sensor has
         something focusable to activate: Space picks the card up, the arrow keys
-        step it between columns, Space drops it.
+        step it between columns, Space drops it. `touch-none` keeps a finger on
+        it from being taken for a pan: with `touch-action: auto` the browser
+        claimed the touch and cancelled the pointer stream before the sensor's
+        4px, so on a phone it never started a drag (issue #95).
       */}
       <button
         type="button"
@@ -99,7 +102,7 @@ export function BoardCardFace({ application, onOpen, handle }: BoardCardFaceProp
         {...handle?.listeners}
         {...handle?.attributes}
         aria-label={`Move ${application.company} from ${STATUS_CONFIG[application.status].label}`}
-        className="mt-2.5 flex w-full cursor-grab items-center justify-center gap-1 rounded-control border border-border px-2 py-1 text-xs text-content-subtle transition-colors hover:bg-surface-muted hover:text-content"
+        className="mt-2.5 flex w-full cursor-grab touch-none items-center justify-center gap-1 rounded-control border border-border px-2 py-1 text-xs text-content-subtle transition-colors hover:bg-surface-muted hover:text-content"
       >
         {/* The only part of the card that drags, so it carries the grip mark. */}
         <GripIcon className="h-3.5 w-3.5 shrink-0" />

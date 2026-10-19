@@ -4401,11 +4401,10 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   eleven bars against eight series tokens, which would have brought back the repeated-colour bug
   that `tokenContrast.test.ts` guards. With one colour, that cannot happen however long the list
   gets.
-- **OPEN FOLLOW-UP, issue #61: `sourceOther` is not searchable.** List search uses the text index
-  on `company`, `role`, `notes` and `tags`, so searching "Glints" does not find "Other: Glints".
-  MongoDB allows one text index per collection, so adding the field means dropping and rebuilding
-  that index on production. That needs its own migration and a quiet moment, so it was kept out of
-  PR #60. Until it lands, filter by Source = Other.
+- **RESOLVED (issue #61): `sourceOther` is searchable.** Correction: this entry first said list
+  search uses the text index, so adding the field would need the index rebuilt. It does not: list
+  search is one escaped, case-insensitive regex per field, and `sourceOther` was simply missing
+  from that list. It was added in the fix for #61, with no index change or migration.
 - **Not changed:** `schemaVersion` stays at 1, because the field is additive and optional, and the
   migration's own filter makes it idempotent.
 
@@ -5537,6 +5536,198 @@ Fixes #99, #98 and #102.
   - `client/tests/lib/deadlineDates.test.tsx` sets `TZ=America/Los_Angeles` for its own
     worker, so #99 is proven west of UTC in CI too.
   - Against the old source, 9 client cases and 1 server case fail.
+
+## A Board drag released outside every column cancels (18 Oct 2026)
+
+Fixes #97.
+
+- **Pointer drags now resolve by `pointerWithin` alone**, so a release over no column is no
+  drop, and the card and its status stay put, as they do on Escape. The `closestCenter`
+  fallback had always found some column, so a release over the page heading silently changed
+  the status.
+- **Keyboard drags keep `closestCenter`.** dnd-kit gives them `pointerCoordinates: null`, which
+  is what the collision function switches on, rather than on an empty `pointerWithin` result.
+- **Test:** `dragAndDrop.test.tsx` releases 200px above the Interview column. Against the old
+  code it sends the PATCH and fails; the keyboard cases are unchanged and pass.
+
+## Export CSV carries the rows the list shows, and says how many (18 Oct 2026)
+
+Fixes #83. The owner chose both behaviours on 18 Oct 2026.
+
+- **Both choices follow the view.** Shown columns and All fields both apply the list's search,
+  filters, "Show archived" and sort, and never its paging. `exportQuerySchema` is now the list
+  schema without `page` and `limit`, plus `format` and `columns`, and the service reuses the
+  list's `buildFilter`, so the two cannot drift apart.
+- **The complete backup is Settings → Export all my data**, a separate endpoint this change
+  does not touch. An `/applications/export` call with no parameters now hides archived rows,
+  exactly as `GET /applications` does. This changes the API, and the OpenAPI entry says so.
+- **Each menu choice states the row count** from the list's own `meta.total` ("18
+  applications, as listed."), so it costs no extra request. The count sits in each item's
+  description rather than in a caption, because a `role="menu"` may only hold menu items.
+- **Tests:**
+  - `application.exportColumns.test.ts`: the default row count changed from 3 to 2 on
+    purpose, since the archived row is now hidden. The full-field round trip exports with
+    `archived=true`, as a user would from the archived view. A new table covers search,
+    status, Show archived and sort on both choices.
+  - `exportMenu.test.tsx`: the descriptions now carry the count, and a new case checks that
+    the request sends the view without `page`.
+  - Against the old source, 7 server cases and 2 client cases fail.
+
+## Search matches the "Other: please specify" text (19 Oct 2026)
+
+Fixes issue #61.
+
+- `buildFilter` adds `{ sourceOther: pattern }` to the search `$or`, so "Glints" finds a row the
+  table shows as "Other: Glints". No index or migration is involved; see the corrected entry
+  under "Malaysia-focused sources".
+- **Placeholder unchanged:** it still reads "Search company, role, tags or notes". Adding
+  "source" would lengthen the text the toolbar's search width is sized around (issue #87), and
+  the free-text source is a niche field; matching it silently is enough.
+- **Test:** `server/tests/application.list.test.ts` searches `glint` and expects only the row
+  whose `sourceOther` is "Glints". It fails without the fix.
+
+## The search field ignores the late echo of its own URL write (19 Oct 2026)
+
+Fixes issue #91, which was filed as a possible test timing weakness. It is a real race in the
+component, which the test only exposed under load.
+
+- **Cause:** the router runs with `v7_startTransition`, so the search field's debounced URL write
+  commits in a transition. When typing is slow enough for the 300 ms timer to fire before Clear
+  search is clicked, the click empties the field first and the transition commits afterwards.
+  The re-seed effect then saw `filters.search` change to "stri", put it back in the field and
+  cancelled the queued write of the empty value. The field and the URL both kept the old term.
+  That matches the failure in #91 exactly (the field held "stri", and the test took 1200 ms
+  instead of its usual 400 ms).
+- **Fix:** the toolbar remembers the last value it wrote (`lastWriteRef`), and the effect skips a
+  `filters.search` equal to it. A change from anywhere else (Clear filters, a link, back and
+  forward) still re-seeds the field and drops a pending write. The one case it no longer re-seeds
+  is an outside change to exactly the term the field last wrote, where the URL already says what
+  the field wrote.
+- **Not changed:** the existing searchField test. It was right; the component was wrong.
+- **Test:** `client/tests/applications/searchField.test.tsx` renders the toolbar directly, types,
+  lets the write happen, clicks Clear and then delivers the late echo. Without the fix it fails
+  with the field holding "stri", as in #91. A second case holds that an outside change still
+  re-seeds the field.
+
+## Dashboard cards shrink with the window, and Total says it counts archived rows (19 Oct 2026)
+
+Fixes issues #79 and #80.
+
+- **#79, confirmed before fixing.** On a real build with real scrollbars, loading the dashboard at
+  1440 and narrowing to 375 without a reload left the document 713 to 749px wide (749 in the e2e
+  run, as in the issue). Loading at 375 was fine. Chart.js pins each canvas to its last width in
+  pixels, and every chart card is a grid item with the default `min-width: auto`, so the canvas
+  held its card wide. The issue named only the timeline; measuring every card showed the four
+  charts in the two-column grid stuck at 537px too, once the timeline was fixed.
+- **Fix:** `min-w-0` on `ChartFrame`'s card, which is the grid item for four charts, and on the
+  timeline's `lg:col-span-2` wrapper, which is the grid item for the fifth. After it, 1440 then
+  375 gives 360/360 (scrollbar shown) and every card is 328px, the same as a page loaded at 375.
+- **#80, option 2 from the issue:** the Total card gets an "About Total" `InfoTip` saying it
+  includes archived applications, that the Applications list hides them until Show archived is
+  ticked, and that the rates use this total. Option 1 (an archived count in the list header) needs
+  a new `meta` field from the list query; the tip explains the gap with no API change. What Total
+  counts is unchanged, because the rates are built on it.
+- **Layout:** `StatCard` takes an optional `tip`, shown after the label in a flex row. Measured at
+  1440 and 375: the Total card's label row stays 16px, the card is the same height as Active
+  (117.3 / 127.3px), and the tip's panel stays inside the viewport (64 to 320 of 360 at 375).
+- **Tests:** `e2e/audits/overflow.spec.ts` adds a case that loads the dashboard at 1440 and
+  resizes to 375. Run locally against both builds, it fails on `main` (document 749/375) and
+  passes on the branch. It runs in CI's e2e job, not in `npm run verify`.
+  `client/tests/dashboard/dashboard.test.tsx` opens "About Total" and reads the archived sentence.
+
+## Toolbar menus stay on screen, the toolbar stops re-flowing, and Filters holds still at 1280 (19 Oct 2026)
+
+Fixes issues #85, #87 and #88. All numbers are from a real build with real scrollbars (Chromium,
+demo account), read from `getBoundingClientRect()` on `main` and on the branch with one script.
+
+- **#85, cause:** `Popover`'s default menu panel was placed with CSS alone (`absolute` plus
+  `right-0` or `left-0`), and only panels given an `anchorRef` went through `useAnchoredPosition`,
+  which clamps to the gutter. At 375 on `main`: Columns at x = -116.9, Export CSV at 14.9 (1px into
+  the gutter), and Filters from 254.6 to 494.6 with the page 495px wide. That last one is bug 2 of
+  the issue, and it happened on the demo account too, not only on a new one.
+- **#85, fix:** every `Popover` panel is now `fixed` and placed by the hook. Without an `anchorRef`
+  it anchors to its own trigger with an 8px gap (the old `mt-2`). At 375 the three panels are now
+  16-256, 16-256 and 104-344 of a 360px page. At 768, 1024 and 1440 every panel's left and top are
+  identical to `main` (Columns 200.4 / 605.1 / 864.4, as in the issue).
+- **Two changes to the shared hook, found while measuring:**
+  - The right-hand clamp used `window.innerWidth`, which counts a classic scrollbar, so a panel
+    clamped at the right could sit up to 15px under it. It now uses the root's own width.
+  - A fixed panel did not follow its trigger when a re-render moved it. At 1024 the Filters count
+    badge moves the trigger 24px left, and the panel stayed behind. The hook now places again after
+    every render of its owner. It keeps the old object when the coordinates are unchanged, so that
+    pass settles instead of looping. Measured after the change: the panel's left edge equals the
+    trigger's before and after ticking a filter at every width.
+- **#87:** the search field's cap is 18rem from `xl` and 24rem from 1376px, the two-step option in
+  the issue. `min-[1376px]:` is not generated here, because the `board-fit` screen is a `raw`
+  query, which turns Tailwind's `min-*` variants off. So it is `[@media(min-width:1376px)]:`, and
+  the built CSS puts that rule after the `xl` one. Filters' shift when the first filter is ticked:
+  1280 -96.1 → -0.1, 1375 -1.1 → 0, 1440 0 → 0. 1024 stays at -24, which is the count badge, as
+  the issue noted. The field at rest is 288px at 1280 to 1375, which still fits the 270.4px
+  placeholder.
+- **#88:** `scrollbar-gutter: stable` on the root, but only while the Applications toolbar is
+  mounted (`html:has([data-stable-gutter])`). With the gutter app-wide, the reserved strip showed
+  the canvas 15px wide beside the auth screen's right-hand panel and the Board's top bar, on pages
+  that never scroll. Searching "go" on `main`: 768 toolbar 705 → 720px, 1024 two rows → one row
+  (field 344.6 → 202.9px), 1440 1105 → 1120px. On the branch all three are unchanged. The cost:
+  when the list is short enough not to scroll, the empty 15px gutter shows the canvas beside the top
+  bar, where the scrollbar track was. `overflow-y: scroll` was not used, because it would stop the
+  modal's `body { overflow: hidden }` reaching the viewport, so the page behind a modal would
+  scroll.
+- **Tests:**
+  - `client/tests/components/popoverPanel.test.tsx` stubs a 360px page and checks three things: a
+    right-aligned menu is clamped to 16px, a left-aligned one to 104px, and a panel follows a
+    re-render that moves its trigger. All three fail against the old `Popover` and hook.
+  - `client/tests/applications/toolbarMenus.test.tsx` holds the gutter rule and that the toolbar
+    carries its marker. That is a contract check, since jsdom has no scrollbars.
+  - `e2e/audits/clearFilters.spec.ts` adds the 1280 check and a 375 check that each menu's panel
+    sits inside the gutter. Run locally against both builds, it fails on `main` with -116.9 for
+    Columns, 14.9 for Export CSV, a 509.6 right edge for Filters, and a 1280 shift. It passes on
+    the branch.
+
+## Board drags: named announcements, a preview on the pointer, and a handle that takes a finger (19 Oct 2026)
+
+Fixes issues #90 and #94. Addresses #95, which still needs a check on a real phone.
+
+- **#90:** `DndContext` gets `accessibility` with the board's own announcements
+  (`boardAnnouncements.ts`), built from `CardDragData.company`, the card's starting status and
+  `STATUS_CONFIG[...].label`. For example: "Picked up Shopee, in Saved.", "Shopee is over Applied.",
+  "Shopee dropped in Applied." and "Move cancelled. Shopee is back in Saved." No message carries
+  the database id or a raw status key. The hidden instructions now say "application" and name the
+  keys the board uses (Space or Enter, left and right arrows, Escape).
+- **#90, found while testing:** dnd-kit reports the card's own column as the first "over" right
+  after pick-up, which replaced "Picked up…" in the assertive live region in the same tick, so it
+  could never be read. That was already true of the defaults. The first report is skipped when it
+  is the starting column, and a later move back to that column is still announced. That needs a
+  little state per board, so the announcements come from `createBoardAnnouncements()`, memoised in
+  `KanbanBoard`.
+- **#90, test changed deliberately:** `moveHandle.test.tsx` pinned dnd-kit's default instruction
+  wording ("press the space bar"). The wording was what #90 asked to change, so the assertion now
+  matches the board's own sentence. It still checks that the instructions are the handle's
+  description.
+- **#94, cause:** the `DragOverlay` wrapper rendered inside `BoardPage`'s `space-y-5`, which gives
+  it `margin-top: 20px`. A fixed box still takes its margin, so the copy sat 20px below the pointer
+  at every card height. It was measured on the real build: the wrapper had `top: 236.95px` and
+  `translate(60px, 40px)` but drew at y = 296.95, and its `margin-top` read 20px. No ancestor made
+  a containing block.
+- **#94, fix:** `BoardDragLayer` portals the overlay to `body`. The copy now lands at exactly +60,
+  +40 for a +60, +40 pointer move.
+- **#95:** the Move button gets `touch-none`, dnd-kit's documented requirement for a
+  `PointerSensor` handle. No `TouchSensor` was added. Under Chrome DevTools touch emulation at 375,
+  a 160px finger drag from the handle went like this:
+  - On `main`: the preview appeared for a moment, then the browser cancelled the pointer stream,
+    so there was no drag and no scroll.
+  - On the branch: the drag stays active, and the board auto-scrolls as the finger nears its edge.
+
+  This is emulation, not a phone. #95 stays open until it is checked on a real device. The cost is
+  that a swipe that starts on the Move bar no longer scrolls the page. That bar is the only thing
+  on the card that drags.
+
+- **Tests:**
+  - `client/tests/board/announcements.test.tsx` reads the live region after a keyboard pick-up,
+    move, drop and cancel. All three cases fail without the `accessibility` prop.
+  - `e2e/audits/moveHandle.spec.ts` checks `touch-action: none` on the handle, and that the
+    preview sits at the card's box plus the pointer's travel. Run locally, it passes on the branch
+    and fails on `main` at the touch-action check.
 
 ## The app-wide border token stays as it is (19 Oct 2026)
 

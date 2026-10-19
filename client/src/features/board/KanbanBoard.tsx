@@ -9,7 +9,8 @@ import {
   type CollisionDetection,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
+import { boardInstructions, createBoardAnnouncements } from '@/features/board/boardAnnouncements';
 import { BoardColumn } from '@/features/board/BoardColumn';
 import { BoardDragLayer } from '@/features/board/BoardDragLayer';
 import { BoardJumpStrip } from '@/features/board/BoardJumpStrip';
@@ -26,11 +27,13 @@ interface KanbanBoardProps {
   onMove: (id: string, status: ApplicationStatus, version?: number) => void;
 }
 
-/** Pointer drags resolve by what is under the cursor; keyboard moves by centre. */
-const collisionDetection: CollisionDetection = (args) => {
-  const underPointer = pointerWithin(args);
-  return underPointer.length > 0 ? underPointer : closestCenter(args);
-};
+/**
+ * Pointer drags resolve by what is under the cursor, and only that: a release
+ * outside every column is no drop, so the drag cancels as Escape does (issue
+ * #97). Keyboard moves carry no pointer and resolve by centre.
+ */
+const collisionDetection: CollisionDetection = (args) =>
+  args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
 
 /**
  * The drag surface, and only the drag surface.
@@ -56,6 +59,7 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
   );
 
   const boardRef = useRef<HTMLDivElement>(null);
+  const announcements = useMemo(createBoardAnnouncements, []);
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
   /** Brings a column to the board's left edge, or as far as the board scrolls. */
@@ -83,7 +87,12 @@ export function KanbanBoard({ applications, onOpen, onMove }: KanbanBoardProps):
   const columns = buildColumns(applications);
 
   return (
-    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragEnd={onDragEnd}
+      accessibility={{ announcements, screenReaderInstructions: boardInstructions }}
+    >
       {/*
         SPEC section 6: at 375 px this scrolls sideways rather than squeezing.
 

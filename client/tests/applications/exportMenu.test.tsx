@@ -130,12 +130,38 @@ describe('the Export CSV menu', () => {
     await user.click(trigger);
 
     expect(screen.getByRole('menu', { name: 'Export CSV' })).toBeInTheDocument();
+    // The list holds one row, and both choices carry what the list shows (#83).
     expect(screen.getByRole('menuitem', { name: 'Shown columns (7)' })).toHaveAccessibleDescription(
-      'The columns in the table. May not import again if Role is hidden.',
+      '1 application, as listed. The columns in the table. May not import again if Role is hidden.',
     );
     expect(screen.getByRole('menuitem', { name: 'All fields' })).toHaveAccessibleDescription(
-      'Every field. Can be imported again.',
+      '1 application, as listed. Every field. Can be imported again.',
     );
+  });
+
+  // Issue #83: the request carries the view's search, filters, archived and
+  // sort, and never its paging, so the file is every row the view holds.
+  it('sends the current view without its page', async () => {
+    const user = userEvent.setup();
+    const api = installMockApi({
+      'GET /applications': () => ({ status: 200, data: makeListResponse([makeApplication()]) }),
+      [`GET ${EXPORT_URL}`]: () => ({ status: 200, data: new Blob(['company\n']) }),
+    });
+    signIn(makeSession());
+    renderWithProviders(<App />, {
+      route: '/applications?search=intern&status=applied&archived=true&sort=company:asc&page=2',
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Export CSV' }));
+    await user.click(screen.getByRole('menuitem', { name: 'All fields' }));
+
+    expect(await exportParams(api)).toEqual({
+      format: 'csv',
+      search: 'intern',
+      status: 'applied',
+      archived: 'true',
+      sort: 'company:asc',
+    });
   });
 
   it('opens with Enter, moves with the arrows, Home and End, and selects with Enter', async () => {
