@@ -707,11 +707,13 @@ Notes:
 - [x] `DEPLOYMENT.md` complete (Atlas + Render + Vercel, env vars, cross-origin cookies, trust proxy;
       since rewritten for Railway, where production runs)
 - [x] SPF/DKIM/DMARC documented — records, syntax, DMARC rollout, warm-up, unsubscribe headers
-- [ ] **Test email reached a real Gmail inbox, not spam** — needs a live domain. Manual, below.
+- [x] **Test email reached a real Gmail inbox, not spam** — 19 Oct 2026, from `tracker.naabel.com`.
+      Details below.
 - [x] Deploy workflow (`.github/workflows/deploy.yml`, off by default behind `DEPLOY_ENABLED`)
 - [x] Uptime monitor documented (UptimeRobot on `/health` every 5 min; on Railway, with sleeping
       off, it is availability alerting only)
-- [ ] **Uptime monitor actually created** — needs the deployed URL. Manual, below.
+- [x] **Uptime monitor actually created** — 19 Oct 2026, UptimeRobot on the API's `/health` and
+      the client's `/`. Details below.
 - [x] Cross-origin cookie configuration implemented in code, not only documented
 - [x] `npm run stats` (SPEC §14, deferred by Phase 14) built
 - [x] Source maps no longer published with the client build
@@ -807,7 +809,7 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 26  | Bundle sizes within budget; Chart.js not on landing              | verified                                   | `check:bundle`: landing 111.4 KB/150 printing "excludes Chart.js", dashboard 215.4 KB/300                                                                |
 | 27  | Stale edit returns 409, UI handles it; `migrate` runs clean      | verified                                   | `application.concurrency.test.ts`, `client/tests/board/conflictDialogSurvival.test.tsx`, `migrations.test.ts`                                            |
 | 28  | LICENSE, CONTRIBUTING, CoC, SECURITY, CHANGELOG, templates       | verified                                   | All nine files present                                                                                                                                  |
-| 29  | SPF/DKIM/DMARC documented **and** a test email reached Gmail     | verified (documented) / **pending deploy** | Records, syntax and rollout in DEPLOYMENT.md §7.2; inbox placement needs a live domain                                                                   |
+| 29  | SPF/DKIM/DMARC documented **and** a test email reached Gmail     | verified                                   | Records, syntax and rollout in DEPLOYMENT.md §7.2; on 19 Oct 2026 a reset email from `tracker.naabel.com` reached a Gmail Inbox, SPF/DKIM/DMARC all PASS   |
 
 Five items carry a `pending deploy` half — 4, 5, 21, 23 and 29 — plus the uptime monitor, Sentry
 receiving live events, and backups being enabled. Every one of them needs infrastructure that does
@@ -957,35 +959,47 @@ nothing is lost.
 
 - [x] **Create the accounts.** MongoDB Atlas, Railway, the object store and Resend. DEPLOYMENT.md
       steps 1, 2, 4, 5 and 7. Production is live on all four.
-- [ ] **Buy a domain and verify it in Resend.** Production still sends from `@resend.dev`, and
-      Resend only delivers that sender to the account owner's own address, so verification and
-      reset emails never reach any other user. A domain is also the only way to pass DMARC: no
-      consumer address can. DEPLOYMENT.md §7.1.
+- [x] **Buy a domain and verify it in Resend.** Done 19 Oct 2026: `naabel.com`, bought through
+      Railway, so its DNS is managed under Railway → Workspace → Domains, not at the registrar.
+      Resend sends from the `tracker.naabel.com` subdomain (region ap-northeast-1). Before this,
+      production sent from `@resend.dev`, which Resend only delivers to the account owner.
+      DEPLOYMENT.md §7.1.
 - [x] **Generate two fresh JWT secrets** with `openssl rand -base64 48`. Done: the env loader
       refuses to boot in production with the development ones, and production boots.
-- [ ] **Publish the SPF, DKIM and DMARC records** Resend shows for the domain, then confirm with
+- [x] **Publish the SPF, DKIM and DMARC records** Resend shows for the domain, then confirm with
       `dig` and wait for the dashboard to say Verified. DEPLOYMENT.md §7.2. Then set `MAIL_FROM`
-      on the API service to an address on that domain.
-- [ ] **Send a verification email to a real Gmail, Outlook and Yahoo address** and confirm it
+      on the API service to an address on that domain. Done 19 Oct 2026. Resend now asks for
+      two CNAMEs (`send.tracker`, `rsend.tracker`) for SPF instead of the MX + TXT pair §7.2
+      describes, plus the DKIM TXT and `_dmarc` at `p=none`. `MAIL_FROM` is
+      `Internship Tracker <no-reply@tracker.naabel.com>`.
+- [x] **Send a verification email to a real Gmail, Outlook and Yahoo address** and confirm it
       lands in the Inbox with `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS` under Gmail's Show
-      original. This is Definition-of-Done item 29 and nothing in this repository can prove it.
-- [ ] **Walk DEPLOYMENT.md §6.4 in a browser on the live Railway domains.** Confirm the
-      `refresh_token` cookie reads `SameSite=None; Secure`, that a hard reload keeps you signed
-      in, and that Export CSV saves the dated filename. This is the one part of the deployment
-      that fails silently, and it is the half of the cookie fix that CI structurally cannot
-      reach.
-- [ ] **Create the UptimeRobot monitors**: `https://<api>/health` and the client's `/`, at
+      original. Gmail done 19 Oct 2026: a reset email reached the Inbox in one second, with SPF,
+      DKIM (`tracker.naabel.com`) and DMARC all PASS. Outlook and Yahoo are not tested yet.
+- [x] **Walk DEPLOYMENT.md §6.4 in a browser on the live Railway domains.** Done 19 Oct 2026 in
+      Edge, as the demo account. The cookie reads `SameSite=None`, `Secure`, `HttpOnly`,
+      `Path=/api/v1/auth`. A hard reload kept the session (`/auth/refresh` 200, with the cookie
+      sent), 16 idle minutes produced no API error, and Export CSV saved
+      `applications-2026-10-19.csv`.
+- [x] **Create the UptimeRobot monitors**: `https://<api>/health` and the client's `/`, at
       5-minute intervals (DEPLOYMENT.md §10.1). Railway services do not sleep unless sleeping is
-      turned on, so this is availability alerting, not a keep-warm.
+      turned on, so this is availability alerting, not a keep-warm. Done 19 Oct 2026, with
+      exactly those two monitors. No test alert has been sent yet.
 - [x] **Run the seed against Atlas** so "Try the demo" has an account. Done 22 Sep 2026, after
       the live button had answered `DEMO_UNAVAILABLE`: seeded through `railway shell` with the
       standard (non-SRV) connection string, because `railway run` failed on Windows with
       `querySrv ECONNREFUSED`. "Try the demo" signs in with 64 applications on production.
       DEPLOYMENT.md step 11; the Windows note is in DECISIONS.md.
-- [ ] **Run `scripts/backup.sh` once and test a restore.** Atlas M0 has no automated backup —
-      that is a real gap in the free tier, not a setting to find. DEPLOYMENT.md §10.3.
-- [ ] **Optional: enable Sentry**, then trigger one deliberate 500 and confirm it arrives. An
-      error tracker nobody has tested is an error tracker that is not working.
+- [x] **Run `scripts/backup.sh` once and test a restore.** Atlas M0 has no automated backup —
+      that is a real gap in the free tier, not a setting to find. DEPLOYMENT.md §10.3. Done 19 Oct
+      2026. `mongodump` is not installed on the Windows machine, so the script ran inside a
+      `mongo:7` container. The archive restored into a scratch container, not production: 134
+      documents, 0 failures, and every collection count matched production.
+- [x] **Optional: enable Sentry**, then trigger one deliberate 500 and confirm it arrives. An
+      error tracker nobody has tested is an error tracker that is not working. Enabled 19 Oct
+      2026 on both services (US region). An event was confirmed arriving, but it was a ZodError
+      behind a 400, which exposed the filter bug PR #116 fixed: Sentry now reports only what the
+      client sees as a 5xx. No real 500 has been triggered yet.
 - [x] **Enable the deploy workflow.** Done 25 Sep 2026: `DEPLOY_ENABLED`, `RAILWAY_TOKEN`,
       `RAILWAY_API_SERVICE` and `RAILWAY_WEB_SERVICE` are set, and `deploy.yml` deploys each
       green `main` commit by SHA. Railway's own push trigger stays deleted on both services; see

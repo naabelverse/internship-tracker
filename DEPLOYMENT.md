@@ -933,7 +933,11 @@ What follows is the shape, so you can tell whether what you were shown is comple
 | TXT  | `resend._domainkey.tracker.example.com` | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GN…`                        | **DKIM** (key from the dashboard) |
 | TXT  | `_dmarc.tracker.example.com`            | `v=DMARC1; p=none; rua=mailto:dmarc@tracker.example.com` | **DMARC**                         |
 
-The region in the MX value varies with the region you chose. DKIM signs with `d=tracker.example.com`,
+The region in the MX value varies with the region you chose. Newer Resend domains (seen in
+October 2026) show two CNAMEs in place of the MX + SPF TXT pair: `send.tracker` →
+`send.forge.rmta.net` and `rsend.tracker` → `rsend-<region>.forge.rmta.net`. Copy whichever set the dashboard shows. If the
+domain was bought through Railway, add the records under Railway → Workspace → Domains, not at the
+registrar the nameservers name. DKIM signs with `d=tracker.example.com`,
 which aligns with your `From` domain — that alignment, not the SPF pass alone, is what makes DMARC
 pass.
 
@@ -1511,14 +1515,14 @@ launch.
       configuration one. `VITE_*` values are compiled into the bundle at image build time, so
       changing it needs a **redeploy**; a restart will not pick it up. `ALLOWED_HOSTS`
       (comma-separated) is available if you need to serve two domains at once during a migration.
-- [ ] The `refresh_token` cookie shows `SameSite=None`, `Secure`, `HttpOnly`, `Path=/api/v1/auth`.
-- [ ] Signing in and **hard-reloading** leaves you signed in.
-- [ ] Export CSV → All fields saves as `applications-YYYY-MM-DD.csv`, not `applications.csv`.
+- [x] The `refresh_token` cookie shows `SameSite=None`, `Secure`, `HttpOnly`, `Path=/api/v1/auth`.
+- [x] Signing in and **hard-reloading** leaves you signed in.
+- [x] Export CSV → All fields saves as `applications-YYYY-MM-DD.csv`, not `applications.csv`.
 
 **Email**
 
-- [ ] SPF, DKIM and DMARC resolve for the sending domain and the provider dashboard shows Verified.
-- [ ] `MAIL_FROM` uses a domain you control, with a real display name.
+- [x] SPF, DKIM and DMARC resolve for the sending domain and the provider dashboard shows Verified.
+- [x] `MAIL_FROM` uses a domain you control, with a real display name.
 - [ ] A verification email **reached the Inbox** of a real Gmail, Outlook and Yahoo address, with
       `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS` under Gmail's Show original.
 - [ ] The verification link in that email works against the deployed client.
@@ -1531,7 +1535,7 @@ launch.
       effect.
 - [ ] The uptime monitor is live on `/health` at 5-minute intervals and has sent a test alert.
 - [ ] If Sentry is enabled, a deliberately triggered 500 has appeared in the issue stream.
-- [ ] `scripts/backup.sh` has been run once **and a restore from that archive has been tested**.
+- [x] `scripts/backup.sh` has been run once **and a restore from that archive has been tested**.
 - [x] `CONTACT_EMAIL` in `client/src/lib/siteMeta.ts` is a real address — the `{{CONTACT_EMAIL}}`
       placeholder must not be live on Terms, Privacy, the footer or `SECURITY.md`.
 
