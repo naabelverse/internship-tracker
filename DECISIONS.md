@@ -4401,11 +4401,10 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   eleven bars against eight series tokens, which would have brought back the repeated-colour bug
   that `tokenContrast.test.ts` guards. With one colour, that cannot happen however long the list
   gets.
-- **OPEN FOLLOW-UP, issue #61: `sourceOther` is not searchable.** List search uses the text index
-  on `company`, `role`, `notes` and `tags`, so searching "Glints" does not find "Other: Glints".
-  MongoDB allows one text index per collection, so adding the field means dropping and rebuilding
-  that index on production. That needs its own migration and a quiet moment, so it was kept out of
-  PR #60. Until it lands, filter by Source = Other.
+- **RESOLVED (issue #61): `sourceOther` is searchable.** Correction: this entry first said list
+  search uses the text index, so adding the field would need the index rebuilt. It does not: list
+  search is one escaped, case-insensitive regex per field, and `sourceOther` was simply missing
+  from that list. It was added in the fix for #61, with no index change or migration.
 - **Not changed:** `schemaVersion` stays at 1, because the field is additive and optional, and the
   migration's own filter makes it idempotent.
 
@@ -5573,3 +5572,16 @@ Fixes #83. The owner chose both behaviours on 18 Oct 2026.
   - `exportMenu.test.tsx`: the descriptions now carry the count, and a new case checks that
     the request sends the view without `page`.
   - Against the old source, 7 server cases and 2 client cases fail.
+
+## Search matches the "Other: please specify" text (19 Oct 2026)
+
+Fixes issue #61.
+
+- `buildFilter` adds `{ sourceOther: pattern }` to the search `$or`, so "Glints" finds a row the
+  table shows as "Other: Glints". No index or migration is involved; see the corrected entry
+  under "Malaysia-focused sources".
+- **Placeholder unchanged:** it still reads "Search company, role, tags or notes". Adding
+  "source" would lengthen the text the toolbar's search width is sized around (issue #87), and
+  the free-text source is a niche field; matching it silently is enough.
+- **Test:** `server/tests/application.list.test.ts` searches `glint` and expects only the row
+  whose `sourceOther` is "Glints". It fails without the fix.

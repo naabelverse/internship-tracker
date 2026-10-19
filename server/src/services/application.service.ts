@@ -163,7 +163,13 @@ export function buildFilter(
 
   if (query.search) {
     const pattern = containsRegex(query.search);
-    filter.$or = [{ company: pattern }, { role: pattern }, { tags: pattern }, { notes: pattern }];
+    filter.$or = [
+      { company: pattern },
+      { role: pattern },
+      { tags: pattern },
+      { notes: pattern },
+      { sourceOther: pattern },
+    ];
   }
 
   if (query.status?.length) filter.status = { $in: query.status };
