@@ -5608,3 +5608,29 @@ component, which the test only exposed under load.
   lets the write happen, clicks Clear and then delivers the late echo. Without the fix it fails
   with the field holding "stri", as in #91. A second case holds that an outside change still
   re-seeds the field.
+
+## Dashboard cards shrink with the window, and Total says it counts archived rows (19 Oct 2026)
+
+Fixes issues #79 and #80.
+
+- **#79, confirmed before fixing.** On a real build with real scrollbars, loading the dashboard at
+  1440 and narrowing to 375 without a reload left the document 713 to 749px wide (749 in the e2e
+  run, as in the issue). Loading at 375 was fine. Chart.js pins each canvas to its last width in
+  pixels, and every chart card is a grid item with the default `min-width: auto`, so the canvas
+  held its card wide. The issue named only the timeline; measuring every card showed the four
+  charts in the two-column grid stuck at 537px too, once the timeline was fixed.
+- **Fix:** `min-w-0` on `ChartFrame`'s card, which is the grid item for four charts, and on the
+  timeline's `lg:col-span-2` wrapper, which is the grid item for the fifth. After it, 1440 then
+  375 gives 360/360 (scrollbar shown) and every card is 328px, the same as a page loaded at 375.
+- **#80, option 2 from the issue:** the Total card gets an "About Total" `InfoTip` saying it
+  includes archived applications, that the Applications list hides them until Show archived is
+  ticked, and that the rates use this total. Option 1 (an archived count in the list header) needs
+  a new `meta` field from the list query; the tip explains the gap with no API change. What Total
+  counts is unchanged, because the rates are built on it.
+- **Layout:** `StatCard` takes an optional `tip`, shown after the label in a flex row. Measured at
+  1440 and 375: the Total card's label row stays 16px, the card is the same height as Active
+  (117.3 / 127.3px), and the tip's panel stays inside the viewport (64 to 320 of 360 at 375).
+- **Tests:** `e2e/audits/overflow.spec.ts` adds a case that loads the dashboard at 1440 and
+  resizes to 375. Run locally against both builds, it fails on `main` (document 749/375) and
+  passes on the branch. It runs in CI's e2e job, not in `npm run verify`.
+  `client/tests/dashboard/dashboard.test.tsx` opens "About Total" and reads the archived sentence.
