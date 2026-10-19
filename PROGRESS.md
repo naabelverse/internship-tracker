@@ -984,7 +984,9 @@ nothing is lost.
 - [x] **Create the UptimeRobot monitors**: `https://<api>/health` and the client's `/`, at
       5-minute intervals (DEPLOYMENT.md §10.1). Railway services do not sleep unless sleeping is
       turned on, so this is availability alerting, not a keep-warm. Done 19 Oct 2026, with
-      exactly those two monitors. No test alert has been sent yet.
+      exactly those two monitors. Alerting was tested the same day: a temporary monitor on a
+      404 path went Down, its "Monitor is DOWN" email reached the Gmail Inbox, and the monitor
+      was then deleted.
 - [x] **Run the seed against Atlas** so "Try the demo" has an account. Done 22 Sep 2026, after
       the live button had answered `DEMO_UNAVAILABLE`: seeded through `railway shell` with the
       standard (non-SRV) connection string, because `railway run` failed on Windows with
@@ -999,7 +1001,12 @@ nothing is lost.
       error tracker nobody has tested is an error tracker that is not working. Enabled 19 Oct
       2026 on both services (US region). An event was confirmed arriving, but it was a ZodError
       behind a 400, which exposed the filter bug PR #116 fixed: Sentry now reports only what the
-      client sees as a 5xx. No real 500 has been triggered yet.
+      client sees as a 5xx. A deliberate 500 then went through the app's own `initSentry`,
+      `shouldReportToSentry` and `errorHandler` wiring. It ran locally against the production
+      DSN, tagged `environment=development`, so production itself never served a 500. Sentry
+      accepted it (HTTP 200) and the issue appeared. Two earlier attempts from `127.0.0.1` never
+      showed up: Sentry's localhost inbound filter dropped them, so the request needed a
+      non-localhost `Host`.
 - [x] **Enable the deploy workflow.** Done 25 Sep 2026: `DEPLOY_ENABLED`, `RAILWAY_TOKEN`,
       `RAILWAY_API_SERVICE` and `RAILWAY_WEB_SERVICE` are set, and `deploy.yml` deploys each
       green `main` commit by SHA. Railway's own push trigger stays deleted on both services; see
