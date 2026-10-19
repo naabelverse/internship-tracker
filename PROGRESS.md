@@ -704,11 +704,13 @@ Notes:
   one-line change.
 
 ## Phase 16 — Ship
-- [x] `DEPLOYMENT.md` complete (Atlas + Render + Vercel, env vars, cross-origin cookies, trust proxy)
+- [x] `DEPLOYMENT.md` complete (Atlas + Render + Vercel, env vars, cross-origin cookies, trust proxy;
+      since rewritten for Railway, where production runs)
 - [x] SPF/DKIM/DMARC documented — records, syntax, DMARC rollout, warm-up, unsubscribe headers
 - [ ] **Test email reached a real Gmail inbox, not spam** — needs a live domain. Manual, below.
 - [x] Deploy workflow (`.github/workflows/deploy.yml`, off by default behind `DEPLOY_ENABLED`)
-- [x] Uptime monitor documented (UptimeRobot on `/health` every 5 min, doubling as the keep-warm)
+- [x] Uptime monitor documented (UptimeRobot on `/health` every 5 min; on Railway, with sleeping
+      off, it is availability alerting only)
 - [ ] **Uptime monitor actually created** — needs the deployed URL. Manual, below.
 - [x] Cross-origin cookie configuration implemented in code, not only documented
 - [x] `npm run stats` (SPEC §14, deferred by Phase 14) built
@@ -949,37 +951,45 @@ _The agent appends anything it cannot do itself here — DNS records, account si
 
 ### Phase 16 — everything that needs a real deployment
 
-`DEPLOYMENT.md` is the walkthrough for all of this; the pointers below are so nothing is lost.
+Production runs on Railway (two services, `web` and the API), with MongoDB Atlas, an
+S3-compatible bucket and Resend. `DEPLOYMENT.md` is the walkthrough; the pointers below are so
+nothing is lost.
 
-- [ ] **Create the four accounts.** MongoDB Atlas, Render, Vercel, and an email provider
-      (Resend is the documented default). DEPLOYMENT.md steps 1, 4, 5 and 7.
-- [ ] **Buy a domain.** Optional for the app, required for email: no consumer address can pass
-      DMARC for mail you send, so verification emails from a `@gmail.com` sender land in spam.
-- [ ] **Generate two fresh JWT secrets** with `openssl rand -base64 48` and never reuse the
-      development ones. The env loader refuses to boot in production if you do.
-- [ ] **Publish the SPF, DKIM and DMARC records** your provider shows you, then confirm with
-      `dig` and wait for the dashboard to say Verified. DEPLOYMENT.md §7.2.
+- [x] **Create the accounts.** MongoDB Atlas, Railway, the object store and Resend. DEPLOYMENT.md
+      steps 1, 2, 4, 5 and 7. Production is live on all four.
+- [ ] **Buy a domain and verify it in Resend.** Production still sends from `@resend.dev`, and
+      Resend only delivers that sender to the account owner's own address, so verification and
+      reset emails never reach any other user. A domain is also the only way to pass DMARC: no
+      consumer address can. DEPLOYMENT.md §7.1.
+- [x] **Generate two fresh JWT secrets** with `openssl rand -base64 48`. Done: the env loader
+      refuses to boot in production with the development ones, and production boots.
+- [ ] **Publish the SPF, DKIM and DMARC records** Resend shows for the domain, then confirm with
+      `dig` and wait for the dashboard to say Verified. DEPLOYMENT.md §7.2. Then set `MAIL_FROM`
+      on the API service to an address on that domain.
 - [ ] **Send a verification email to a real Gmail, Outlook and Yahoo address** and confirm it
       lands in the Inbox with `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS` under Gmail's Show
       original. This is Definition-of-Done item 29 and nothing in this repository can prove it.
-- [ ] **Walk DEPLOYMENT.md §6.4 in a browser once the two domains are live.** Confirm the
+- [ ] **Walk DEPLOYMENT.md §6.4 in a browser on the live Railway domains.** Confirm the
       `refresh_token` cookie reads `SameSite=None; Secure`, that a hard reload keeps you signed
       in, and that Export CSV saves the dated filename. This is the one part of the deployment
       that fails silently, and it is the half of the cookie fix that CI structurally cannot
       reach.
-- [ ] **Create the UptimeRobot monitor** on `https://<api>/health` at 5-minute intervals. It is
-      both the availability alert and the keep-warm that stops Render's free tier sleeping.
+- [ ] **Create the UptimeRobot monitors**: `https://<api>/health` and the client's `/`, at
+      5-minute intervals (DEPLOYMENT.md §10.1). Railway services do not sleep unless sleeping is
+      turned on, so this is availability alerting, not a keep-warm.
 - [x] **Run the seed against Atlas** so "Try the demo" has an account. Done 22 Sep 2026, after
       the live button had answered `DEMO_UNAVAILABLE`: seeded through `railway shell` with the
       standard (non-SRV) connection string, because `railway run` failed on Windows with
       `querySrv ECONNREFUSED`. "Try the demo" signs in with 64 applications on production.
       DEPLOYMENT.md step 11; the Windows note is in DECISIONS.md.
 - [ ] **Run `scripts/backup.sh` once and test a restore.** Atlas M0 has no automated backup —
-      that is a real gap in the free tier, not a setting to find.
+      that is a real gap in the free tier, not a setting to find. DEPLOYMENT.md §10.3.
 - [ ] **Optional: enable Sentry**, then trigger one deliberate 500 and confirm it arrives. An
       error tracker nobody has tested is an error tracker that is not working.
-- [ ] **Enable the deploy workflow** by setting the `DEPLOY_ENABLED` repository secret to
-      `true` plus the two deploy-hook URLs. It is inert until you do.
+- [x] **Enable the deploy workflow.** Done 25 Sep 2026: `DEPLOY_ENABLED`, `RAILWAY_TOKEN`,
+      `RAILWAY_API_SERVICE` and `RAILWAY_WEB_SERVICE` are set, and `deploy.yml` deploys each
+      green `main` commit by SHA. Railway's own push trigger stays deleted on both services; see
+      "deploy.yml is the only deploy path" in DECISIONS.md.
 - [x] **Run the orphaned-upload sweep once in production (issue #42).** Done 26 Sep 2026: 0 files
       before, 0 after; production had no attachments and an empty bucket. The original step:
       `railway run npm run storage:sweep -w server` for the dry run, review the keys, then
