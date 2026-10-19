@@ -4401,11 +4401,10 @@ day, a hover wash, a today marker) instead of being drawn by the browser.
   eleven bars against eight series tokens, which would have brought back the repeated-colour bug
   that `tokenContrast.test.ts` guards. With one colour, that cannot happen however long the list
   gets.
-- **OPEN FOLLOW-UP, issue #61: `sourceOther` is not searchable.** List search uses the text index
-  on `company`, `role`, `notes` and `tags`, so searching "Glints" does not find "Other: Glints".
-  MongoDB allows one text index per collection, so adding the field means dropping and rebuilding
-  that index on production. That needs its own migration and a quiet moment, so it was kept out of
-  PR #60. Until it lands, filter by Source = Other.
+- **RESOLVED (issue #61): `sourceOther` is searchable.** Correction: this entry first said list
+  search uses the text index, so adding the field would need the index rebuilt. It does not: list
+  search is one escaped, case-insensitive regex per field, and `sourceOther` was simply missing
+  from that list. It was added in the fix for #61, with no index change or migration.
 - **Not changed:** `schemaVersion` stays at 1, because the field is additive and optional, and the
   migration's own filter makes it idempotent.
 
@@ -5537,6 +5536,78 @@ Fixes #99, #98 and #102.
   - `client/tests/lib/deadlineDates.test.tsx` sets `TZ=America/Los_Angeles` for its own
     worker, so #99 is proven west of UTC in CI too.
   - Against the old source, 9 client cases and 1 server case fail.
+
+## A Board drag released outside every column cancels (18 Oct 2026)
+
+Fixes #97.
+
+- **Pointer drags now resolve by `pointerWithin` alone**, so a release over no column is no
+  drop, and the card and its status stay put, as they do on Escape. The `closestCenter`
+  fallback had always found some column, so a release over the page heading silently changed
+  the status.
+- **Keyboard drags keep `closestCenter`.** dnd-kit gives them `pointerCoordinates: null`, which
+  is what the collision function switches on, rather than on an empty `pointerWithin` result.
+- **Test:** `dragAndDrop.test.tsx` releases 200px above the Interview column. Against the old
+  code it sends the PATCH and fails; the keyboard cases are unchanged and pass.
+
+## Export CSV carries the rows the list shows, and says how many (18 Oct 2026)
+
+Fixes #83. The owner chose both behaviours on 18 Oct 2026.
+
+- **Both choices follow the view.** Shown columns and All fields both apply the list's search,
+  filters, "Show archived" and sort, and never its paging. `exportQuerySchema` is now the list
+  schema without `page` and `limit`, plus `format` and `columns`, and the service reuses the
+  list's `buildFilter`, so the two cannot drift apart.
+- **The complete backup is Settings → Export all my data**, a separate endpoint this change
+  does not touch. An `/applications/export` call with no parameters now hides archived rows,
+  exactly as `GET /applications` does. This changes the API, and the OpenAPI entry says so.
+- **Each menu choice states the row count** from the list's own `meta.total` ("18
+  applications, as listed."), so it costs no extra request. The count sits in each item's
+  description rather than in a caption, because a `role="menu"` may only hold menu items.
+- **Tests:**
+  - `application.exportColumns.test.ts`: the default row count changed from 3 to 2 on
+    purpose, since the archived row is now hidden. The full-field round trip exports with
+    `archived=true`, as a user would from the archived view. A new table covers search,
+    status, Show archived and sort on both choices.
+  - `exportMenu.test.tsx`: the descriptions now carry the count, and a new case checks that
+    the request sends the view without `page`.
+  - Against the old source, 7 server cases and 2 client cases fail.
+
+## Search matches the "Other: please specify" text (19 Oct 2026)
+
+Fixes issue #61.
+
+- `buildFilter` adds `{ sourceOther: pattern }` to the search `$or`, so "Glints" finds a row the
+  table shows as "Other: Glints". No index or migration is involved; see the corrected entry
+  under "Malaysia-focused sources".
+- **Placeholder unchanged:** it still reads "Search company, role, tags or notes". Adding
+  "source" would lengthen the text the toolbar's search width is sized around (issue #87), and
+  the free-text source is a niche field; matching it silently is enough.
+- **Test:** `server/tests/application.list.test.ts` searches `glint` and expects only the row
+  whose `sourceOther` is "Glints". It fails without the fix.
+
+## The search field ignores the late echo of its own URL write (19 Oct 2026)
+
+Fixes issue #91, which was filed as a possible test timing weakness. It is a real race in the
+component, which the test only exposed under load.
+
+- **Cause:** the router runs with `v7_startTransition`, so the search field's debounced URL write
+  commits in a transition. When typing is slow enough for the 300 ms timer to fire before Clear
+  search is clicked, the click empties the field first and the transition commits afterwards.
+  The re-seed effect then saw `filters.search` change to "stri", put it back in the field and
+  cancelled the queued write of the empty value. The field and the URL both kept the old term.
+  That matches the failure in #91 exactly (the field held "stri", and the test took 1200 ms
+  instead of its usual 400 ms).
+- **Fix:** the toolbar remembers the last value it wrote (`lastWriteRef`), and the effect skips a
+  `filters.search` equal to it. A change from anywhere else (Clear filters, a link, back and
+  forward) still re-seeds the field and drops a pending write. The one case it no longer re-seeds
+  is an outside change to exactly the term the field last wrote, where the URL already says what
+  the field wrote.
+- **Not changed:** the existing searchField test. It was right; the component was wrong.
+- **Test:** `client/tests/applications/searchField.test.tsx` renders the toolbar directly, types,
+  lets the write happen, clicks Clear and then delivers the late echo. Without the fix it fails
+  with the field holding "stri", as in #91. A second case holds that an outside change still
+  re-seeds the field.
 
 ## Dashboard cards shrink with the window, and Total says it counts archived rows (19 Oct 2026)
 
