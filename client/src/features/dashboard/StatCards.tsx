@@ -1,3 +1,4 @@
+import { InfoTip } from '@/components/ui/InfoTip';
 import { StatCard } from '@/features/dashboard/StatCard';
 import { WeeklyGoalRing } from '@/features/dashboard/WeeklyGoalRing';
 import type { AnalyticsSummary } from '@/types/analytics';
@@ -42,6 +43,17 @@ export function StatCards({ summary, isLoading }: StatCardsProps): JSX.Element {
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <StatCard
         label="Total"
+        tip={
+          // Issue #80: this counts archived rows and the Applications list does
+          // not, so the two numbers differ with nothing on either page saying why.
+          <InfoTip label="About Total">
+            <p>Every application on your account, archived ones included.</p>
+            <p>
+              The Applications list hides archived ones until you tick Show archived under Filters,
+              so its count can be lower. The rates are worked out from this total.
+            </p>
+          </InfoTip>
+        }
         value={String(summary?.total ?? 0)}
         delta={delta((metrics) => metrics.created)}
         formatDelta={plain}

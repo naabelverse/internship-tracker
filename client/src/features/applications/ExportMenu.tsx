@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Popover } from '@/components/ui/Popover';
 import { DownloadIcon } from '@/components/ui/icons';
+import type { ApplicationFilters } from '@/features/applications/filterParams';
 import {
   useExportApplications,
   type ExportChoice,
@@ -9,6 +10,10 @@ import {
 interface ExportMenuProps {
   /** The table's visible column ids, in table order, from the same state the table reads. */
   shownColumns: readonly string[];
+  /** The list's current view, which the download follows (issue #83). */
+  filters: ApplicationFilters;
+  /** How many rows that view holds, from the list's `meta.total`; unknown while loading. */
+  total?: number;
 }
 
 interface ChoiceDefinition extends ExportChoice {
@@ -31,22 +36,28 @@ interface ChoiceDefinition extends ExportChoice {
  * it moves. The panel is the menus' standard 240px: right-aligned under the
  * trigger, that still fits inside a 375px screen, which a wider one did not.
  */
-export function ExportMenu({ shownColumns }: ExportMenuProps): JSX.Element {
+export function ExportMenu({ shownColumns, filters, total }: ExportMenuProps): JSX.Element {
   const idPrefix = useId();
   const exportApplications = useExportApplications();
   const isPending = exportApplications.isPending;
+
+  // Both choices carry the rows the list shows, so each says how many.
+  const rows =
+    total === undefined
+      ? ''
+      : `${String(total)} ${total === 1 ? 'application' : 'applications'}, as listed. `;
 
   const choices: ChoiceDefinition[] = [
     {
       key: 'shown',
       label: `Shown columns (${String(shownColumns.length)})`,
-      description: 'The columns in the table. May not import again if Role is hidden.',
+      description: `${rows}The columns in the table. May not import again if Role is hidden.`,
       columns: shownColumns,
     },
     {
       key: 'all',
       label: 'All fields',
-      description: 'Every field. Can be imported again.',
+      description: `${rows}Every field. Can be imported again.`,
     },
   ];
 
@@ -87,7 +98,7 @@ export function ExportMenu({ shownColumns }: ExportMenuProps): JSX.Element {
                 close();
                 // One download at a time; a second pick while the first is
                 // still being prepared is ignored rather than queued.
-                if (!isPending) exportApplications.mutate({ columns: choice.columns });
+                if (!isPending) exportApplications.mutate({ filters, columns: choice.columns });
               }}
               className="flex w-full flex-col items-start gap-0.5 rounded-control px-2 py-1.5 text-left transition-colors hover:bg-surface-muted focus:bg-surface-muted"
             >

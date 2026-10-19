@@ -36,7 +36,10 @@ export function ChartFrame({
   children,
 }: ChartFrameProps): JSX.Element {
   return (
-    <Card as="section">
+    // `min-w-0` lets the card shrink as a grid item: Chart.js pins the canvas to
+    // its last width in pixels, and `min-width: auto` would hold the card at it
+    // when the window narrows without a reload (issue #79).
+    <Card as="section" className="min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold stretch-wide text-content">{title}</h2>
