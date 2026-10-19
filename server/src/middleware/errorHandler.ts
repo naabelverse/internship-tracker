@@ -47,8 +47,9 @@ function formatZodIssues(error: ZodError): Record<string, string[]> {
 /**
  * Turns any thrown value into a status, a stable code and a user-safe message.
  * Database and validation library errors are mapped here so no route has to.
+ * Exported so Sentry's filter judges an error by the same status the client gets.
  */
-function normalise(error: unknown): NormalisedError {
+export function normalise(error: unknown): NormalisedError {
   if (error instanceof ApiError) {
     return {
       statusCode: error.statusCode,

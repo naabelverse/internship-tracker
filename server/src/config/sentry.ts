@@ -3,6 +3,7 @@ import type { Express } from 'express';
 import { APP_VERSION } from '@/config/app-info';
 import { env } from '@/config/env';
 import { logger, redactSecrets } from '@/config/logger';
+import { normalise } from '@/middleware/errorHandler';
 
 /**
  * Error reporting, and only when it is asked for.
@@ -67,6 +68,17 @@ export function initSentry(): void {
 }
 
 /**
+ * Whether an error is a fault worth reporting. 4xx are answers, not faults:
+ * reporting them would bury the real failures under every mistyped password.
+ * The status comes from `normalise`, not `error.statusCode`, because a ZodError
+ * or a Mongoose CastError carries no status of its own and only becomes a 400
+ * there.
+ */
+export function shouldReportToSentry(error: unknown): boolean {
+  return normalise(error).statusCode >= 500;
+}
+
+/**
  * Attaches Sentry's Express error handler.
  *
  * Mounted before this application's own `errorHandler` so the report is captured
@@ -77,14 +89,7 @@ export function initSentry(): void {
 export function attachSentryErrorHandler(app: Express): void {
   if (!isSentryEnabled()) return;
 
-  Sentry.setupExpressErrorHandler(app, {
-    // 4xx are answers, not faults. Reporting them would bury the real failures
-    // under every mistyped password and every 404.
-    shouldHandleError: (error) => {
-      const status = (error as { statusCode?: number }).statusCode ?? 500;
-      return status >= 500;
-    },
-  });
+  Sentry.setupExpressErrorHandler(app, { shouldHandleError: shouldReportToSentry });
 }
 
 /** Flushes buffered events during shutdown, so the last crash is not lost. */
