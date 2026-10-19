@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Popover } from '@/components/ui/Popover';
 
 /**
@@ -69,5 +69,79 @@ describe("Popover's panel", () => {
     expect(css).toMatch(
       /@media \(forced-colors: active\)\s*\{\s*\.scroll-panel\s*\{\s*border-color: Canvas;/,
     );
+  });
+});
+
+/**
+ * Issue #85: a menu was placed with CSS alone (`absolute right-0` or `left-0`),
+ * so at 375px Columns opened 117px off the left edge and Filters off the right.
+ * Every panel is now placed from its trigger's box and kept inside the page's
+ * 16px gutter. jsdom has no layout, so the boxes are stubbed: a 360px page (a
+ * 375px window less its scrollbar) and a 240x200 panel.
+ */
+describe("Popover's panel placement", () => {
+  let triggerBox = new DOMRect(0, 100, 90, 36);
+
+  function stubLayout(): void {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function box(
+      this: Element,
+    ) {
+      if (this === document.documentElement) return new DOMRect(0, 0, 360, 900);
+      if (this.tagName === 'BUTTON') return triggerBox;
+      return new DOMRect();
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(240);
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function open(align: 'left' | 'right', trigger = 'Menu') {
+    stubLayout();
+    const user = userEvent.setup();
+    const view = render(
+      <Popover label="Menu" trigger={trigger} align={align}>
+        {() => <p>Panel content</p>}
+      </Popover>,
+    );
+    await user.click(screen.getByRole('button', { name: trigger }));
+
+    return { ...view, panel: screen.getByRole('group', { name: 'Menu' }) };
+  }
+
+  it('keeps a right-aligned menu off the left edge', async () => {
+    triggerBox = new DOMRect(33, 100, 90, 36);
+    const { panel } = await open('right');
+
+    // `right-0` would put it at 123 - 240 = -117.
+    expect(panel).toHaveClass('fixed');
+    expect(panel.style.left).toBe('16px');
+    expect(panel.style.top).toBe('144px');
+  });
+
+  it('keeps a left-aligned menu off the right edge', async () => {
+    triggerBox = new DOMRect(255, 100, 90, 36);
+    const { panel } = await open('left');
+
+    // `left-0` would end it at 255 + 240 = 495, past the 360px page.
+    expect(panel.style.left).toBe('104px');
+  });
+
+  it('follows its trigger when a re-render moves it', async () => {
+    triggerBox = new DOMRect(100, 100, 90, 36);
+    const { panel, rerender } = await open('left');
+    expect(panel.style.left).toBe('100px');
+
+    // A count badge appears and the toolbar re-flows, with no scroll or resize.
+    triggerBox = new DOMRect(76, 100, 114, 36);
+    rerender(
+      <Popover label="Menu" trigger="Menu" align="left">
+        {() => <p>Panel content 2</p>}
+      </Popover>,
+    );
+
+    expect(panel.style.left).toBe('76px');
   });
 });

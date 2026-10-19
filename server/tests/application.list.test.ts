@@ -191,6 +191,22 @@ describe('GET /applications search and archive behaviour', () => {
     expect(companiesIn(response)).toEqual(['Lazada']);
   });
 
+  // Issue #61: the table shows "Other: Glints", so searching "Glints" must find it.
+  it('matches the "Other: please specify" source text', async () => {
+    const { accessToken } = await registerUser(app);
+    await createApplicationFor(app, accessToken, {
+      company: 'Petronas',
+      role: 'Intern',
+      source: 'other',
+      sourceOther: 'Glints',
+    });
+    await createApplicationFor(app, accessToken, { company: 'Maxis', role: 'Intern' });
+
+    const response = await list(accessToken, '?search=glint');
+
+    expect(companiesIn(response)).toEqual(['Petronas']);
+  });
+
   it('treats regular expression metacharacters as literal text', async () => {
     const { accessToken } = await registerUser(app);
     await createApplicationFor(app, accessToken, { company: 'A.C.M.E', role: 'Intern' });

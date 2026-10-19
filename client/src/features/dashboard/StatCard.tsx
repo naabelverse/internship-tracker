@@ -18,6 +18,8 @@ export interface StatCardProps {
   isLoading: boolean;
   /** A graphic beside the figures, centred on all three lines of them. */
   children?: ReactNode;
+  /** An `InfoTip` after the label, for a figure whose basis needs saying. */
+  tip?: ReactNode;
 }
 
 /**
@@ -41,6 +43,7 @@ export function StatCard({
   lowerIsBetter = false,
   isLoading,
   children,
+  tip,
 }: StatCardProps): JSX.Element {
   const isFlat = delta === null || delta === 0;
   const isUp = delta !== null && delta > 0;
@@ -52,7 +55,14 @@ export function StatCard({
   return (
     <Card className={hasGraphic ? 'flex gap-3' : undefined}>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
+        {tip === undefined ? (
+          <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
+        ) : (
+          <div className="flex items-center gap-1">
+            <p className="truncate text-xs font-medium text-content-subtle">{label}</p>
+            {tip}
+          </div>
+        )}
         {isLoading ? (
           <Skeleton className="mt-2 h-8 w-20" label={`Loading ${label}`} />
         ) : (

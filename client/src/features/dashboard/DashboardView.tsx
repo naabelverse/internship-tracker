@@ -116,7 +116,8 @@ export function DashboardView(): JSX.Element {
           <StatCards summary={summary.data} isLoading={false} />
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            {/* The grid item here is this wrapper, not the chart's card. */}
+            <div className="min-w-0 lg:col-span-2">
               <TimelineChart
                 timeline={timeline.data}
                 granularity={granularity}

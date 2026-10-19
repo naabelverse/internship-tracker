@@ -27,11 +27,13 @@ interface KanbanBoardProps {
   onMove: (id: string, status: ApplicationStatus, version?: number) => void;
 }
 
-/** Pointer drags resolve by what is under the cursor; keyboard moves by centre. */
-const collisionDetection: CollisionDetection = (args) => {
-  const underPointer = pointerWithin(args);
-  return underPointer.length > 0 ? underPointer : closestCenter(args);
-};
+/**
+ * Pointer drags resolve by what is under the cursor, and only that: a release
+ * outside every column is no drop, so the drag cancels as Escape does (issue
+ * #97). Keyboard moves carry no pointer and resolve by centre.
+ */
+const collisionDetection: CollisionDetection = (args) =>
+  args.pointerCoordinates ? pointerWithin(args) : closestCenter(args);
 
 /**
  * The drag surface, and only the drag surface.

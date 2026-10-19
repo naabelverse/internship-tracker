@@ -14,6 +14,8 @@ import { APPLICATION_STATUSES, PRIORITIES, SOURCES } from '@/types/application';
 
 interface ApplicationsToolbarProps {
   filters: ApplicationFilters;
+  /** Rows in the current view, for the Export menu; unknown while the list loads. */
+  total?: number;
   hiddenColumns: string[];
   onFiltersChange: (patch: Partial<ApplicationFilters>, options?: { replace?: boolean }) => void;
   onClearFilters: () => void;
@@ -82,12 +84,16 @@ function CheckboxFilter<T extends string>({
  *
  * "Clear filters" sits right after Filters, the control it undoes, and shows only
  * for filters beyond the search text, which has its own clear button. From `xl`
- * the search field stops at 24rem and Columns, Export and New application keep
+ * the search field stops growing and Columns, Export and New application keep
  * to the right edge, so the button takes free space when it appears instead of
- * pushing Filters, and its open panel, to the left.
+ * pushing Filters, and its open panel, to the left. The cap is 18rem up to
+ * 1375px and 24rem above: showing the button needs about 156px, and a 24rem
+ * field left only 60px spare at 1280 (issue #87). 18rem still fits the
+ * placeholder, which needs about 271px.
  */
 export function ApplicationsToolbar({
   filters,
+  total,
   hiddenColumns,
   onFiltersChange,
   onClearFilters,
@@ -96,6 +102,7 @@ export function ApplicationsToolbar({
 }: ApplicationsToolbarProps): JSX.Element {
   const [searchText, setSearchText] = useState(filters.search);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastWriteRef = useRef(filters.search);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const filtersRef = useRef<HTMLButtonElement | null>(null);
 
@@ -105,8 +112,12 @@ export function ApplicationsToolbar({
   };
 
   // A filter cleared or a link opened elsewhere re-seeds the input and drops any
-  // write the user's earlier keystrokes had queued.
+  // write the user's earlier keystrokes had queued. The echo of this field's own
+  // write is skipped: the router commits it in a transition, so it can land after
+  // a later keystroke or Clear and would put the old term back (issue #91).
   useEffect(() => {
+    if (filters.search === lastWriteRef.current) return;
+    lastWriteRef.current = filters.search;
     setSearchText(filters.search);
     cancelPendingSearch();
   }, [filters.search]);
@@ -118,6 +129,7 @@ export function ApplicationsToolbar({
     cancelPendingSearch();
 
     timerRef.current = setTimeout(() => {
+      lastWriteRef.current = value;
       onFiltersChange({ search: value }, { replace: true });
     }, 300);
   };
@@ -125,8 +137,10 @@ export function ApplicationsToolbar({
   const activeFilterCount = filters.status.length + filters.source.length + filters.priority.length;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="min-w-[12rem] flex-1 xl:max-w-sm">
+    // `data-stable-gutter` reserves the page's scrollbar gutter while the
+    // toolbar is mounted (`index.css`, issue #88).
+    <div className="flex flex-wrap items-center gap-2" data-stable-gutter="">
+      <div className="min-w-[12rem] flex-1 xl:max-w-[18rem] [@media(min-width:1376px)]:max-w-sm">
         {/*
           The platform's own cancel button is hidden so this one is the only
           clear control. It writes through the same debounced path as typing.
@@ -277,7 +291,11 @@ export function ApplicationsToolbar({
         renders from, off the same stored choice, so the file and the table
         cannot disagree about which columns are showing.
       */}
-      <ExportMenu shownColumns={visibleColumns(hiddenColumns).map((column) => column.id)} />
+      <ExportMenu
+        shownColumns={visibleColumns(hiddenColumns).map((column) => column.id)}
+        filters={filters}
+        total={total}
+      />
 
       <Button size="sm" onClick={onCreate}>
         <PlusIcon className="h-4 w-4" />

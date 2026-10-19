@@ -280,8 +280,13 @@ const exportColumnList = z
   })
   .transform((entries) => entries.filter(isExportTableColumn));
 
-export const exportQuerySchema = z
-  .object({
+/**
+ * The list's own filters and sort, without paging: an export carries the rows
+ * the user is looking at, in the order they see them (issue #83).
+ */
+export const exportQuerySchema = listApplicationsQuerySchema
+  .omit({ page: true, limit: true })
+  .extend({
     format: z.enum(['csv', 'json']).default('csv'),
     columns: exportColumnList.optional(),
   })

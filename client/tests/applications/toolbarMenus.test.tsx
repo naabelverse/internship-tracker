@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -88,4 +90,21 @@ describe.each(MENUS)('the %s menu', (menu) => {
     expect(box.checked).toBe(!wasChecked);
     expect(screen.getByRole('group', { name: menu })).toBeInTheDocument();
   });
+});
+
+/**
+ * Issue #88: a search that shortened the list removed the page's scrollbar,
+ * widened the toolbar 15px and re-flowed it while the user typed (at 1024 the
+ * toolbar went from two rows to one). Reserving the gutter on the root stops
+ * that. jsdom has no scrollbars, so this holds the rule; the width before and
+ * after a search was measured on a real build (see DECISIONS.md).
+ */
+it('reserves the scrollbar gutter on the page root while the toolbar is mounted', async () => {
+  renderWithProviders(<App />, { route: '/applications' });
+  await screen.findByText('Stripe');
+  const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
+  const rule = /html:has\(\[([\w-]+)\]\)\s*\{([^}]*)\}/.exec(css);
+
+  expect(rule?.[2]).toMatch(/scrollbar-gutter:\s*stable;/);
+  expect(document.querySelector(`[${rule?.[1] ?? 'missing'}]`)).not.toBeNull();
 });
