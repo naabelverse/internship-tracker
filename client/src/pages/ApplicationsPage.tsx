@@ -126,6 +126,7 @@ export function ApplicationsPage(): JSX.Element {
 
       <ApplicationsToolbar
         filters={filters}
+        total={query.data?.meta.total}
         hiddenColumns={hiddenColumns}
         onFiltersChange={setFilters}
         onClearFilters={clearFilters}
