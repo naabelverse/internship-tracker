@@ -17,14 +17,20 @@ const test = testForClient(17);
  * - Clearing moves focus to Filters, rather than dropping it on the page body
  *   when the button it was on goes away.
  *
+ * - At 1280 the same holds (issue #87): the field stops at 18rem up to 1375px,
+ *   since a 24rem field left 60px of the ~156px the button needs and Filters
+ *   moved 96.1px left.
+ * - At 375 every toolbar menu opens inside the page's 16px gutter (issue #85).
+ *   Placed with CSS alone, Columns opened at x = -117 and Filters ran past the
+ *   right edge.
+ *
  * One application is seeded and it matches the filter, so the list never shows
- * the empty state and its own "Clear filters". Narrow widths are left out: the
- * open panel's placement there is tracked separately.
+ * the empty state and its own "Clear filters".
  *
  * The first three checks are soft so that a regression reports each of them,
  * and the focus check starts from Clear filters itself rather than from Tab.
  */
-test('Clear filters appears beside Filters without moving it, and hands focus back to it', async ({
+test('Clear filters appears beside Filters without moving it, and hands focus back to it; menus stay on screen', async ({
   page,
 }) => {
   const account = newAccount('clear');
@@ -70,4 +76,31 @@ test('Clear filters appears beside Filters without moving it, and hands focus ba
   await page.keyboard.press('Enter');
   await expect(clear).toBeHidden();
   await expect(filters).toBeFocused();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await filters.click();
+  const before1280 = await leftEdge();
+  await page.getByRole('checkbox', { name: 'Applied', exact: true }).click();
+  await expect(clear).toBeVisible();
+  // Within half a pixel: flex rounding moves it 0.08px as the badge appears.
+  expect.soft(await leftEdge(), 'Filters left edge at 1280').toBeCloseTo(before1280, 0);
+  await page.keyboard.press('Escape');
+  await clear.click();
+  await expect(clear).toBeHidden();
+
+  await page.setViewportSize({ width: 375, height: 900 });
+  const pageWidth = await page.evaluate(
+    () => document.documentElement.getBoundingClientRect().width,
+  );
+  for (const name of ['Columns', 'Export CSV', 'Filters']) {
+    const trigger = page.getByRole('main').getByRole('button', { name: new RegExp(`^${name}`) });
+    await trigger.click();
+    const panel = trigger.locator('xpath=following-sibling::*[1]');
+    const box = await panel.boundingBox();
+    expect.soft(box?.x, `${name} panel left edge at 375`).toBeGreaterThanOrEqual(16);
+    expect
+      .soft((box?.x ?? 0) + (box?.width ?? 0), `${name} panel right edge at 375`)
+      .toBeLessThanOrEqual(pageWidth - 16);
+    await page.keyboard.press('Escape');
+  }
 });

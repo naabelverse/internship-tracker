@@ -1,7 +1,5 @@
-import { useLayoutEffect, useState, type CSSProperties, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 
-/** The select panel's `my-1` gap between a field and what opens from it. */
-const GAP_PX = 4;
 /** The page's side gutter, which a floating panel never crosses. */
 const GUTTER_PX = 16;
 
@@ -10,18 +8,22 @@ const GUTTER_PX = 16;
  * ancestor that scrolls or clips — a modal's body — cannot cut the panel off.
  * It flips above the anchor when only that side has room, stays inside the
  * viewport's gutter, and follows the anchor through any scroll or resize.
- * `undefined` while inactive.
+ * `gapPx` is the space between anchor and panel: the select panel's `my-1` by
+ * default. `undefined` while inactive.
  */
 export function useAnchoredPosition(
   anchorRef: RefObject<HTMLElement> | undefined,
   panelRef: RefObject<HTMLElement>,
   active: boolean,
   align: 'left' | 'right',
+  gapPx = 4,
 ): CSSProperties | undefined {
   const [position, setPosition] = useState<CSSProperties>();
+  const placeRef = useRef<() => void>();
 
   useLayoutEffect(() => {
     if (!active || !anchorRef) {
+      placeRef.current = undefined;
       setPosition(undefined);
       return;
     }
@@ -35,17 +37,26 @@ export function useAnchoredPosition(
       const height = panel.offsetHeight;
       const width = panel.offsetWidth;
 
-      const below = rect.bottom + GAP_PX;
-      const above = rect.top - GAP_PX - height;
+      const below = rect.bottom + gapPx;
+      const above = rect.top - gapPx - height;
       const fitsBelow = below + height <= window.innerHeight - GUTTER_PX;
       const top = !fitsBelow && above >= GUTTER_PX ? above : below;
 
+      // The root's own width, not `innerWidth` or `clientWidth`: with the
+      // scrollbar gutter reserved (`index.css`), both of those count it, and
+      // the page's gutter is measured from where the page ends.
+      const viewportWidth = document.documentElement.getBoundingClientRect().width;
       const preferred = align === 'right' ? rect.right - width : rect.left;
-      const left = Math.max(GUTTER_PX, Math.min(preferred, window.innerWidth - GUTTER_PX - width));
+      const left = Math.max(GUTTER_PX, Math.min(preferred, viewportWidth - GUTTER_PX - width));
 
-      setPosition({ top, left });
+      // Same coordinates, same object: the re-render pass below runs after
+      // every render, and a fresh object each time would never settle.
+      setPosition((current) =>
+        current?.top === top && current.left === left ? current : { top, left },
+      );
     };
 
+    placeRef.current = place;
     place();
     window.addEventListener('resize', place);
     // Capture, because the scroll that moves the anchor is usually a modal
@@ -56,7 +67,13 @@ export function useAnchoredPosition(
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [active, anchorRef, panelRef, align]);
+  }, [active, anchorRef, panelRef, align, gapPx]);
+
+  // A re-render can move the anchor with no scroll or resize, such as a count
+  // badge appearing in a toolbar that then re-flows, so place again after each.
+  useLayoutEffect(() => {
+    placeRef.current?.();
+  });
 
   return position;
 }

@@ -84,9 +84,12 @@ function CheckboxFilter<T extends string>({
  *
  * "Clear filters" sits right after Filters, the control it undoes, and shows only
  * for filters beyond the search text, which has its own clear button. From `xl`
- * the search field stops at 24rem and Columns, Export and New application keep
+ * the search field stops growing and Columns, Export and New application keep
  * to the right edge, so the button takes free space when it appears instead of
- * pushing Filters, and its open panel, to the left.
+ * pushing Filters, and its open panel, to the left. The cap is 18rem up to
+ * 1375px and 24rem above: showing the button needs about 156px, and a 24rem
+ * field left only 60px spare at 1280 (issue #87). 18rem still fits the
+ * placeholder, which needs about 271px.
  */
 export function ApplicationsToolbar({
   filters,
@@ -134,8 +137,10 @@ export function ApplicationsToolbar({
   const activeFilterCount = filters.status.length + filters.source.length + filters.priority.length;
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="min-w-[12rem] flex-1 xl:max-w-sm">
+    // `data-stable-gutter` reserves the page's scrollbar gutter while the
+    // toolbar is mounted (`index.css`, issue #88).
+    <div className="flex flex-wrap items-center gap-2" data-stable-gutter="">
+      <div className="min-w-[12rem] flex-1 xl:max-w-[18rem] [@media(min-width:1376px)]:max-w-sm">
         {/*
           The platform's own cancel button is hidden so this one is the only
           clear control. It writes through the same debounced path as typing.
