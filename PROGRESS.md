@@ -785,7 +785,7 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 2   | `docker compose up` runs mongo + api + web; app usable           | verified                                   | All three Up, mongo healthy; `web /` 200, `api /health` 200, `api /ready` 200                                                                          |
 | 3   | `npm run seed` populates the demo account, charts have data      | verified                                   | `npm run stats`: 64 applications; Lighthouse audited the dashboard signed in through "Try the demo"                                                     |
 | 4   | Register → … → export → logout in one manual pass                | verified (automated) / **pending deploy**  | `e2e/flows/10.full-journey.spec.ts` walks all ten steps as one user in one continuous UI pass; a human pass on the live site is still yours               |
-| 5   | Refresh keeps you logged in; token expiry refreshes silently     | verified locally / **pending deploy**      | E2E flow 8 + `client/tests/api/refreshInterceptor.test.ts`; the cross-site half is the cookie fix, unprovable without two real domains — §6.4           |
+| 5   | Refresh keeps you logged in; token expiry refreshes silently     | verified                                   | E2E flow 8 + `client/tests/api/refreshInterceptor.test.ts`; cross-site half walked live per DEPLOYMENT.md §6.4 on 19 Oct 2026 (manual steps below)     |
 | 6   | User A cannot reach user B's data, proven by a test              | verified                                   | `server/tests/application.ownership.test.ts`, 7 cases across single-record, list, bulk, interviews and export                                           |
 | 7   | No TODO/FIXME/console.log/hardcoded secret/unused file in `src`  | verified                                   | grep over `server/src` and `client/src` is empty; the only `console.log` is in `e2e/audits/*.spec.ts`, the report SPEC §10 asks to print, and not `src` |
 | 8   | Usable at 375, 768, 1440 px, dark and light                      | verified                                   | `e2e/audits/overflow.spec.ts`: 7 routes × 3 widths every CI run; `client/tests/theme/`                                                                  |
@@ -801,7 +801,7 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 18  | Export returns everything; deletion removes it all               | verified                                   | `server/tests/dataExport.test.ts` (a record from every model, no credentials, scoped to the account) + `auth.softDelete.test.ts`                        |
 | 19  | Lighthouse reported for landing + dashboard, meets targets       | verified                                   | Measured this phase: landing 100/100/96/100, dashboard 98/100/100/100 against 90/95/95/95. README → Performance                                         |
 | 20  | Resource caps, rate limits, upload validation each proven        | verified                                   | `resourceCaps.test.ts`, `auth.rateLimit.test.ts`, `attachment.test.ts`                                                                                  |
-| 21  | `DEPLOYMENT.md` complete; cross-origin cookies explicit          | verified (written) / **pending deploy**    | 17 sections, every production variable, §6 is entirely cross-origin; its accuracy against a real deploy is unproven until you run it                    |
+| 21  | `DEPLOYMENT.md` complete; cross-origin cookies explicit          | verified                                   | 17 sections, every production variable, §6 is entirely cross-origin; production was deployed from it, and its one drift (Resend's CNAMEs) is in §7.2  |
 | 22  | No secret, real email or personal data committed, ever           | verified                                   | gitleaks over every commit: `no leaks found`; the history contains only the two `.env.example` files                                                    |
 | 23  | Uploads survive a restart and a redeploy                         | verified (adapter) / **pending deploy**    | `server/tests/storage.contract.test.ts` runs one contract against both drivers; production is forced to `s3` by the env loader                          |
 | 24  | Dates correct in two distant timezones                           | verified                                   | `analytics.timezone`, `reminderJob.timezone`, `weeklySummaryJob.timezone`, `mail.digestTimezone`, `dates` — Asia/Kuala_Lumpur and America/Los_Angeles    |
@@ -811,9 +811,10 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 28  | LICENSE, CONTRIBUTING, CoC, SECURITY, CHANGELOG, templates       | verified                                   | All nine files present                                                                                                                                  |
 | 29  | SPF/DKIM/DMARC documented **and** a test email reached Gmail     | verified                                   | Records, syntax and rollout in DEPLOYMENT.md §7.2; on 19 Oct 2026 a reset email from `tracker.naabel.com` reached a Gmail Inbox, SPF/DKIM/DMARC all PASS   |
 
-Five items carry a `pending deploy` half — 4, 5, 21, 23 and 29 — plus the uptime monitor, Sentry
-receiving live events, and backups being enabled. Every one of them needs infrastructure that does
-not exist yet. **None of them is blocked by code.**
+Two items still carry a `pending deploy` half, as of 20 Oct 2026: 4 (a human pass on the live
+site) and 23 (an attachment uploaded in production, then a redeploy, then the attachment still
+opens). Both need a manual action on production, not code. 5, 21 and 29 were closed on the live
+deploy; the uptime monitor, Sentry and backups are done under manual steps below.
 
 ## Phase 17 — Optional
 - [ ] Google OAuth (only if phases 1–16 are green and nothing regresses)
