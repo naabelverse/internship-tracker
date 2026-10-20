@@ -41,4 +41,13 @@ test('drag a card to another column and the status survives a reload', async ({ 
 
   await expect(page.getByTestId('column-interview').getByText('Cloudflare')).toBeVisible();
   await expect(page.getByTestId('column-saved').getByText('Cloudflare')).toHaveCount(0);
+
+  // Rejected starts well off-screen, so the board has to auto-scroll for this
+  // one; a drop that lands on whatever slid under the pointer fails here.
+  const rejectedColumn = page.getByTestId('column-rejected');
+  await dragCardTo(page, handle, rejectedColumn);
+  await expect(rejectedColumn.getByText('Cloudflare')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByTestId('column-rejected').getByText('Cloudflare')).toBeVisible();
 });

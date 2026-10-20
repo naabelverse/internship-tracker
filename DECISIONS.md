@@ -5774,3 +5774,17 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   sequence rather than two copies.
 - **Checked locally** against the compose E2E stack with `TRUST_PROXY=0`, so the rate limiters
   saw one real client: it costs one sign-up and one sign-in. Passed twice, alongside flow 03.
+
+### Follow-up: `dragCardTo` lands where it aims when the board auto-scrolls
+
+- **Failure:** CI run 39348336975 (PR #121, docs only) failed flow 03: Cloudflare landed in Offer,
+  not Interview. At 1280 px the Interview column starts off-screen; the helper aimed the pointer
+  at its centre, dnd-kit auto-scrolled the board while the pointer sat in its 20% edge band, and
+  `pointerWithin` resolved the drop against whatever had slid under it by release. Timing decided
+  the column, so it passed most runs.
+- **Fix:** the helper holds the pointer at the board's edge until the target column's centre is
+  clear of the band (or the board can scroll no further), then moves onto it and releases. It
+  also scrolls the handle into view first, since a card in an off-screen column has none.
+- **Regression:** flow 03 now also drags to Rejected, which starts far off-screen. Against the
+  old helper it failed ("column-rejected … not found"); with the fix, flow 03 and flow 10 passed
+  three consecutive runs.
