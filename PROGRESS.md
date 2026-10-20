@@ -803,7 +803,7 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 20  | Resource caps, rate limits, upload validation each proven        | verified                                   | `resourceCaps.test.ts`, `auth.rateLimit.test.ts`, `attachment.test.ts`                                                                                  |
 | 21  | `DEPLOYMENT.md` complete; cross-origin cookies explicit          | verified                                   | 17 sections, every production variable, §6 is entirely cross-origin; production was deployed from it, and its one drift (Resend's CNAMEs) is in §7.2  |
 | 22  | No secret, real email or personal data committed, ever           | verified                                   | gitleaks over every commit: `no leaks found`; the history contains only the two `.env.example` files                                                    |
-| 23  | Uploads survive a restart and a redeploy                         | verified (adapter) / **pending deploy**    | `server/tests/storage.contract.test.ts` runs one contract against both drivers; production is forced to `s3` by the env loader                          |
+| 23  | Uploads survive a restart and a redeploy                         | verified                                   | `server/tests/storage.contract.test.ts` against both drivers; live on 20 Oct 2026 a PDF uploaded before redeploy `29cac55c` downloaded with the same SHA-256 after it, then was deleted |
 | 24  | Dates correct in two distant timezones                           | verified                                   | `analytics.timezone`, `reminderJob.timezone`, `weeklySummaryJob.timezone`, `mail.digestTimezone`, `dates` — Asia/Kuala_Lumpur and America/Los_Angeles    |
 | 25  | Playwright suite and axe pass in CI against a real stack         | verified                                   | 13 tests, `retries: 0`, its own compose project; the CI run for this commit                                                                             |
 | 26  | Bundle sizes within budget; Chart.js not on landing              | verified                                   | `check:bundle`: landing 111.4 KB/150 printing "excludes Chart.js", dashboard 215.4 KB/300                                                                |
@@ -811,9 +811,8 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 28  | LICENSE, CONTRIBUTING, CoC, SECURITY, CHANGELOG, templates       | verified                                   | All nine files present                                                                                                                                  |
 | 29  | SPF/DKIM/DMARC documented **and** a test email reached Gmail     | verified                                   | Records, syntax and rollout in DEPLOYMENT.md §7.2; on 19 Oct 2026 a reset email from `tracker.naabel.com` reached a Gmail Inbox, SPF/DKIM/DMARC all PASS   |
 
-Two items still carry a `pending deploy` half, as of 20 Oct 2026: 4 (a human pass on the live
-site) and 23 (an attachment uploaded in production, then a redeploy, then the attachment still
-opens). Both need a manual action on production, not code. 5, 21 and 29 were closed on the live
+One item still carries a `pending deploy` half, as of 20 Oct 2026: 4 (a human pass on the live
+site). It needs a manual action on production, not code. 5, 21, 23 and 29 were closed on the live
 deploy; the uptime monitor, Sentry and backups are done under manual steps below.
 
 ## Phase 17 — Optional
