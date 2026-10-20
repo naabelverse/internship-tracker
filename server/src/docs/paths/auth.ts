@@ -5,6 +5,7 @@ import {
   objectOf,
   ok,
   pathParam,
+  queryParam,
   RATE_LIMITED,
   ref,
 } from '@/docs/paths/helpers';
@@ -157,6 +158,49 @@ export const authPaths: Record<string, unknown> = {
           description: 'This deployment has no seeded demo account',
           content: { 'application/json': { schema: ref('Error') } },
         },
+        ...RATE_LIMITED,
+      },
+    },
+  },
+  '/api/v1/auth/google': {
+    get: {
+      tags: TAG,
+      summary: 'Start "Continue with Google"',
+      description:
+        'A browser navigation, not an API call: redirects to Google with a state handle and a PKCE challenge, both kept in a short-lived httpOnly google_oauth_state cookie. When this deployment has no Google client configured, redirects to the client with ?oauth=GOOGLE_UNAVAILABLE instead.',
+      security: [],
+      parameters: [
+        queryParam(
+          'intent',
+          { type: 'string', enum: ['login', 'register'], default: 'login' },
+          'Only register may create an account; the register page sends it once the terms are accepted.',
+        ),
+        queryParam(
+          'timezone',
+          { type: 'string', example: 'Asia/Kuala_Lumpur' },
+          'IANA timezone for an account this creates.',
+        ),
+      ],
+      responses: {
+        '302': { description: 'To Google, or back to the client when Google is unavailable' },
+        '400': COMMON_ERRORS['400'],
+      },
+    },
+  },
+  '/api/v1/auth/google/callback': {
+    get: {
+      tags: TAG,
+      summary: 'Where Google returns the browser',
+      description:
+        'Verifies the state handle against the cookie, exchanges the code with the PKCE verifier, then signs in by Google id, links an account by email when both Google and this app have verified it, or creates one when intent was register. On success sets the refresh cookie and redirects to /dashboard, whose cold-start refresh opens the session; no token travels in a URL. Every refusal redirects to /login or /register with ?oauth=<code>: GOOGLE_CANCELLED, GOOGLE_FAILED, GOOGLE_EMAIL_UNVERIFIED, NO_ACCOUNT, ACCOUNT_UNVERIFIED, GOOGLE_ACCOUNT_MISMATCH, ACCOUNT_CLOSED, DEMO_ACCOUNT or DISPOSABLE_EMAIL.',
+      security: [],
+      parameters: [
+        queryParam('code', { type: 'string' }, 'Authorization code from Google.'),
+        queryParam('state', { type: 'string' }, 'The state handle sent to Google.'),
+        queryParam('error', { type: 'string' }, 'Set by Google, e.g. access_denied on cancel.'),
+      ],
+      responses: {
+        '302': { description: 'To /dashboard signed in, or to /login or /register with ?oauth=' },
         ...RATE_LIMITED,
       },
     },

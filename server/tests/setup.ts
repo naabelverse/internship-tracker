@@ -21,3 +21,8 @@ process.env.TRUST_PROXY ??= '1';
 process.env.UPLOAD_DIR ??= path.join(os.tmpdir(), 'internship-tracker-test-uploads');
 process.env.ENABLE_CRON ??= 'false';
 process.env.REMINDER_DIGEST_HOUR ??= '8';
+
+// Registers the Google strategy. No request reaches Google: auth.google.test.ts
+// stubs the token exchange and the profile fetch.
+process.env.GOOGLE_CLIENT_ID ??= 'test-client-id.apps.googleusercontent.com';
+process.env.GOOGLE_CLIENT_SECRET ??= 'test-google-client-secret';

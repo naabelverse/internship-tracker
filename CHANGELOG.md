@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Continue with Google.** Sign up from the register page, once the terms box is ticked, or
+  sign in from the sign-in page. A Google address matching an existing account links to it when
+  both Google and the app have confirmed that address. Off until the deployment configures a
+  Google client; every other way of signing in works exactly as before.
+
 - **The Board names every column above it.** A row of buttons, one per column
   with its count ("Offer 5"), sits over the board. Clicking one scrolls the board
   to that column, so the columns past the right edge are no longer hidden with

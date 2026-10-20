@@ -30,11 +30,12 @@ deployment that fails silently.
 10. [Step 9 — Cold starts and keeping the API warm](#step-9--sleeping-cold-starts-and-keeping-the-api-warm)
 11. [Step 10 — Uptime, errors and backups](#step-10--uptime-errors-and-backups)
 12. [Step 11 — Seed the demo account](#step-11--seed-the-demo-account)
-13. [Production environment variables](#production-environment-variables)
-14. [Automated deploys](#automated-deploys)
-15. [Pre-launch checklist](#pre-launch-checklist)
-16. [Alternatives: Render + Vercel](#alternatives-render--vercel-instead-of-railway)
-17. [Troubleshooting](#troubleshooting)
+13. [Step 12 — Optional: "Continue with Google"](#step-12--optional-continue-with-google)
+14. [Production environment variables](#production-environment-variables)
+15. [Automated deploys](#automated-deploys)
+16. [Pre-launch checklist](#pre-launch-checklist)
+17. [Alternatives: Render + Vercel](#alternatives-render--vercel-instead-of-railway)
+18. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -1308,6 +1309,54 @@ the enforcement.
 
 ---
 
+## Step 12 — Optional: "Continue with Google"
+
+Skip this step and nothing changes: with no Google client configured, the API leaves every other
+sign-in flow exactly as it was and the client shows no Google button.
+
+### 12.1 Create the OAuth client
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project (or pick one).
+2. **APIs & Services → OAuth consent screen**: user type **External**, app name, support email,
+   and the app's home, privacy (`/privacy`) and terms (`/terms`) URLs. Scopes: `openid`, `email`,
+   `profile` only. These are non-sensitive, so no Google review is needed. While the app is in
+   **Testing**, only the test users you list can sign in; **Publish** it to open it to everyone.
+3. **APIs & Services → Credentials → Create credentials → OAuth client ID**, type **Web
+   application**:
+   - **Authorized JavaScript origins:** none are needed. The browser never calls Google from the
+     client; it is redirected there by the API.
+   - **Authorized redirect URIs:** the API's callback, exactly, one per environment:
+     `https://<api>/api/v1/auth/google/callback`, and `http://localhost:5000/api/v1/auth/google/callback`
+     for local development. Google rejects any callback not listed here, character for character.
+4. Copy the client ID and client secret.
+
+### 12.2 Set the variables
+
+- **API service:** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Set both or neither: the env
+  loader refuses to boot with one. `API_URL` must be the public API origin, because the callback
+  URL sent to Google is built from it.
+- **Client service:** `VITE_GOOGLE_AUTH_ENABLED=true`, then redeploy the client, because Vite
+  inlines it at build time.
+
+### 12.3 How it behaves
+
+- The callback sets the same refresh cookie as a password sign-in and redirects to `/dashboard`,
+  whose cold-start refresh opens the session. No token is ever put in a URL.
+- An existing account is linked by email only when Google and this app have both verified the
+  address. Otherwise the visitor is sent back with a message, never signed in.
+- Only the register page, after the terms box is ticked, can create an account. The sign-in page
+  answers an unknown Google address with "Create one first".
+- An account created through Google has a random password nobody knows. "Forgot password" sets a
+  real one, after which both ways of signing in work.
+
+### 12.4 Verify
+
+Sign up with Google from `/register` with a test user, sign out, then sign in with Google from
+`/login`. Both should land on the dashboard. Cancelling at Google's account picker should land back
+on `/login` with "Google sign-in was cancelled."
+
+---
+
 ## Production environment variables
 
 Everything the API reads. The zod loader in `server/src/config/env.ts` validates all of it at boot and
@@ -1362,6 +1411,7 @@ refuses to start on a bad configuration, listing every problem at once.
 | `WEEKLY_SUMMARY_WEEKDAY`       | `1`                              | 1 = Monday.                                                           |
 | `SENTRY_DSN`                   | unset                            | Unset means Sentry is never initialised.                              |
 | `SENTRY_TRACES_SAMPLE_RATE`    | `0`                              | Errors only.                                                          |
+| `GOOGLE_CLIENT_ID` / `_SECRET` | unset                            | Both or neither. Enables "Continue with Google". See Step 12.         |
 
 ### Client (`web` service) — build-time
 
@@ -1370,6 +1420,7 @@ refuses to start on a bad configuration, listing every problem at once.
 | `VITE_API_URL`                                 | `https://api.tracker.example.com` | No trailing slash.                                        |
 | `VITE_APP_URL`                                 | `https://tracker.example.com`     | Canonical URLs, sitemap, OG tags.                         |
 | `VITE_DEMO_ENABLED`                            | `true`                            | Cosmetic; the API is the enforcement.                     |
+| `VITE_GOOGLE_AUTH_ENABLED`                     | `false`                           | Shows "Continue with Google". Step 12.                    |
 | `VITE_SENTRY_DSN`                              | unset                             | Behind a dynamic import when unset.                       |
 | `VITE_ANALYTICS_DOMAIN` / `VITE_ANALYTICS_SRC` | unset                             | Cookieless analytics only, so no cookie banner is needed. |
 

@@ -42,6 +42,11 @@ export const clientEnv = {
   appUrl: readUrl(import.meta.env.VITE_APP_URL, 'http://localhost:5173', 'VITE_APP_URL'),
   demoEnabled: readFlag(import.meta.env.VITE_DEMO_ENABLED, true),
   /**
+   * Off unless set, unlike the demo: it needs a Google client configured on the
+   * API, which a fresh checkout does not have.
+   */
+  googleAuthEnabled: readFlag(import.meta.env.VITE_GOOGLE_AUTH_ENABLED, false),
+  /**
    * Error reporting. Unset means the SDK is never even downloaded: `initSentry`
    * returns before its dynamic import, so the chunk stays off the wire.
    */
