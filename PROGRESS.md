@@ -1037,6 +1037,12 @@ _Anything intentionally postponed, with the reason._
   still intermittent and the required 20-run clean loop was not achieved** — it passes 8/8 alone and
   fails ~3-in-4 when the two cases before it run first, which is test isolation, not this defect.
   Details in `DECISIONS.md`. The original description follows.
+  **All three follow-ups RESOLVED before Phase 11** (DECISIONS.md, "Blocking fix"): the
+  `dragAndDrop` flake was `pointerDrag` racing dnd-kit's post-drag click suppression (`f0a7cbe`,
+  guarded by `dragClickSuppression.test.tsx`); the edit modal now snapshots its row (`ab9e901`,
+  guarded by `editModalSurvival.test.tsx`); `ApplicationDetailPage` was checked and left as is,
+  with no reachable defect. Re-checked 20 Oct 2026: those three test files together, 20
+  consecutive runs, 20 passed.
 - **The board's version-conflict dialog can vanish mid-interaction, discarding the user's move.**
   Found by the first real CI run in Phase 10. `BoardPage` renders `KanbanBoard` only while the query
   has data, and the optimistic write plus rollback leaves that query briefly with none, so the board
