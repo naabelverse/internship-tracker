@@ -1,5 +1,33 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import type { TestAccount } from './api';
+
+/**
+ * Drags a card onto a column with a real pointer.
+ *
+ * dnd-kit's `PointerSensor` has a 4 px activation distance and measures
+ * droppables through `getBoundingClientRect`, so the move has to be a genuine
+ * sequence of pointer positions rather than one jump: a single `mouse.move`
+ * lands the pointer without ever crossing the activation threshold, and the drag
+ * never starts. The intermediate steps are what make this exercise the same code
+ * path a user does.
+ */
+export async function dragCardTo(page: Page, handle: Locator, column: Locator): Promise<void> {
+  const from = await handle.boundingBox();
+  const to = await column.boundingBox();
+  if (!from || !to) throw new Error('Card or column has no layout box');
+
+  const startX = from.x + from.width / 2;
+  const startY = from.y + from.height / 2;
+  const endX = to.x + to.width / 2;
+  const endY = to.y + 80;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  // Past the activation constraint first, then across in steps.
+  await page.mouse.move(startX + 8, startY, { steps: 4 });
+  await page.mouse.move(endX, endY, { steps: 20 });
+  await page.mouse.up();
+}
 
 /**
  * Signs in through the real form, which is what flows about the session need:

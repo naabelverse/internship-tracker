@@ -5760,3 +5760,17 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
 - **Checked:** after the change, a reset email still reached the Gmail Inbox with SPF, DKIM and
   DMARC all PASS.
 - **Not done:** `p=reject` waits. Add an `rua` address before it if a second sender ever appears.
+
+## The Definition of Done's one-pass journey becomes its own E2E flow (20 Oct 2026)
+
+- **What:** `e2e/flows/10.full-journey.spec.ts` walks SPEC §17 item 4 (register → login →
+  create → filter → drag → interview → status → charts → export → logout) as one user, through
+  the UI only, one `test.step` per step.
+- **Why one test, not ten:** flows 01–08 already prove each step alone from a fresh, API-seeded
+  account. What they cannot see is a seam between steps, so this flow reads each step's result
+  in the next: the dragged card is the one the chart counts, the changed status is the one the
+  CSV exports.
+- **`dragCardTo`** moved from flow 03 into `e2e/support/ui.ts` so both flows share one pointer
+  sequence rather than two copies.
+- **Checked locally** against the compose E2E stack with `TRUST_PROXY=0`, so the rate limiters
+  saw one real client: it costs one sign-up and one sign-in. Passed twice, alongside flow 03.

@@ -43,6 +43,7 @@ Two settings in that override are worth knowing about:
 | Path                      | What it holds                                                                                     |
 | ------------------------- | ------------------------------------------------------------------------------------------------- |
 | `flows/01…08`             | The eight SPEC section 10 flows, one file each                                                    |
+| `flows/10`                | SPEC section 17 item 4: all ten steps as one user in one continuous pass, UI only                 |
 | `audits/axe.spec.ts`      | `@axe-core/playwright` over landing, login, terms, privacy, dashboard, board and the create modal |
 | `audits/overflow.spec.ts` | Every route at 375 / 768 / 1440 px, asserting the document does not scroll sideways               |
 | `support/`                | API helpers, the mail-log reader, the client-address fixture, the overflow instrumentation        |
