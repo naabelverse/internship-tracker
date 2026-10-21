@@ -4,6 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { APP_VERSION, AUTHOR_URL, CONTACT_EMAIL } from '@/lib/siteMeta';
 import { paths } from '@/routes/paths';
 import { makeSession } from '../utils/factories';
 import { installMockApi } from '../utils/mockAdapter';
@@ -90,6 +91,18 @@ describe('the sidebar lockup', () => {
     await user.click(lockup());
 
     expect(await screen.findByRole('heading', { name: 'Dashboard page' })).toBeInTheDocument();
+  });
+
+  it('ends with the author credit and a feedback mailto', () => {
+    renderWithProviders(<Sidebar isOpen={false} onClose={() => undefined} />);
+    const panel = within(screen.getByLabelText('Main navigation'));
+
+    expect(panel.getByRole('link', { name: 'Naabel' })).toHaveAttribute('href', AUTHOR_URL);
+    expect(panel.getByRole('link', { name: 'Send feedback' })).toHaveAttribute(
+      'href',
+      `mailto:${CONTACT_EMAIL}`,
+    );
+    expect(panel.getByText(`v${APP_VERSION}`)).toBeInTheDocument();
   });
 
   it('appears once in the shell, and not in the topbar', () => {

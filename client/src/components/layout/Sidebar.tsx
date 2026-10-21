@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn';
 import { BrandMark } from '@/components/marketing/MarketingChrome';
 import { CloseIcon } from '@/components/ui/icons';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { APP_VERSION, AUTHOR_URL, CONTACT_EMAIL } from '@/lib/siteMeta';
 import { NAV_ITEMS } from '@/routes/navItems';
 import { paths } from '@/routes/paths';
 
@@ -11,6 +12,9 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
+
+const FOOTER_LINK =
+  'rounded-control text-content-muted underline decoration-border underline-offset-4 transition-colors hover:text-content';
 
 function navLinkClass({ isActive }: { isActive: boolean }): string {
   return cn(
@@ -110,6 +114,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
             </NavLink>
           ))}
         </nav>
+
+        {/* `px-6` puts the text on the nav labels' left line: the nav's `p-3` plus a link's `px-3`. */}
+        <p className="px-6 py-4 text-xs text-content-subtle">
+          Built by{' '}
+          <a href={AUTHOR_URL} target="_blank" rel="noreferrer noopener" className={FOOTER_LINK}>
+            Naabel
+          </a>{' '}
+          <span aria-hidden="true">·</span>{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`} className={FOOTER_LINK}>
+            Send feedback
+          </a>
+          <span className="mt-1 block">v{APP_VERSION}</span>
+        </p>
       </div>
     </>
   );
