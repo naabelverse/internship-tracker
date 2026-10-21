@@ -5826,3 +5826,13 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
 - **Not built:** disconnecting Google in Settings, an email when Google is linked, and an E2E flow
   through Google, since CI cannot reach Google. The server tests stub the code exchange and the
   profile fetch and run every other part for real. Add the first two if users ask for them.
+
+## The sidebar ends with a credit, a feedback link and the app version (21 Oct 2026)
+
+- **"Built by Naabel" links to the maintainer's LinkedIn**, chosen by the maintainer. It lives
+  in `siteMeta` as `AUTHOR_URL` beside the other shared links.
+- **"Send feedback" is a `mailto:` to `CONTACT_EMAIL`**, the same address as the landing footer's
+  Contact link, so it needs no form, no endpoint and no new inbox.
+- **The version comes from `client/package.json`.** `client/tsconfig.json` gains
+  `resolveJsonModule` for the import, and Vite inlines only the `version` string, not the file.
+  The three `package.json` files share one version, so the client's speaks for the release.
