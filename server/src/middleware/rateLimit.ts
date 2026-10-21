@@ -124,6 +124,16 @@ export const demoLoginIpLimiter = createAuthLimiter(
 );
 
 /**
+ * Caps the Google callback, where sessions are minted, like every other sign-in
+ * route. The start route only redirects, so it needs nothing beyond the global
+ * limit.
+ */
+export const googleSignInIpLimiter = createAuthLimiter(
+  'RATE_LIMITED_IP',
+  'Too many Google sign-ins from this network. Try again in 15 minutes.',
+);
+
+/**
  * SPEC section 5: 3 per hour, per account rather than per IP, so a shared
  * network cannot exhaust one user's budget. Keyed on the authenticated id
  * because the route carries no email in its body.

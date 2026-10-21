@@ -7,6 +7,8 @@ import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
 import { loginSchema, type LoginValues } from '@/features/auth/authSchemas';
 import { readPendingDeletion } from '@/features/auth/accountClosure';
+import { GoogleSignInLink } from '@/features/auth/GoogleSignInLink';
+import { useGoogleSignInError } from '@/features/auth/googleSignIn';
 import { RestoreAccountDialog } from '@/features/auth/RestoreAccountDialog';
 import { applyServerErrors } from '@/features/auth/serverErrors';
 import { useLogin, useRestoreAccount } from '@/features/auth/useAuthMutations';
@@ -21,6 +23,7 @@ export function LoginForm(): JSX.Element {
   // Derived from the mutation rather than copied into state: the prompt exists
   // exactly as long as the login's last answer was "closed, restorable".
   const pending = readPendingDeletion(login.error);
+  const googleError = useGoogleSignInError();
 
   const {
     register,
@@ -62,7 +65,7 @@ export function LoginForm(): JSX.Element {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormError message={errors.root?.message} />
+      <FormError message={errors.root?.message ?? googleError} />
 
       <TextField
         label="Email"
@@ -83,6 +86,8 @@ export function LoginForm(): JSX.Element {
       <Button type="submit" className="w-full" isLoading={isSubmitting} loadingLabel="Signing in">
         Sign in
       </Button>
+
+      <GoogleSignInLink intent="login" />
 
       <RestoreAccountDialog
         pending={pending}

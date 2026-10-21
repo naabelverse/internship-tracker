@@ -5788,3 +5788,41 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
 - **Regression:** flow 03 now also drags to Rejected, which starts far off-screen. Against the
   old helper it failed ("column-rejected … not found"); with the fix, flow 03 and flow 10 passed
   three consecutive runs.
+
+## Phase 17: "Continue with Google" through Passport, with no server sessions (21 Oct 2026)
+
+- **Passport only for the OAuth leg.** `passport-google-oauth20` handles the redirect, the code
+  exchange and the profile, with `session: false`. The session is the app's own refresh cookie,
+  set by the callback exactly as a password sign-in sets it, so refresh, rotation, reuse
+  detection, "sign out everywhere" and the session list all apply to a Google session unchanged.
+- **State and PKCE in a cookie, not `express-session`.** A custom state store keeps the state
+  handle and the PKCE verifier in a 10-minute httpOnly `SameSite=Lax` cookie, path
+  `/api/v1/auth/google`. The API stays stateless, and the handle check ties each callback to the
+  browser that started it, which closes login CSRF. `Lax` is enough because Google returns with a
+  top-level GET.
+- **No token in a URL.** The callback redirects to `/dashboard`, and the client's existing
+  cold-start refresh turns the cookie into a session. No client callback page was needed.
+- **Linking by email requires both sides verified.** Google's `email_verified` and our
+  `emailVerified`. Without the second, someone could register a victim's address with their own
+  password and keep access after the victim later linked Google. An unverified local account is
+  refused (`ACCOUNT_UNVERIFIED`); the owner confirms the email or resets the password first.
+- **Only the register page creates accounts.** `intent` defaults to `login`, which answers an
+  unknown Google address with `NO_ACCOUNT`. The register page's link is held until the terms box
+  is ticked, so `acceptedTermsAt` still means someone accepted the terms.
+- **Created accounts get a random password.** `password` stays required, so no password flow
+  changes; "Forgot password" sets a real one.
+- **A locked account can still use Google.** The lock defends against password guessing; a
+  Google sign-in proves ownership another way. A closed account is refused (`ACCOUNT_CLOSED`):
+  restoring stays on the password path.
+- **Rate limit on the callback only**, 5 per 15 minutes per IP like the other sign-in routes.
+  The start route mints nothing.
+- **`Express.User` now extends `UserDocument`.** `@types/passport` declares `Request.user`, so the
+  existing declaration became a widening of that interface. The strategy's verify callback is the
+  one place that puts something else in Passport's user slot, with a commented cast.
+- **No migration.** `googleId` is optional with a sparse unique index, which Mongoose builds on
+  boot. No existing document changes shape, so `schemaVersion` stays 1.
+- **The Google "G" is `client/public/google-g.svg`,** so its brand colours stay outside `src`,
+  where the no-raw-colour rule applies.
+- **Not built:** disconnecting Google in Settings, an email when Google is linked, and an E2E flow
+  through Google, since CI cannot reach Google. The server tests stub the code exchange and the
+  profile fetch and run every other part for real. Add the first two if users ask for them.

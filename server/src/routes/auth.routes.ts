@@ -20,11 +20,13 @@ import {
   usage,
   verifyEmail,
 } from '@/controllers/auth.controller';
+import { finishGoogleSignIn, startGoogleSignIn } from '@/controllers/googleAuth.controller';
 import {
   demoLoginIpLimiter,
   exportLimiter,
   forgotPasswordEmailLimiter,
   forgotPasswordIpLimiter,
+  googleSignInIpLimiter,
   loginEmailLimiter,
   loginIpLimiter,
   registerEmailLimiter,
@@ -35,11 +37,12 @@ import {
 } from '@/middleware/rateLimit';
 import { changesEmail, rejectDemoAccount } from '@/middleware/rejectDemoAccount';
 import { requireAuth } from '@/middleware/requireAuth';
-import { validateBody } from '@/middleware/validate';
+import { validateBody, validateQuery } from '@/middleware/validate';
 import {
   changePasswordSchema,
   deleteAccountSchema,
   forgotPasswordSchema,
+  googleStartSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -70,6 +73,11 @@ router.post('/restore', restoreIpLimiter, validateBody(restoreAccountSchema), re
 // precisely what stops this route being pointed at any account but the seeded
 // demo one. See `loginAsDemo`.
 router.post('/demo', demoLoginIpLimiter, demoLogin);
+
+// Browser navigations rather than API calls: both answer with a redirect into
+// the client, never a JSON body. See `googleAuth.controller`.
+router.get('/google', validateQuery(googleStartSchema), startGoogleSignIn);
+router.get('/google/callback', googleSignInIpLimiter, finishGoogleSignIn);
 
 // Refresh and logout authenticate with the cookie, so they must work even once
 // the access token has expired.

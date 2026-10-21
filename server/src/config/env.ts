@@ -106,6 +106,14 @@ const baseSchema = z.object({
    */
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0),
 
+  /**
+   * Optional "Continue with Google" (SPEC Phase 17). Both unset - the default -
+   * leaves the Google routes answering with a redirect that says sign-in with
+   * Google is unavailable, and every other flow exactly as it was.
+   */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+
   ENABLE_CRON: z.preprocess(
     (value) => (value === undefined ? undefined : value !== 'false' && value !== false),
     z.boolean().default(true),
@@ -219,6 +227,17 @@ export const envSchemaWithMail = envSchemaWithStorage.superRefine((value, ctx) =
   }
 });
 
+/** Half a Google client cannot sign anyone in, so it is refused rather than half-enabled. */
+export const envSchemaWithGoogle = envSchemaWithMail.superRefine((value, ctx) => {
+  if (Boolean(value.GOOGLE_CLIENT_ID) === Boolean(value.GOOGLE_CLIENT_SECRET)) return;
+
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: [value.GOOGLE_CLIENT_ID ? 'GOOGLE_CLIENT_SECRET' : 'GOOGLE_CLIENT_ID'],
+    message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together',
+  });
+});
+
 export type Env = z.infer<typeof envSchema>;
 
 /**
@@ -246,7 +265,7 @@ function withoutBlanks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
  * in a single pass instead of one variable per restart.
  */
 export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchemaWithMail.safeParse(withoutBlanks(source));
+  const result = envSchemaWithGoogle.safeParse(withoutBlanks(source));
 
   if (!result.success) {
     const details = result.error.issues

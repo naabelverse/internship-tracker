@@ -40,12 +40,14 @@ COPY client ./client
 ARG VITE_API_URL
 ARG VITE_APP_URL
 ARG VITE_DEMO_ENABLED
+ARG VITE_GOOGLE_AUTH_ENABLED
 ARG VITE_SENTRY_DSN
 # Promoted to ENV because an ARG is visible to the Dockerfile's own instructions
 # but is not exported into a RUN's environment, which is where `vite build` looks.
 ENV VITE_API_URL=$VITE_API_URL \
     VITE_APP_URL=$VITE_APP_URL \
     VITE_DEMO_ENABLED=$VITE_DEMO_ENABLED \
+    VITE_GOOGLE_AUTH_ENABLED=$VITE_GOOGLE_AUTH_ENABLED \
     VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 # `build:deploy` rather than `build`: it refuses to build without a real API and
 # app URL, then strips the source maps out of dist/ after building, so the served

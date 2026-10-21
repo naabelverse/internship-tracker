@@ -801,7 +801,7 @@ until the app is actually deployed to a domain, and is listed under manual steps
 | 18  | Export returns everything; deletion removes it all               | verified                                   | `server/tests/dataExport.test.ts` (a record from every model, no credentials, scoped to the account) + `auth.softDelete.test.ts`                        |
 | 19  | Lighthouse reported for landing + dashboard, meets targets       | verified                                   | Measured this phase: landing 100/100/96/100, dashboard 98/100/100/100 against 90/95/95/95. README → Performance                                         |
 | 20  | Resource caps, rate limits, upload validation each proven        | verified                                   | `resourceCaps.test.ts`, `auth.rateLimit.test.ts`, `attachment.test.ts`                                                                                  |
-| 21  | `DEPLOYMENT.md` complete; cross-origin cookies explicit          | verified                                   | 17 sections, every production variable, §6 is entirely cross-origin; production was deployed from it, and its one drift (Resend's CNAMEs) is in §7.2  |
+| 21  | `DEPLOYMENT.md` complete; cross-origin cookies explicit          | verified                                   | 18 sections, every production variable, §6 is entirely cross-origin; production was deployed from it, and its one drift (Resend's CNAMEs) is in §7.2  |
 | 22  | No secret, real email or personal data committed, ever           | verified                                   | gitleaks over every commit: `no leaks found`; the history contains only the two `.env.example` files                                                    |
 | 23  | Uploads survive a restart and a redeploy                         | verified                                   | `server/tests/storage.contract.test.ts` against both drivers; live on 20 Oct 2026 a PDF uploaded before redeploy `29cac55c` downloaded with the same SHA-256 after it, then was deleted |
 | 24  | Dates correct in two distant timezones                           | verified                                   | `analytics.timezone`, `reminderJob.timezone`, `weeklySummaryJob.timezone`, `mail.digestTimezone`, `dates` — Asia/Kuala_Lumpur and America/Los_Angeles    |
@@ -816,7 +816,10 @@ site). It needs a manual action on production, not code. 5, 21, 23 and 29 were c
 deploy; the uptime monitor, Sentry and backups are done under manual steps below.
 
 ## Phase 17 — Optional
-- [ ] Google OAuth (only if phases 1–16 are green and nothing regresses)
+- [x] Google OAuth (only if phases 1–16 are green and nothing regresses)
+  — "Continue with Google" on sign-in and sign-up, off until `GOOGLE_CLIENT_ID`/`_SECRET` and
+  `VITE_GOOGLE_AUTH_ENABLED` are set (DEPLOYMENT.md Step 12). No existing test changed. Not built:
+  disconnecting Google in Settings, and an E2E through Google. See DECISIONS.md, Phase 17.
 
 ---
 

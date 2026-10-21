@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { THEMES } from '@/models/User';
+import { GOOGLE_INTENTS } from '@/services/googleAuth.service';
 
 /** Rejects a timezone the runtime cannot resolve, so stored values are always usable. */
 const ianaTimezone = z.string().refine((value) => {
@@ -100,6 +101,16 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;
 export type RestoreAccountInput = z.infer<typeof restoreAccountSchema>;
+
+/**
+ * Query for `GET /auth/google`. `intent` defaults to `login`, so a bare link can
+ * never create an account: only the register page, where the terms are
+ * accepted, asks for `register`.
+ */
+export const googleStartSchema = z.object({
+  intent: z.enum(GOOGLE_INTENTS).default('login'),
+  timezone: ianaTimezone.optional(),
+});
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

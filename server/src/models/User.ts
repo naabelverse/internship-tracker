@@ -55,6 +55,8 @@ export interface UserAttributes {
   acceptedTermsAt: Date;
   deletedAt?: Date;
   isDemo: boolean;
+  /** Google's `sub` for an account that signs in with Google; never reused, unlike an email. */
+  googleId?: string;
   schemaVersion: number;
   createdAt: Date;
   updatedAt: Date;
@@ -120,6 +122,8 @@ const userSchema = new Schema<UserAttributes, UserModelType, UserMethods>(
     acceptedTermsAt: { type: Date, required: true },
     deletedAt: { type: Date },
     isDemo: { type: Boolean, default: false },
+    // Sparse, so the many accounts without one do not collide on a shared null.
+    googleId: { type: String, unique: true, sparse: true },
     schemaVersion: { type: Number, default: CURRENT_USER_SCHEMA_VERSION },
   },
   {

@@ -24,7 +24,7 @@ import { sendSuccess } from '@/utils/apiResponse';
 import { REFRESH_COOKIE_NAME, clearRefreshCookie, setRefreshCookie } from '@/utils/cookies';
 
 /** Device fingerprint stored against a refresh token so users can audit sessions. */
-function sessionContext(req: Request): SessionContext {
+export function sessionContext(req: Request): SessionContext {
   return { userAgent: req.get('user-agent'), ip: req.ip };
 }
 

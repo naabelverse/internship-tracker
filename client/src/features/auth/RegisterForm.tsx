@@ -8,6 +8,8 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { PasswordField } from '@/components/ui/PasswordField';
 import { TextField } from '@/components/ui/TextField';
 import { detectTimezone, registerSchema, type RegisterValues } from '@/features/auth/authSchemas';
+import { GoogleSignInLink } from '@/features/auth/GoogleSignInLink';
+import { useGoogleSignInError } from '@/features/auth/googleSignIn';
 import { applyServerErrors } from '@/features/auth/serverErrors';
 import { useRegister } from '@/features/auth/useAuthMutations';
 import { paths } from '@/routes/paths';
@@ -39,11 +41,14 @@ export function RegisterForm(): JSX.Element {
   // Set once, on first render, so it measures the form's whole time on screen.
   const mountedAt = useRef(Date.now());
   const honeypot = useRef<HTMLInputElement>(null);
+  const googleError = useGoogleSignInError();
 
   const {
     register,
     handleSubmit,
     setError,
+    getValues,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
@@ -70,7 +75,7 @@ export function RegisterForm(): JSX.Element {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
-      <FormError message={errors.root?.message} />
+      <FormError message={errors.root?.message ?? googleError} />
 
       {/*
         Not registered with react-hook-form, and not in the zod schema: it is not
@@ -144,6 +149,19 @@ export function RegisterForm(): JSX.Element {
       >
         Create account
       </Button>
+
+      {/*
+        Google creates the account too, so it needs the same accepted terms: a
+        click with the box unticked stays here and shows the box's own error.
+      */}
+      <GoogleSignInLink
+        intent="register"
+        onClick={(event) => {
+          if (getValues('acceptTerms')) return;
+          event.preventDefault();
+          void trigger('acceptTerms');
+        }}
+      />
     </form>
   );
 }
