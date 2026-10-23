@@ -5895,3 +5895,20 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   never reach that line, so at the bottom the linked section wins while it is on screen, else the
   last one. A page that has not scrolled is never at the bottom; without that guard a page that
   fits the window marked its last card, which is how the first version failed in jsdom.
+
+## Deploys only from pushes to this repository, before going public (23 Oct 2026)
+
+- **The repository is being made public, because GitHub Actions minutes ran out on the private
+  plan.** Public repositories get standard runners for free.
+- **`deploy.yml` now requires the CI run to be a `push` from this repository.** `workflow_run`'s
+  `branches: [main]` matches the head branch _name_, so in a public repository a fork's pull
+  request from its own branch called `main` would pass, run with the Railway secrets, and deploy
+  the fork's `head_sha`. The `DEPLOY_ENABLED` gate does not stop this: it protects a fork's own
+  copy, not a run in this repository. A manual dispatch is also limited to `main`.
+- **Checked before the switch:** gitleaks 8.21.2 over every commit on all 66 branches (199 commits
+  with a text diff; the rest are merges or screenshot-only) found nothing, and an independent grep
+  for connection strings, API keys and private keys found only documentation placeholders.
+  `ci.yml` uses no secrets, the default workflow token is read-only, and the only email address in
+  file content is the public contact alias. Commit metadata carries the maintainer's own address,
+  which going public exposes; rewriting history was rejected because it would break every pinned
+  screenshot SHA in past pull requests.

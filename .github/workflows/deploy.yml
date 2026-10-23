@@ -36,9 +36,17 @@ jobs:
     # to be checked explicitly or a red suite would still deploy — which is the
     # one thing this workflow exists to prevent. `workflow_dispatch` has no
     # upstream run, so it passes on the first clause.
+    #
+    # The repository is public, and `branches: [main]` above matches the head
+    # branch *name*: a fork's pull request from its own branch called `main`
+    # passes it, and this job would then run with our secrets and deploy the
+    # fork's commit (`head_sha`). So the CI run must also be a push, to this
+    # repository. A manual dispatch is limited to `main` for the same reason.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
 
     steps:
       # Disabled by default, and deliberately not an `if:` on the job. A fork or
