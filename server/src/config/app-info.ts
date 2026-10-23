@@ -13,9 +13,9 @@ export const APP_VERSION = '1.0.0';
 export const APP_PRODUCT_NAME = 'Internship Tracker';
 
 /**
- * Two-letter mark used where a logo would go. Email clients block remote images
- * by default and a broken image is worse than no image, so the masthead is drawn
- * with type and a background colour rather than fetched.
+ * The email masthead's alt text. The logo itself is a PNG served by the client;
+ * a mail client that blocks remote images shows these two letters on the same
+ * dark cell instead of a broken image.
  */
 export const APP_LOGO_MARK = 'IT';
 

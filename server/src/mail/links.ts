@@ -33,3 +33,11 @@ export function boardUrl(): string {
 export function dashboardUrl(): string {
   return appUrl(MAIL_LINK_PATHS.dashboard);
 }
+
+/**
+ * The brand mark on its dark rounded square, served by the client. A client that
+ * blocks images shows the masthead's alt text on the same dark cell instead.
+ */
+export function logoUrl(): string {
+  return appUrl('/apple-touch-icon.png');
+}

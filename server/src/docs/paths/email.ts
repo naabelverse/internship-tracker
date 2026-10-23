@@ -61,13 +61,12 @@ const feedback = {
     tags: ['Email'],
     summary: 'Send feedback to the maintainer',
     description:
-      'Emails the message to the project inbox; nothing is stored. A non-empty replyTo becomes the Reply-To address, and an empty one means the sender wants no reply. Limited to 5 an hour per account.',
+      'Emails the message to the project inbox; nothing is stored. The signed-in account email becomes the Reply-To address, except on the shared demo account. Limited to 5 an hour per account.',
     security: AUTHENTICATED,
     requestBody: jsonBody(
       objectOf({
         category: { type: 'string', enum: ['general', 'bug', 'suggestion'] },
         message: { type: 'string', minLength: 1, maxLength: 5000 },
-        replyTo: { type: 'string', description: 'An email address, or empty for no reply' },
       }),
     ),
     responses: {
