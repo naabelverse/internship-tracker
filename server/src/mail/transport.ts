@@ -28,6 +28,8 @@ export interface OutgoingMessage {
   html: string;
   text: string;
   headers: Record<string, string>;
+  /** Set on operator mail, so answering it reaches the person who wrote it. */
+  replyTo?: string;
 }
 
 export interface MailTransport {
@@ -124,6 +126,7 @@ export function createMailTransport(): MailTransport {
         text: message.text,
         html: message.html,
         headers: message.headers,
+        replyTo: message.replyTo,
       });
 
       if (mode === 'console') printToConsole(message);

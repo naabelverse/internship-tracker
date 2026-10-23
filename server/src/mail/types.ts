@@ -1,6 +1,6 @@
 /**
  * The message vocabulary. Every email the application can send is one of these
- * seven kinds, and each kind carries exactly the data its template needs, so a
+ * eight kinds, and each kind carries exactly the data its template needs, so a
  * template can never be rendered with a field the caller forgot to supply.
  */
 
@@ -12,6 +12,7 @@ export const MAIL_KINDS = [
   'account_restored',
   'reminder_digest',
   'weekly_summary',
+  'feedback',
 ] as const;
 
 export type MailKind = (typeof MAIL_KINDS)[number];
@@ -26,7 +27,11 @@ export type MailKind = (typeof MAIL_KINDS)[number];
  * reminder preference is off would hide exactly the event someone whose account
  * was taken over most needs to see.
  */
-export type MailCategory = 'security' | 'optional';
+/**
+ * `operator` mail goes to the maintainer rather than to a user: no preference
+ * applies and there is nothing to unsubscribe from.
+ */
+export type MailCategory = 'security' | 'optional' | 'operator';
 
 export const MAIL_CATEGORY: Record<MailKind, MailCategory> = {
   verify_email: 'security',
@@ -36,6 +41,7 @@ export const MAIL_CATEGORY: Record<MailKind, MailCategory> = {
   account_restored: 'security',
   reminder_digest: 'optional',
   weekly_summary: 'optional',
+  feedback: 'operator',
 };
 
 export function isSecurityMail(kind: MailKind): boolean {
@@ -130,11 +136,26 @@ export type SecurityMessage =
   | { kind: 'account_deleted'; data: AccountDeletedData }
   | { kind: 'account_restored'; data: AccountRestoredData };
 
+export const FEEDBACK_CATEGORIES = ['general', 'bug', 'suggestion'] as const;
+export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
+
+export interface FeedbackData {
+  category: FeedbackCategory;
+  message: string;
+  senderName: string;
+  /** The account the feedback came from, which may differ from the reply address. */
+  senderAccountEmail: string;
+  /** Where the sender asked to be answered, if anywhere. */
+  replyTo?: string;
+}
+
+export type OperatorMessage = { kind: 'feedback'; data: FeedbackData };
+
 export type OptionalMessage =
   | { kind: 'reminder_digest'; data: ReminderDigestData }
   | { kind: 'weekly_summary'; data: WeeklySummaryData };
 
-export type MailMessage = SecurityMessage | OptionalMessage;
+export type MailMessage = SecurityMessage | OptionalMessage | OperatorMessage;
 
 export interface RenderedMail {
   subject: string;

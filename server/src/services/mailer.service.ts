@@ -11,6 +11,7 @@ import {
   type MailKind,
   type MailRecipient,
   type OptionalMailKind,
+  type OperatorMessage,
   type OptionalMessage,
   type SecurityMessage,
 } from '@/mail/types';
@@ -34,7 +35,8 @@ export type { MailRecord } from '@/mail/queue';
  */
 export type SendMailInput =
   | { to: string; message: SecurityMessage; recipient?: MailRecipient }
-  | { to: string; message: OptionalMessage; recipient: MailRecipient };
+  | { to: string; message: OptionalMessage; recipient: MailRecipient }
+  | { to: string; message: OperatorMessage; replyTo?: string };
 
 let queue: MailQueue | undefined;
 
@@ -113,7 +115,7 @@ export function sendMail(input: SendMailInput): void {
     const { message } = input;
 
     if (message.kind === 'reminder_digest' || message.kind === 'weekly_summary') {
-      const { recipient } = input;
+      const recipient = 'recipient' in input ? input.recipient : undefined;
 
       if (!recipient) {
         // The public type makes this unreachable; reaching it means someone cast
@@ -144,8 +146,8 @@ export function sendMail(input: SendMailInput): void {
       return;
     }
 
-    // Security mail: no gate, no unsubscribe link, only the preferences link
-    // every message carries.
+    // Security and operator mail: no gate, no unsubscribe link, only the
+    // preferences link every message carries.
     const rendered = renderMail(message, { preferencesUrl: preferencesUrl() });
 
     activeQueue().enqueue({
@@ -155,6 +157,7 @@ export function sendMail(input: SendMailInput): void {
       html: rendered.html,
       text: rendered.text,
       headers: rendered.headers,
+      replyTo: 'replyTo' in input ? input.replyTo : undefined,
     });
   } catch (error) {
     logger.error('Mail could not be queued', {

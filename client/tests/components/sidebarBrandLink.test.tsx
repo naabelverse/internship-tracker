@@ -4,7 +4,7 @@ import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { APP_VERSION, AUTHOR_URL, CONTACT_EMAIL } from '@/lib/siteMeta';
+import { APP_VERSION, AUTHOR_URL } from '@/lib/siteMeta';
 import { paths } from '@/routes/paths';
 import { makeSession } from '../utils/factories';
 import { installMockApi } from '../utils/mockAdapter';
@@ -93,15 +93,12 @@ describe('the sidebar lockup', () => {
     expect(await screen.findByRole('heading', { name: 'Dashboard page' })).toBeInTheDocument();
   });
 
-  it('ends with the author credit and a feedback mailto', () => {
+  it('ends with a feedback button, the author credit and the version', () => {
     renderWithProviders(<Sidebar isOpen={false} onClose={() => undefined} />);
     const panel = within(screen.getByLabelText('Main navigation'));
 
     expect(panel.getByRole('link', { name: 'Naabel' })).toHaveAttribute('href', AUTHOR_URL);
-    expect(panel.getByRole('link', { name: 'Send feedback' })).toHaveAttribute(
-      'href',
-      `mailto:${CONTACT_EMAIL}`,
-    );
+    expect(panel.getByRole('button', { name: 'Send feedback' })).toBeInTheDocument();
     expect(panel.getByText(`v${APP_VERSION}`)).toBeInTheDocument();
   });
 

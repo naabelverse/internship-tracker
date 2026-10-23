@@ -81,10 +81,21 @@ const MESSAGES: Record<MailKind, MailMessage> = {
       upcoming: [{ title: 'Deadline', dueLabel: 'Mon 8 Sep, 09:00' }],
     },
   },
+  feedback: {
+    kind: 'feedback',
+    data: {
+      category: 'bug',
+      message: 'The board froze after a drag.',
+      senderName: 'Ada',
+      senderAccountEmail: 'ada@example.com',
+      replyTo: 'ada@example.com',
+    },
+  },
 };
 
 function render(kind: MailKind) {
-  const footer = MAIL_CATEGORY[kind] === 'security' ? securityFooter : optionalFooter;
+  // Mirrors sendMail: only optional mail carries an unsubscribe footer.
+  const footer = MAIL_CATEGORY[kind] === 'optional' ? optionalFooter : securityFooter;
 
   return renderMail(MESSAGES[kind], footer);
 }
@@ -113,7 +124,10 @@ describe('every template renders both bodies through the shared layout', () => {
     expect(html).toContain('name="viewport"');
   });
 
-  it.each(MAIL_KINDS)('%s greets the recipient in both bodies', (kind) => {
+  // Operator mail is read by the maintainer, so it names the sender instead.
+  const userFacing = MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] !== 'operator');
+
+  it.each(userFacing)('%s greets the recipient in both bodies', (kind) => {
     const mail = render(kind);
 
     expect(mail.html).toContain('Hi Ada,');
@@ -171,7 +185,7 @@ describe('the plain text alternative is a projection of the same blocks', () => 
 
 describe('unsubscribe links appear on exactly the non-transactional mail', () => {
   const optionalKinds = MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] === 'optional');
-  const securityKinds = MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] === 'security');
+  const securityKinds = MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] !== 'optional');
 
   it('covers both categories, so neither list is silently empty', () => {
     expect(optionalKinds).toEqual(['reminder_digest', 'weekly_summary']);
@@ -181,6 +195,7 @@ describe('unsubscribe links appear on exactly the non-transactional mail', () =>
       'password_changed',
       'account_deleted',
       'account_restored',
+      'feedback',
     ]);
   });
 

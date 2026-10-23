@@ -69,7 +69,7 @@ function kindsSent(): MailKind[] {
 }
 
 describe('the two categories are exactly what SPEC section 13 describes', () => {
-  it('names five security kinds and two optional ones', () => {
+  it('names five security kinds, two optional ones and one operator kind', () => {
     const security = MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] === 'security');
     const optional = MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] === 'optional');
 
@@ -81,6 +81,7 @@ describe('the two categories are exactly what SPEC section 13 describes', () => 
       'account_restored',
     ]);
     expect(optional).toEqual(['reminder_digest', 'weekly_summary']);
+    expect(MAIL_KINDS.filter((kind) => MAIL_CATEGORY[kind] === 'operator')).toEqual(['feedback']);
   });
 });
 

@@ -185,6 +185,12 @@ export const ExternalLinkIcon = (props: IconProps): JSX.Element => (
   </Icon>
 );
 
+export const MailIcon = (props: IconProps): JSX.Element => (
+  <Icon {...props}>
+    <path d="M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1zM3.5 7l8.5 6 8.5-6" />
+  </Icon>
+);
+
 export const ChevronLeftIcon = (props: IconProps): JSX.Element => (
   <Icon {...props}>
     <path d="M15 5l-7 7 7 7" />

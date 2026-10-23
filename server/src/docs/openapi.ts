@@ -29,7 +29,10 @@ export const openApiDocument = {
     { name: 'Interviews', description: 'Interviews embedded in an application' },
     { name: 'Analytics', description: 'Aggregations behind the dashboard' },
     { name: 'Calendar and reminders', description: 'Upcoming work and nudges' },
-    { name: 'Email', description: 'Unsubscribing from non-transactional mail' },
+    {
+      name: 'Email',
+      description: 'Unsubscribing from non-transactional mail, and sending feedback',
+    },
   ],
   components,
   security: [{ bearerAuth: [] }],

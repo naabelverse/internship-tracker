@@ -5836,3 +5836,27 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
 - **The version comes from `client/package.json`.** `client/tsconfig.json` gains
   `resolveJsonModule` for the import, and Vite inlines only the `version` string, not the file.
   The three `package.json` files share one version, so the client's speaks for the release.
+
+## The sidebar footer is redesigned, and feedback becomes an in-app form (23 Oct 2026)
+
+- **"Send feedback" is a nav-styled button that opens a modal,** chosen by the maintainer over a
+  one-line footer and a card. It has the same 36px box and icon line as the nav items. Below a
+  divider, "Built by Naabel" sits on the left and the version on the right, with no underlines.
+- **Feedback is emailed, not stored.** `POST /api/v1/email/feedback` mails `FEEDBACK_INBOX`, the
+  same public project alias as the client's `CONTACT_EMAIL`, through the existing queue and
+  Resend transport. A new collection would need export and deletion handling for no gain.
+- **A new mail category, `operator`,** for mail read by the maintainer rather than a user. It
+  skips the preference gate and the unsubscribe footer like security mail does, but it greets
+  nobody, so the per-kind greeting test now covers user-facing kinds only.
+- **`replyTo` is an explicit field from `sendMail` through the queue to both transports.** Resend
+  takes it as `reply_to` and nodemailer as `replyTo`. Passing a `Reply-To` header was rejected
+  because whether Resend honours it was not verified.
+- **The reply address starts as the account email.** Clearing it sends feedback with no way to
+  answer; the server treats `''` as no reply.
+- **Mounted on the email router,** so the OpenAPI mount table needed no change. It runs
+  `requireAuth`, then `feedbackLimiter` (5 an hour per account; the demo account shares one
+  budget), then zod validation.
+- **The sidebar closes the drawer before opening the modal,** so two focus traps never run at
+  once on a phone.
+- **The `0 / 5,000` counter uses `TextArea`'s left-aligned hint,** not the right-aligned counter
+  in the reference image, to avoid a one-off variant of the field.
