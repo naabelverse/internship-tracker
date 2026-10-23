@@ -5872,3 +5872,26 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   `APP_URL`; production serves it as a 200 PNG. Gmail shows remote images by default. A client
   that blocks them shows the `IT` alt text on the same dark cell, so nothing looks broken. This
   replaces the earlier choice to draw the mark with type only.
+
+## Settings: section navigation, a visible avatar, and an empty avatar that saves (23 Oct 2026)
+
+- **Saving the profile with an empty Avatar URL returned 400.** The form sends every profile field,
+  with an empty box as `''` meaning "no picture", but `updateMeSchema` validated `avatarUrl` as a
+  URL, so every account without an avatar could not save its profile. The client unit tests mock
+  the API and never saw it. The schema now accepts `''` as well as a URL, the same treatment
+  `university` already gets, and a server test covers both the clear and a non-URL refusal.
+- **`avatarUrl` is now shown.** It was editable but rendered nowhere, and the hint promised an
+  upload "with the storage work". `UserAvatar` draws the picture in the top bar and beside the
+  field, falling back to initials when it is empty or fails to load. The preview uses the saved
+  value, not the field, so typing does not request every half-typed URL.
+- **Avatar upload was not built.** SPEC section 4 has `avatarUrl` as a plain optional string, and
+  uploads are served as `Content-Disposition: attachment` (section 12), which an `<img>` cannot use.
+  Uploading would need a separate inline-served image path; the stale promise was removed instead.
+- **"On this page" beside the cards from `xl` up.** The single 48rem column left the right half of
+  a wide screen empty. The page is now a centred two-column grid (cards, then a sticky 11rem nav),
+  and below `xl` the column is centred alone. The section ids live once in `SettingsPage`.
+- **The scroll spy reads positions on scroll, not with IntersectionObserver.** The active section
+  is the last whose top passed the 96px line under the top bar. The short sections at the end can
+  never reach that line, so at the bottom the linked section wins while it is on screen, else the
+  last one. A page that has not scrolled is never at the bottom; without that guard a page that
+  fits the window marked its last card, which is how the first version failed in jsdom.

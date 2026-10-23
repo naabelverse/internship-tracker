@@ -57,7 +57,8 @@ export const loginSchema = z
 export const updateMeSchema = z
   .object({
     name: z.string().trim().min(2).max(60).optional(),
-    avatarUrl: z.string().url().max(2048).optional(),
+    // '' clears the picture: Settings sends the whole profile, empty box included.
+    avatarUrl: z.string().url().max(2048).or(z.literal('')).optional(),
     university: z.string().trim().max(120).optional(),
     gradYear: z.number().int().min(1950).max(2100).optional(),
     targetRoles: z.array(z.string().trim().min(1).max(80)).max(20).optional(),

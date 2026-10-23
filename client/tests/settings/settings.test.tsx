@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -286,6 +286,87 @@ describe('settings password', () => {
  * replacement asserts what the section now actually does, and the "no stale
  * copy" case is what stops the placeholder wording creeping back.
  */
+describe('settings section navigation', () => {
+  const nextFrame = (): Promise<void> =>
+    act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+
+  it('links to every section, and every link has a target on the page', async () => {
+    renderSettings();
+    await screen.findByLabelText('Name');
+
+    const links = within(
+      screen.getByRole('navigation', { name: 'Settings sections' }),
+    ).getAllByRole('link');
+
+    expect(links).toHaveLength(8);
+    for (const link of links) {
+      const id = link.getAttribute('href')?.slice(1) ?? '';
+      expect(document.getElementById(id), `#${id}`).not.toBeNull();
+    }
+  });
+
+  /**
+   * jsdom has no layout, so each section is given a top: 600 px apart, starting
+   * below the top bar. Scrolling 700 px lifts the second past the 96 px line.
+   */
+  it('marks the section whose top has passed the top bar', async () => {
+    const order = [
+      'profile',
+      'email',
+      'preferences',
+      'password',
+      'sessions',
+      'usage',
+      'data',
+      'close-account',
+    ];
+    let scrolled = 0;
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const index = order.indexOf(this.id);
+      return DOMRect.fromRect({ y: index === -1 ? 0 : 120 + index * 600 - scrolled });
+    });
+
+    try {
+      renderSettings();
+      await screen.findByLabelText('Name');
+      const nav = screen.getByRole('navigation', { name: 'Settings sections' });
+      const current = (): string | undefined =>
+        within(nav).queryByRole('link', { current: 'location' })?.textContent ?? undefined;
+
+      await nextFrame();
+      expect(current()).toBe('Profile');
+
+      scrolled = 700;
+      fireEvent.scroll(window);
+      await nextFrame();
+      expect(current()).toBe('Email address');
+
+      // At the very bottom (jsdom's scrollHeight is 0), "Your data" sits on
+      // screen at 220 px but can never reach the line: the clicked link wins.
+      Object.defineProperty(window, 'scrollY', { value: 3500, configurable: true });
+      scrolled = 3500;
+      window.location.hash = '#data';
+      fireEvent(window, new HashChangeEvent('hashchange'));
+      await nextFrame();
+      expect(current()).toBe('Your data');
+
+      // A stale hash for a section scrolled off screen falls back to the last.
+      window.location.hash = '#profile';
+      fireEvent(window, new HashChangeEvent('hashchange'));
+      await nextFrame();
+      expect(current()).toBe('Close your account');
+    } finally {
+      rect.mockRestore();
+      Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+      window.location.hash = '';
+    }
+  });
+});
+
 describe('settings data section', () => {
   it('offers a working export rather than a disabled placeholder', async () => {
     renderSettings();
