@@ -209,6 +209,17 @@ export const exportLimiter = createAccountLimiter(
   'RATE_LIMITED_EXPORT',
 );
 
+/**
+ * Feedback: 5 an hour. Each one is an email to a real inbox, and the demo
+ * account shares one budget across everyone trying it, which is the point.
+ */
+export const feedbackLimiter = createAccountLimiter(
+  5,
+  60 * 60 * 1000,
+  'You have sent a lot of feedback recently. Try again in an hour.',
+  'RATE_LIMITED_FEEDBACK',
+);
+
 /** Clears every auth counter. Used by tests so one case cannot throttle the next. */
 export function resetAuthRateLimiters(): void {
   for (const store of authStores) store.resetAll();

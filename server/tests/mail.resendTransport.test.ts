@@ -327,6 +327,16 @@ describe('all six templates travel this path unchanged', () => {
         upcoming: [{ title: 'Interview', dueLabel: 'Monday, 10am' }],
       },
     },
+    feedback: {
+      kind: 'feedback',
+      data: {
+        category: 'bug',
+        message: 'The board froze after a drag.',
+        senderName: 'Ada',
+        senderAccountEmail: 'ada@example.com',
+        replyTo: 'ada@example.com',
+      },
+    },
   };
 
   it.each(MAIL_KINDS)('delivers the rendered %s intact over HTTP', async (kind) => {
@@ -362,5 +372,35 @@ describe('all six templates travel this path unchanged', () => {
     expect(body.html).toBe(rendered.html);
     expect(body.text).toBe(rendered.text);
     expect(body.headers).toEqual(rendered.headers);
+  });
+});
+
+describe('reply-to', () => {
+  const base = {
+    to: 'inbox@example.com',
+    kind: 'feedback' as const,
+    subject: 's',
+    html: '<p>h</p>',
+    text: 't',
+    headers: {},
+  };
+
+  it('sends reply_to when the message carries one', async () => {
+    const stub = stubFetch([ok()]);
+
+    await createResendTransport({ apiKey: API_KEY, fetchImpl: stub.impl }).send({
+      ...base,
+      replyTo: 'ada@example.com',
+    });
+
+    expect(bodyOf(stub).reply_to).toBe('ada@example.com');
+  });
+
+  it('omits reply_to otherwise', async () => {
+    const stub = stubFetch([ok()]);
+
+    await createResendTransport({ apiKey: API_KEY, fetchImpl: stub.impl }).send(base);
+
+    expect(bodyOf(stub)).not.toHaveProperty('reply_to');
   });
 });

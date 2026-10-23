@@ -24,6 +24,7 @@ export interface MailRecord {
   text: string;
   html: string;
   headers: Record<string, string>;
+  replyTo?: string;
   queuedAt: Date;
   attempts: number;
   outcome: MailOutcome;
@@ -150,6 +151,7 @@ export class MailQueue {
           html: record.html,
           text: record.text,
           headers: record.headers,
+          replyTo: record.replyTo,
         });
 
         record.outcome = 'sent';

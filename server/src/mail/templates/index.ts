@@ -1,5 +1,6 @@
 import { renderHtml, renderText, type MailFooter } from '@/mail/layout';
 import { reminderDigestTemplate, weeklySummaryTemplate } from '@/mail/templates/digests';
+import { feedbackTemplate } from '@/mail/templates/feedback';
 import {
   accountDeletedTemplate,
   accountRestoredTemplate,
@@ -33,6 +34,8 @@ function contentFor(message: MailMessage): TemplateOutput {
       return reminderDigestTemplate(message.data);
     case 'weekly_summary':
       return weeklySummaryTemplate(message.data);
+    case 'feedback':
+      return feedbackTemplate(message.data);
   }
 }
 

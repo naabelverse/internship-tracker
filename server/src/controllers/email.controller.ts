@@ -1,9 +1,11 @@
 import { logger } from '@/config/logger';
+import { getAuthenticatedUser } from '@/middleware/requireAuth';
 import { escapeHtml } from '@/mail/layout';
 import { preferencesUrl } from '@/mail/links';
 import { verifyUnsubscribeToken, type UnsubscribeClaim } from '@/mail/unsubscribe';
 import { User } from '@/models/User';
-import type { UnsubscribeQuery } from '@/schemas/email.schema';
+import type { FeedbackInput, UnsubscribeQuery } from '@/schemas/email.schema';
+import { sendFeedback } from '@/services/feedback.service';
 import { ApiError } from '@/utils/ApiError';
 import { sendSuccess } from '@/utils/apiResponse';
 import { asyncHandler } from '@/utils/asyncHandler';
@@ -103,4 +105,13 @@ export const unsubscribeOneClick = asyncHandler(async (req, res) => {
   const claim = await applyUnsubscribe(token);
 
   sendSuccess(res, { category: claim.category }, { message: 'Unsubscribed' });
+});
+
+/** The in-app feedback form. Accepted once queued; delivery happens after the response. */
+export const feedback = asyncHandler(async (req, res) => {
+  const user = getAuthenticatedUser(req);
+
+  await sendFeedback(user._id, req.body as FeedbackInput);
+
+  sendSuccess(res, null, { status: 202, message: 'Feedback sent' });
 });

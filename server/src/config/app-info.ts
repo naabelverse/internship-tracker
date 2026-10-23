@@ -18,3 +18,9 @@ export const APP_PRODUCT_NAME = 'Internship Tracker';
  * with type and a background colour rather than fetched.
  */
 export const APP_LOGO_MARK = 'IT';
+
+/**
+ * Where in-app feedback is mailed. The same public project alias as the client's
+ * `CONTACT_EMAIL`, chosen by the maintainer (see DECISIONS.md).
+ */
+export const FEEDBACK_INBOX = 'naabel.workspace@gmail.com';

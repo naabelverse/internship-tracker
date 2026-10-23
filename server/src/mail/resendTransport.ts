@@ -120,6 +120,7 @@ function buildPayload(message: OutgoingMessage, from: string): Record<string, un
     // `List-Unsubscribe` and friends ride here, so optional mail stays
     // unsubscribable through this path exactly as it is through SMTP.
     headers: message.headers,
+    ...(message.replyTo ? { reply_to: message.replyTo } : {}),
   };
 }
 

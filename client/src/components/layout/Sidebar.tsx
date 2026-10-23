@@ -1,10 +1,11 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { BrandMark } from '@/components/marketing/MarketingChrome';
-import { CloseIcon } from '@/components/ui/icons';
+import { CloseIcon, MailIcon } from '@/components/ui/icons';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { APP_VERSION, AUTHOR_URL, CONTACT_EMAIL } from '@/lib/siteMeta';
+import { FeedbackModal } from '@/features/feedback/FeedbackModal';
+import { APP_VERSION, AUTHOR_URL } from '@/lib/siteMeta';
 import { NAV_ITEMS } from '@/routes/navItems';
 import { paths } from '@/routes/paths';
 
@@ -12,9 +13,6 @@ interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const FOOTER_LINK =
-  'rounded-control text-content-muted underline decoration-border underline-offset-4 transition-colors hover:text-content';
 
 function navLinkClass({ isActive }: { isActive: boolean }): string {
   return cn(
@@ -38,6 +36,7 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
  */
 export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   useFocusTrap(panelRef, isOpen, onClose);
 
   return (
@@ -115,19 +114,44 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
           ))}
         </nav>
 
-        {/* `px-6` puts the text on the nav labels' left line: the nav's `p-3` plus a link's `px-3`. */}
-        <p className="px-6 py-4 text-xs text-content-subtle">
-          Built by{' '}
-          <a href={AUTHOR_URL} target="_blank" rel="noreferrer noopener" className={FOOTER_LINK}>
-            Naabel
-          </a>{' '}
-          <span aria-hidden="true">·</span>{' '}
-          <a href={`mailto:${CONTACT_EMAIL}`} className={FOOTER_LINK}>
+        {/*
+          Feedback is styled as a nav item so it gets the same 36px target and icon
+          line. The credit row's `px-3` puts its text on the nav icons' left edge.
+        */}
+        <div className="p-3">
+          {/*
+            Closes the drawer first: below `lg` the drawer is itself a focus-trapped
+            dialog, and two traps at once would fight over Tab.
+          */}
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              setFeedbackOpen(true);
+            }}
+            className={cn(navLinkClass({ isActive: false }), 'w-full')}
+          >
+            <MailIcon className="h-5 w-5 shrink-0" />
             Send feedback
-          </a>
-          <span className="mt-1 block">v{APP_VERSION}</span>
-        </p>
+          </button>
+          <div className="mt-2 flex items-center justify-between border-t border-border px-3 pt-3 text-xs text-content-subtle">
+            <span>
+              Built by{' '}
+              <a
+                href={AUTHOR_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="rounded-control font-medium text-content-muted transition-colors hover:text-content"
+              >
+                Naabel
+              </a>
+            </span>
+            <span>v{APP_VERSION}</span>
+          </div>
+        </div>
       </div>
+
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </>
   );
 }
