@@ -28,7 +28,7 @@ export function feedbackTemplate(data: FeedbackData): TemplateOutput {
         type: 'note',
         text: data.replyTo
           ? `Sent from the account ${data.senderAccountEmail}. Replying to this email reaches ${data.replyTo}.`
-          : `Sent from the account ${data.senderAccountEmail}. No reply address was given.`,
+          : `Sent from the shared demo account (${data.senderAccountEmail}), so there is no one to reply to.`,
       },
     ],
   };

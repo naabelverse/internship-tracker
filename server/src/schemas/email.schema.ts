@@ -15,17 +15,11 @@ export type UnsubscribeQuery = z.infer<typeof unsubscribeQuerySchema>;
 /** Mirrors the client form's counter. */
 export const FEEDBACK_MESSAGE_MAX = 5000;
 
-/** An empty `replyTo` means the sender cleared the field and wants no reply. */
+/** The reply address is the account's own email, so the form does not ask for one. */
 export const feedbackSchema = z
   .object({
     category: z.enum(FEEDBACK_CATEGORIES),
     message: z.string().trim().min(1, 'is required').max(FEEDBACK_MESSAGE_MAX),
-    replyTo: z
-      .union([
-        z.literal(''),
-        z.string().trim().toLowerCase().email('must be a valid email address').max(254),
-      ])
-      .optional(),
   })
   .strict();
 

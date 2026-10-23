@@ -1,4 +1,5 @@
 import { APP_LOGO_MARK, APP_PRODUCT_NAME } from '@/config/app-info';
+import { logoUrl } from '@/mail/links';
 import { MAIL_PALETTE } from '@/mail/palette';
 
 /**
@@ -223,7 +224,7 @@ export function renderHtml(input: LayoutInput): string {
 <table role="presentation" class="shell" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${SURFACE};border-radius:12px;font-family:${FONT};">
 <tr><td class="pad" style="padding:28px 28px 8px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-<td style="width:32px;height:32px;border-radius:8px;background:${BRAND_FILL};text-align:center;font-size:13px;font-weight:700;color:${BRAND_FILL_TEXT};font-family:${FONT};">${escapeHtml(APP_LOGO_MARK)}</td>
+<td style="width:32px;height:32px;border-radius:8px;background:${BRAND_FILL};text-align:center;font-size:13px;font-weight:700;color:${BRAND_FILL_TEXT};font-family:${FONT};"><img src="${escapeHtml(logoUrl())}" width="32" height="32" alt="${escapeHtml(APP_LOGO_MARK)}" style="display:block;width:32px;height:32px;border:0;border-radius:8px;line-height:32px;text-align:center;font-size:13px;font-weight:700;color:${BRAND_FILL_TEXT};font-family:${FONT};"></td>
 <td style="padding-left:10px;font-size:15px;font-weight:600;color:${INK};font-family:${FONT};">${escapeHtml(APP_PRODUCT_NAME)}</td>
 </tr></table>
 </td></tr>

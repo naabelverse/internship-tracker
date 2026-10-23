@@ -145,7 +145,7 @@ export interface FeedbackData {
   senderName: string;
   /** The account the feedback came from, which may differ from the reply address. */
   senderAccountEmail: string;
-  /** Where the sender asked to be answered, if anywhere. */
+  /** The account's email, or absent for the shared demo account. */
   replyTo?: string;
 }
 

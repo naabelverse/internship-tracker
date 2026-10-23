@@ -5860,3 +5860,15 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   once on a phone.
 - **The `0 / 5,000` counter uses `TextArea`'s left-aligned hint,** not the right-aligned counter
   in the reference image, to avoid a one-off variant of the field.
+
+## Feedback replies go to the account email, and emails show the real logo (23 Oct 2026)
+
+- **The feedback form no longer asks for an email.** This reverses the pre-filled field from the
+  previous entry, at the maintainer's request. Every sender is signed in with an email already,
+  so the server sets Reply-To to that address. `feedbackSchema` now rejects a `replyTo` field.
+- **The shared demo account gets no Reply-To.** `demo@tracker.dev` is nobody's inbox, and a
+  reply could reach whoever owns that domain. The email says there is no one to reply to.
+- **The email masthead shows the brand mark as an image.** It loads `/apple-touch-icon.png` from
+  `APP_URL`; production serves it as a 200 PNG. Gmail shows remote images by default. A client
+  that blocks them shows the `IT` alt text on the same dark cell, so nothing looks broken. This
+  replaces the earlier choice to draw the mark with type only.

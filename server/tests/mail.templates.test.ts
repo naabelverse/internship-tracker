@@ -114,6 +114,7 @@ describe('every template renders both bodies through the shared layout', () => {
 
     expect(mail.html).toContain(APP_PRODUCT_NAME);
     expect(mail.text).toContain(APP_PRODUCT_NAME);
+    expect(mail.html).toMatch(/<img src="[^"]+\/apple-touch-icon\.png"[^>]* alt="IT"/);
   });
 
   it.each(MAIL_KINDS)('%s is responsive rather than a fixed width page', (kind) => {
