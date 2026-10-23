@@ -145,6 +145,36 @@ describe('PATCH /auth/me', () => {
     expect(response.body.data.user.pendingEmail).toBe('newaddress@example.com');
   });
 
+  /**
+   * The settings form sends every profile field on save, and an empty Avatar URL
+   * box goes out as `''` meaning "no picture". Validating it as a URL refused the
+   * whole save for every account without an avatar.
+   */
+  it('accepts an empty avatarUrl as clearing the picture', async () => {
+    const { accessToken } = await registerUser(app);
+    const picture = 'https://images.example.test/grace.png';
+
+    const set = await authed('patch', '/me', accessToken).send({ avatarUrl: picture });
+    expect(set.status).toBe(200);
+    expect(set.body.data.user.avatarUrl).toBe(picture);
+
+    const cleared = await authed('patch', '/me', accessToken).send({
+      name: 'Grace Hopper',
+      avatarUrl: '',
+    });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.data.user.name).toBe('Grace Hopper');
+    expect(cleared.body.data.user.avatarUrl).toBe('');
+  });
+
+  it('still refuses an avatarUrl that is not a URL', async () => {
+    const { accessToken } = await registerUser(app);
+
+    const response = await authed('patch', '/me', accessToken).send({ avatarUrl: 'not a url' });
+
+    expect(response.status).toBe(400);
+  });
+
   it('refuses privilege fields such as isDemo', async () => {
     const { accessToken } = await registerUser(app);
 
