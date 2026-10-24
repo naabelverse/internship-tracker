@@ -45,6 +45,14 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
 
   const { isDirty } = form.formState;
 
+  // Previewed once it looks like a full link, so half-typed text does not fire
+  // a request per keystroke. An emptied box previews as the initials it saves to.
+  const linkDraft = form.watch('avatarUrl').trim();
+  const linkPreview =
+    linkDraft !== linkOf(user.avatarUrl) && (linkDraft === '' || /^https?:\/\/\S/i.test(linkDraft))
+      ? linkDraft
+      : undefined;
+
   // Re-seed from the account only while the form is untouched. Resetting on
   // every background refetch would discard whatever the user was typing, which
   // is the bug Phase 6 hit on the application edit form.
@@ -127,6 +135,7 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
 
       <AvatarField
         user={user}
+        linkPreview={linkPreview}
         onSaved={(saved) => {
           form.resetField('avatarUrl', { defaultValue: linkOf(saved.avatarUrl) });
         }}

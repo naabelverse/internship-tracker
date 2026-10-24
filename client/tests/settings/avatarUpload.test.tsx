@@ -40,17 +40,47 @@ afterEach(() => {
 });
 
 describe('avatar upload', () => {
-  it('saves the resized picture on its own, straight away', async () => {
+  it('previews the resized picture, then saves it on its own', async () => {
     const user = userEvent.setup();
     toAvatarDataUrl.mockResolvedValue(UPLOADED);
     const api = renderProfile(makeUser({ name: 'Ada Lovelace' }));
 
     await user.upload(screen.getByLabelText('Avatar image file'), photo());
 
+    expect(await screen.findByText('Preview. Not saved yet.')).toBeInTheDocument();
+    expect(document.querySelector('img')).toHaveAttribute('src', UPLOADED);
+    expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'Save picture' }));
+
     await waitFor(() => {
       expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(1);
     });
     expect(api.callsTo('PATCH', '/auth/me')[0].data).toEqual({ avatarUrl: UPLOADED });
+  });
+
+  it('drops a previewed picture on Cancel and sends nothing', async () => {
+    const user = userEvent.setup();
+    toAvatarDataUrl.mockResolvedValue(UPLOADED);
+    const api = renderProfile(makeUser({ name: 'Ada Lovelace' }));
+
+    await user.upload(screen.getByLabelText('Avatar image file'), photo());
+    await user.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+    expect(document.querySelector('img')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Upload image' })).toBeInTheDocument();
+    expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(0);
+  });
+
+  it('previews a pasted link before Save profile', async () => {
+    const user = userEvent.setup();
+    const api = renderProfile(makeUser({ name: 'Ada Lovelace' }));
+
+    await user.type(screen.getByLabelText('Image link'), 'https://example.com/me.png');
+
+    expect(document.querySelector('img')).toHaveAttribute('src', 'https://example.com/me.png');
+    expect(screen.getByText('Preview. Save profile to keep it.')).toBeInTheDocument();
+    expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(0);
   });
 
   it('says why a file was refused and sends nothing', async () => {
