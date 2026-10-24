@@ -5961,3 +5961,7 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   asked for upload alone. `avatarUrl` stays in SPEC section 6 as stored data, set only by the
   upload, and the profile form no longer carries it. The server still accepts a URL there, so a
   link saved before this keeps showing.
+- **Settings "On this page": 2 px of slack on the active line.** A jump to `#usage` snaps the
+  scroll offset to a device pixel and could stop at 96.25 px, a quarter-pixel short of the 96 px
+  line, so "Storage and limits" marked "Signed in devices". Reproduced in Edge at 125-175% with a
+  fractional card height; sections sit 16 px apart, so the slack cannot mark a neighbour.
