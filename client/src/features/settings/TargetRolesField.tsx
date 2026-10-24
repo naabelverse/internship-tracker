@@ -1,5 +1,4 @@
 import { useState, type KeyboardEvent } from 'react';
-import { Button } from '@/components/ui/Button';
 import { CloseIcon } from '@/components/ui/icons';
 import { TextField } from '@/components/ui/TextField';
 
@@ -14,10 +13,11 @@ const MAX_ROLES = 20;
 /**
  * A chip input for `targetRoles`.
  *
- * Enter and the Add button both commit, and Backspace on an empty input removes
- * the last chip, so the control is fully operable without a pointer. Each chip
- * keeps its own remove button with a label naming the role it removes, rather
- * than a row of identical "Remove" buttons a screen reader cannot tell apart.
+ * Enter and the Add button both commit. Chips are removed only through their
+ * own buttons: Backspace on an empty input used to remove the last one, so
+ * clearing a draft with a held Backspace silently ate saved roles too. Each
+ * remove button's label names its role, rather than a row of identical
+ * "Remove" buttons a screen reader cannot tell apart.
  */
 export function TargetRolesField({ value, onChange, error }: TargetRolesFieldProps): JSX.Element {
   const [draft, setDraft] = useState('');
@@ -39,35 +39,36 @@ export function TargetRolesField({ value, onChange, error }: TargetRolesFieldPro
       // Otherwise Enter submits the surrounding form instead of adding a role.
       event.preventDefault();
       commit();
-      return;
-    }
-
-    if (event.key === 'Backspace' && draft === '' && value.length > 0) {
-      onChange(value.slice(0, -1));
     }
   };
 
   return (
     <div className="space-y-2">
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <TextField
-            label="Target roles"
-            hint="Press Enter to add. These shape the roles suggested to you."
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-            }}
-            onKeyDown={onKeyDown}
-            error={error}
-            placeholder="Frontend Intern"
-            maxLength={80}
-          />
-        </div>
-        <Button variant="secondary" onClick={commit} disabled={draft.trim() === ''}>
-          Add
-        </Button>
-      </div>
+      <TextField
+        label="Target roles"
+        hint="Press Enter to add. These shape the roles suggested to you."
+        value={draft}
+        onChange={(event) => {
+          setDraft(event.target.value);
+        }}
+        onKeyDown={onKeyDown}
+        error={error}
+        placeholder="e.g. Frontend Intern"
+        maxLength={80}
+        // Inside the field, like the search's clear button. Beside it, the
+        // button lined up with the hint line instead of the input.
+        trailing={
+          draft.trim() !== '' && (
+            <button
+              type="button"
+              onClick={commit}
+              className="rounded-control px-2 py-1.5 text-xs font-medium text-content-muted transition-colors hover:bg-surface-muted hover:text-content"
+            >
+              Add
+            </button>
+          )
+        }
+      />
 
       {value.length > 0 && (
         <ul className="flex flex-wrap gap-1.5">

@@ -5948,3 +5948,7 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   merging them, so the earlier `h-11 w-11` sat beside the default `h-8 w-8` and lost. The Settings
   preview rendered at 32 px instead of the intended size. Measured after the fix: 32 px in the top
   bar, 56 px in Settings.
+- **Target roles: Backspace no longer removes a chip, and Add sits inside the field.** Holding
+  Backspace to clear a draft ran on into the saved roles and deleted them one by one, so chips now
+  leave only through their own labelled remove buttons. Add moved into the input's trailing slot
+  because beside the field it lined up with the hint line rather than the input.
