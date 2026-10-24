@@ -5952,3 +5952,7 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   Backspace to clear a draft ran on into the saved roles and deleted them one by one, so chips now
   leave only through their own labelled remove buttons. Add moved into the input's trailing slot
   because beside the field it lined up with the hint line rather than the input.
+- **Avatar: a picked file waits for "Save picture", and a pasted link previews live.** Saving on
+  pick gave no chance to see the crop first. The upload still saves on its own rather than with
+  "Save profile", for the reason the field was built that way. The link previews only once it
+  starts with `http(s)://`, so half-typed text does not fire an image request per keystroke.
