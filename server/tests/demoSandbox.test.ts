@@ -155,6 +155,36 @@ describe('the server refuses destructive actions on the demo account', () => {
     expect(user?.pendingEmail).toBeUndefined();
   });
 
+  it('refuses a profile change, so the university every visitor sees stays put', async () => {
+    const token = await demoSession();
+
+    const response = await request(app)
+      .patch(`${AUTH_BASE}/me`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ university: 'Somewhere Else' });
+
+    expect(response.status).toBe(403);
+    expect(response.body.code).toBe(DEMO_READONLY_CODE);
+    const user = await User.findOne({ email: env.DEMO_EMAIL });
+    expect(user?.university).toBe('Universiti Tun Hussein Onn Malaysia');
+  });
+
+  it.each([
+    ['name', 'Someone Else'],
+    ['gradYear', 2030],
+    ['avatarUrl', 'https://images.example.test/anything.png'],
+    ['targetRoles', ['Anything']],
+  ])('refuses a change to %s, which every demo visitor sees', async (field, value) => {
+    const token = await demoSession();
+
+    const response = await request(app)
+      .patch(`${AUTH_BASE}/me`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ [field]: value });
+
+    expect(response.status).toBe(403);
+  });
+
   it('still allows the harmless parts of the profile patch', async () => {
     const token = await demoSession();
 
@@ -195,7 +225,10 @@ describe('the nightly reset', () => {
     if (!user) throw new Error('demo account was not seeded');
 
     await Application.deleteMany({ user: user._id });
-    await User.updateOne({ _id: user._id }, { $set: { name: 'Vandalised', theme: 'dark' } });
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { name: 'Vandalised', university: 'Vandalised', theme: 'dark' } },
+    );
 
     const result = await runDemoReset();
 
@@ -204,6 +237,7 @@ describe('the nightly reset', () => {
 
     const restored = await User.findById(user._id);
     expect(restored?.name).toBe('Demo Student');
+    expect(restored?.university).toBe('Universiti Tun Hussein Onn Malaysia');
     expect(restored?.isDemo).toBe(true);
     // A theme a visitor saved on the shared account does not outlive the night.
     expect(restored?.theme).toBe('system');

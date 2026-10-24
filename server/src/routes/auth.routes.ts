@@ -35,7 +35,7 @@ import {
   resetPasswordIpLimiter,
   restoreIpLimiter,
 } from '@/middleware/rateLimit';
-import { changesEmail, rejectDemoAccount } from '@/middleware/rejectDemoAccount';
+import { changesSharedProfile, rejectDemoAccount } from '@/middleware/rejectDemoAccount';
 import { requireAuth } from '@/middleware/requireAuth';
 import { validateBody, validateQuery } from '@/middleware/validate';
 import {
@@ -86,13 +86,13 @@ router.post('/logout', logout);
 
 router.post('/logout-all', requireAuth, logoutAll);
 router.get('/me', requireAuth, me);
-// The demo guard runs after validation on the profile patch, so `changesEmail`
+// The demo guard runs after validation on the profile patch, so `changesSharedProfile`
 // reads a parsed body rather than guessing at a raw one.
 router.patch(
   '/me',
   requireAuth,
   validateBody(updateMeSchema),
-  rejectDemoAccount({ when: changesEmail }),
+  rejectDemoAccount({ when: changesSharedProfile }),
   updateMe,
 );
 router.patch(

@@ -24,7 +24,7 @@ import { buildDemoApplications } from '@/services/demoData.service';
 /** Profile fields that make the seeded dashboard read like a real account. */
 const DEMO_PROFILE = {
   name: 'Demo Student',
-  university: 'Universiti Malaya',
+  university: 'Universiti Tun Hussein Onn Malaysia',
   gradYear: 2027,
   targetRoles: ['Software Engineer Intern', 'Backend Engineer Intern'],
   weeklyGoal: 5,

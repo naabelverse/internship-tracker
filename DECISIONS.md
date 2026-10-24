@@ -5912,3 +5912,16 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   file content is the public contact alias. Commit metadata carries the maintainer's own address,
   which going public exposes; rewriting history was rejected because it would break every pinned
   screenshot SHA in past pull requests.
+
+## The demo account's profile is fixed, and its university is UTHM (24 Oct 2026)
+
+- **The demo's university is Universiti Tun Hussein Onn Malaysia,** at the maintainer's request.
+  `DEMO_PROFILE` in `seed.ts` held Universiti Malaya, and the nightly reset re-applies that
+  object, so a value set by hand on production would have been reverted every night.
+- **Visitors can no longer change the demo's profile card.** `changesEmail` became
+  `changesSharedProfile`: a `PATCH /auth/me` from the demo account that carries email, name,
+  university, gradYear, avatarUrl or targetRoles is refused with `DEMO_ACCOUNT_READONLY`, like
+  the password and email changes already were. Every visitor shares that card, and since the
+  avatar is now drawn in the top bar, an open profile would let one visitor show the next an
+  image of their choosing. Theme, timezone, weekly goal and the email toggles stay open so the
+  demo still demonstrates them.
