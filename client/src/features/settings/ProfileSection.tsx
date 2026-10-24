@@ -125,21 +125,21 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
         />
       </div>
 
-      <div className="space-y-3">
-        <AvatarField
-          user={user}
-          onSaved={(saved) => {
-            form.resetField('avatarUrl', { defaultValue: linkOf(saved.avatarUrl) });
-          }}
-        />
+      <AvatarField
+        user={user}
+        onSaved={(saved) => {
+          form.resetField('avatarUrl', { defaultValue: linkOf(saved.avatarUrl) });
+        }}
+      >
         <TextField
-          label="Or use an image link"
-          placeholder="https://example.com/avatar.png"
-          hint="A link to a square image. Your initials show if there is no picture or it fails to load."
+          label="Image link"
+          labelHidden
+          placeholder="…or paste an image link"
+          hint="Your initials show if there is no picture or it fails to load."
           error={form.formState.errors.avatarUrl?.message}
           {...form.register('avatarUrl')}
         />
-      </div>
+      </AvatarField>
 
       <Controller
         control={form.control}

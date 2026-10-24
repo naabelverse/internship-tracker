@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -10,6 +10,8 @@ interface AvatarFieldProps {
   user: User;
   /** Lets the profile form re-seed its link field from the saved account. */
   onSaved: (user: User) => void;
+  /** The link field, set under the buttons so the two read as one control. */
+  children: ReactNode;
 }
 
 /**
@@ -17,7 +19,7 @@ interface AvatarFieldProps {
  * for "Save profile": a picked file is not something a form can show back in a
  * text box, and a half-finished upload sitting in a dirty form is easy to lose.
  */
-export function AvatarField({ user, onSaved }: AvatarFieldProps): JSX.Element {
+export function AvatarField({ user, onSaved, children }: AvatarFieldProps): JSX.Element {
   const update = useUpdateProfile();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isReading, setIsReading] = useState(false);
@@ -42,7 +44,7 @@ export function AvatarField({ user, onSaved }: AvatarFieldProps): JSX.Element {
   return (
     <div className="space-y-1.5">
       <span className="block text-sm font-medium text-content">Avatar</span>
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <UserAvatar name={user.name} src={user.avatarUrl} size="lg" />
         <input
           ref={inputRef}
@@ -56,35 +58,38 @@ export function AvatarField({ user, onSaved }: AvatarFieldProps): JSX.Element {
             event.target.value = '';
           }}
         />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            isLoading={isBusy}
-            loadingLabel="Saving"
-            onClick={() => {
-              inputRef.current?.click();
-            }}
-          >
-            Upload image
-          </Button>
-          {user.avatarUrl && (
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              disabled={isBusy}
+              isLoading={isBusy}
+              loadingLabel="Saving"
               onClick={() => {
-                save('');
+                inputRef.current?.click();
               }}
             >
-              Remove
+              Upload image
             </Button>
-          )}
+            {user.avatarUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isBusy}
+                onClick={() => {
+                  save('');
+                }}
+              >
+                Remove
+              </Button>
+            )}
+            <span className="text-xs text-content-subtle">PNG, JPEG or WebP, up to 5 MB.</span>
+          </div>
+          {children}
         </div>
       </div>
-      <p className="text-xs text-content-subtle">PNG, JPEG or WebP, up to 5 MB.</p>
     </div>
   );
 }
