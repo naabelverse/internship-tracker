@@ -345,6 +345,13 @@ describe('settings section navigation', () => {
       await nextFrame();
       expect(current()).toBe('Email address');
 
+      // A jump to #usage snaps to a device pixel and can stop a fraction short of
+      // the line, which used to mark "Signed in devices" instead.
+      scrolled = 120 + 5 * 600 - 96.25;
+      fireEvent.scroll(window);
+      await nextFrame();
+      expect(current()).toBe('Storage and limits');
+
       // At the very bottom (jsdom's scrollHeight is 0), "Your data" sits on
       // screen at 220 px but can never reach the line: the clicked link wins.
       Object.defineProperty(window, 'scrollY', { value: 3500, configurable: true });

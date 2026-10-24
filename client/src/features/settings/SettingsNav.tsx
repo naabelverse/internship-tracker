@@ -15,6 +15,13 @@ interface SettingsNavProps {
 const ACTIVE_LINE_PX = 96;
 
 /**
+ * A jump to `#id` snaps the scroll offset to a device pixel, so the section can
+ * stop a fraction short of the line (96.25 px at 125% scaling). Sections sit
+ * 16 px apart, so this cannot mark a neighbour.
+ */
+const SNAP_SLACK_PX = 2;
+
+/**
  * The section a reader is in: the last one whose top has scrolled past the line
  * under the top bar.
  *
@@ -40,7 +47,7 @@ function currentSection(items: readonly SettingsNavItem[]): string | undefined {
   let current = items[0]?.id;
   for (const { id } of items) {
     const top = document.getElementById(id)?.getBoundingClientRect().top;
-    if (top !== undefined && top <= ACTIVE_LINE_PX) current = id;
+    if (top !== undefined && top < ACTIVE_LINE_PX + SNAP_SLACK_PX) current = id;
   }
   return current;
 }
