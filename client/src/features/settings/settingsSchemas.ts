@@ -23,14 +23,6 @@ export const profileSchema = z.object({
       (value) => value === '' || (Number(value) >= 1950 && Number(value) <= MAX_GRAD_YEAR),
       `Enter a year between 1950 and ${String(MAX_GRAD_YEAR)}`,
     ),
-  avatarUrl: z
-    .string()
-    .trim()
-    .max(2048, 'Use at most 2048 characters')
-    .refine(
-      (value) => value === '' || z.string().url().safeParse(value).success,
-      'Enter a valid URL',
-    ),
   targetRoles: z.array(z.string().trim().min(1).max(80)).max(20, 'At most 20 roles'),
 });
 

@@ -15,27 +15,21 @@ interface ProfileSectionProps {
   user: User;
 }
 
-const SERVER_FIELDS = ['name', 'university', 'gradYear', 'avatarUrl', 'targetRoles'] as const;
-
-/**
- * What the link box shows for a saved avatar. An uploaded picture is a data URL
- * tens of kilobytes long, so the box stays empty for it rather than showing that.
- */
-function linkOf(avatarUrl: string | undefined): string {
-  return avatarUrl?.startsWith('data:') ? '' : (avatarUrl ?? '');
-}
+const SERVER_FIELDS = ['name', 'university', 'gradYear', 'targetRoles'] as const;
 
 function toValues(user: User): ProfileValues {
   return {
     name: user.name,
     university: user.university ?? '',
     gradYear: user.gradYear === undefined ? '' : String(user.gradYear),
-    avatarUrl: linkOf(user.avatarUrl),
     targetRoles: user.targetRoles,
   };
 }
 
-/** SPEC section 6: name, university, gradYear, targetRoles and avatarUrl. */
+/**
+ * SPEC section 6: name, university, gradYear and targetRoles. The avatar saves
+ * on its own from `AvatarField`, so the form never carries it.
+ */
 export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
   const update = useUpdateProfile();
   const form = useForm<ProfileValues>({
@@ -44,14 +38,6 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
   });
 
   const { isDirty } = form.formState;
-
-  // Previewed once it looks like a full link, so half-typed text does not fire
-  // a request per keystroke. An emptied box previews as the initials it saves to.
-  const linkDraft = form.watch('avatarUrl').trim();
-  const linkPreview =
-    linkDraft !== linkOf(user.avatarUrl) && (linkDraft === '' || /^https?:\/\/\S/i.test(linkDraft))
-      ? linkDraft
-      : undefined;
 
   // Re-seed from the account only while the form is untouched. Resetting on
   // every background refetch would discard whatever the user was typing, which
@@ -67,9 +53,6 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
         // An empty box means "clear this", which the API expresses as an empty
         // string rather than an omitted key.
         university: values.university,
-        // Sent only when the link box changed, so an empty box beside an
-        // uploaded picture does not clear it.
-        ...(values.avatarUrl === linkOf(user.avatarUrl) ? {} : { avatarUrl: values.avatarUrl }),
         targetRoles: values.targetRoles,
         ...(values.gradYear === '' ? {} : { gradYear: Number(values.gradYear) }),
       },
@@ -133,22 +116,7 @@ export function ProfileSection({ user }: ProfileSectionProps): JSX.Element {
         />
       </div>
 
-      <AvatarField
-        user={user}
-        linkPreview={linkPreview}
-        onSaved={(saved) => {
-          form.resetField('avatarUrl', { defaultValue: linkOf(saved.avatarUrl) });
-        }}
-      >
-        <TextField
-          label="Image link"
-          labelHidden
-          placeholder="…or paste an image link"
-          hint="Your initials show if there is no picture or it fails to load."
-          error={form.formState.errors.avatarUrl?.message}
-          {...form.register('avatarUrl')}
-        />
-      </AvatarField>
+      <AvatarField user={user} />
 
       <Controller
         control={form.control}
