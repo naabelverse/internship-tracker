@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -8,31 +8,18 @@ import type { User } from '@/types/user';
 
 interface AvatarFieldProps {
   user: User;
-  /**
-   * An unsaved link from the link box, previewed in place of the saved picture.
-   * Undefined when the box still matches the account.
-   */
-  linkPreview?: string;
-  /** Lets the profile form re-seed its link field from the saved account. */
-  onSaved: (user: User) => void;
-  /** The link field, set under the buttons so the two read as one control. */
-  children: ReactNode;
 }
 
 /**
- * The picture, with upload and remove.
+ * The picture: upload, preview, then save or cancel; or remove.
  *
- * A picked file is previewed first and saved on its own by "Save picture"
- * rather than by "Save profile": it is not something a form can show back in a
- * text box, and a half-finished upload sitting in a dirty form is easy to lose.
- * A pasted link is previewed too but rides with the form, like any other field.
+ * Upload is the only way in. A pasted link was offered too, but a page link
+ * (a gallery or search result) is HTML rather than an image, and the preview
+ * fell back to initials with no obvious reason. The picture saves on its own
+ * rather than with "Save profile", since a picked file is not something a form
+ * can show back in a text box.
  */
-export function AvatarField({
-  user,
-  linkPreview,
-  onSaved,
-  children,
-}: AvatarFieldProps): JSX.Element {
+export function AvatarField({ user }: AvatarFieldProps): JSX.Element {
   const update = useUpdateProfile();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isReading, setIsReading] = useState(false);
@@ -43,9 +30,8 @@ export function AvatarField({
     update.mutate(
       { avatarUrl },
       {
-        onSuccess: (saved) => {
+        onSuccess: () => {
           setPicked(undefined);
-          onSaved(saved);
         },
       },
     );
@@ -63,15 +49,11 @@ export function AvatarField({
     }
   };
 
-  let note = 'PNG, JPEG or WebP, up to 5 MB.';
-  if (picked) note = 'Preview. Not saved yet.';
-  else if (linkPreview !== undefined) note = 'Preview. Save profile to keep it.';
-
   return (
     <div className="space-y-1.5">
       <span className="block text-sm font-medium text-content">Avatar</span>
-      <div className="flex items-start gap-4">
-        <UserAvatar name={user.name} src={picked ?? linkPreview ?? user.avatarUrl} size="lg" />
+      <div className="flex items-center gap-4">
+        <UserAvatar name={user.name} src={picked ?? user.avatarUrl} size="lg" />
         <input
           ref={inputRef}
           type="file"
@@ -84,8 +66,8 @@ export function AvatarField({
             event.target.value = '';
           }}
         />
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             {picked ? (
               <>
                 <Button
@@ -123,7 +105,7 @@ export function AvatarField({
                     inputRef.current?.click();
                   }}
                 >
-                  Upload image
+                  {user.avatarUrl ? 'Change picture' : 'Upload picture'}
                 </Button>
                 {user.avatarUrl && (
                   <Button
@@ -140,9 +122,12 @@ export function AvatarField({
                 )}
               </>
             )}
-            <span className="text-xs text-content-subtle">{note}</span>
           </div>
-          {children}
+          <p className="text-xs text-content-subtle">
+            {picked
+              ? 'Preview. Not saved yet.'
+              : 'PNG, JPEG or WebP, up to 5 MB. Your initials show when there is no picture.'}
+          </p>
         </div>
       </div>
     </div>

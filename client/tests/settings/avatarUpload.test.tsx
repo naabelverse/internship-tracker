@@ -68,18 +68,7 @@ describe('avatar upload', () => {
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
 
     expect(document.querySelector('img')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Upload image' })).toBeInTheDocument();
-    expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(0);
-  });
-
-  it('previews a pasted link before Save profile', async () => {
-    const user = userEvent.setup();
-    const api = renderProfile(makeUser({ name: 'Ada Lovelace' }));
-
-    await user.type(screen.getByLabelText('Image link'), 'https://example.com/me.png');
-
-    expect(document.querySelector('img')).toHaveAttribute('src', 'https://example.com/me.png');
-    expect(screen.getByText('Preview. Save profile to keep it.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upload picture' })).toBeInTheDocument();
     expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(0);
   });
 
@@ -115,11 +104,11 @@ describe('avatar upload', () => {
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
   });
 
-  it('keeps an uploaded picture out of the link box, and Save profile leaves it alone', async () => {
+  it('offers no link box, and Save profile leaves the picture alone', async () => {
     const user = userEvent.setup();
     const api = renderProfile(makeUser({ name: 'Ada Lovelace', avatarUrl: UPLOADED }));
 
-    expect(screen.getByLabelText('Image link')).toHaveValue('');
+    expect(screen.queryByLabelText('Image link')).not.toBeInTheDocument();
 
     const name = screen.getByLabelText('Name');
     await user.clear(name);
@@ -130,5 +119,11 @@ describe('avatar upload', () => {
       expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(1);
     });
     expect(api.callsTo('PATCH', '/auth/me')[0].data).not.toHaveProperty('avatarUrl');
+  });
+
+  it('names the button for what it does', () => {
+    renderProfile(makeUser({ avatarUrl: UPLOADED }));
+
+    expect(screen.getByRole('button', { name: 'Change picture' })).toBeInTheDocument();
   });
 });

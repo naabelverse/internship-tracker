@@ -5956,3 +5956,8 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   pick gave no chance to see the crop first. The upload still saves on its own rather than with
   "Save profile", for the reason the field was built that way. The link previews only once it
   starts with `http(s)://`, so half-typed text does not fire an image request per keystroke.
+- **Avatar: upload only, no link box.** A pasted page link (a gallery or search result) is HTML
+  rather than an image, so the preview fell back to initials with no clear reason, and the user
+  asked for upload alone. `avatarUrl` stays in SPEC section 6 as stored data, set only by the
+  upload, and the profile form no longer carries it. The server still accepts a URL there, so a
+  link saved before this keeps showing.
