@@ -21,8 +21,8 @@ const DEMO_READONLY_MESSAGE =
 export interface RejectDemoOptions {
   /**
    * Narrows the guard to part of an endpoint. `PATCH /auth/me` needs this: the
-   * profile patch stays open so the demo can show theme and timezone changes,
-   * while an address change on it would be a takeover of a shared login.
+   * preferences stay open so the demo can show theme and timezone changes,
+   * while the address and the profile card are shared by every visitor.
    */
   when?: (req: Request) => boolean;
 }
@@ -45,7 +45,23 @@ export function rejectDemoAccount(options: RejectDemoOptions = {}) {
   };
 }
 
-/** True when a profile patch is trying to move the account to another address. */
-export function changesEmail(req: Request): boolean {
-  return typeof (req.body as { email?: unknown } | undefined)?.email === 'string';
+/**
+ * Fields every visitor of the shared demo sees as "the account": its address
+ * (a change would be a takeover of the shared login) and the profile card. The
+ * avatar is drawn in the top bar for everyone signed in to the demo, so an open
+ * profile would let one visitor show the next an image or name of their choosing.
+ */
+const SHARED_PROFILE_FIELDS = [
+  'email',
+  'name',
+  'university',
+  'gradYear',
+  'avatarUrl',
+  'targetRoles',
+] as const;
+
+/** True when a profile patch touches what the demo's visitors share. */
+export function changesSharedProfile(req: Request): boolean {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  return SHARED_PROFILE_FIELDS.some((field) => body[field] !== undefined);
 }
