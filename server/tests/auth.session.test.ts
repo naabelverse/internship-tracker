@@ -3,6 +3,7 @@ import request from 'supertest';
 import { env } from '@/config/env';
 import { resetAuthRateLimiters } from '@/middleware/rateLimit';
 import { RefreshToken } from '@/models/RefreshToken';
+import { AVATAR_DATA_URL_MAX } from '@/schemas/auth.schema';
 import { User } from '@/models/User';
 import { AUTH_BASE, buildTestApp, extractRefreshCookie, registerUser } from './helpers/factories';
 import { useTestDatabase } from './helpers/testDb';
@@ -171,6 +172,30 @@ describe('PATCH /auth/me', () => {
     const { accessToken } = await registerUser(app);
 
     const response = await authed('patch', '/me', accessToken).send({ avatarUrl: 'not a url' });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('accepts an uploaded picture as a small image data URL', async () => {
+    const { accessToken } = await registerUser(app);
+    const picture = `data:image/webp;base64,${'A'.repeat(4000)}`;
+
+    const response = await authed('patch', '/me', accessToken).send({ avatarUrl: picture });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.user.avatarUrl).toBe(picture);
+  });
+
+  it.each([
+    ['an SVG data URL', 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4='],
+    ['a data URL that is not an image', 'data:text/html;base64,PGgxPmhpPC9oMT4='],
+    ['an oversized picture', `data:image/png;base64,${'A'.repeat(AVATAR_DATA_URL_MAX)}`],
+    ['a javascript: link', 'javascript:alert(1)'],
+    ['an ftp link', 'ftp://images.example.test/a.png'],
+  ])('refuses %s as an avatar', async (_case, avatarUrl) => {
+    const { accessToken } = await registerUser(app);
+
+    const response = await authed('patch', '/me', accessToken).send({ avatarUrl });
 
     expect(response.status).toBe(400);
   });

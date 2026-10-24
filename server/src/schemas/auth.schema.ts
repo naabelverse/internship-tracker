@@ -54,11 +54,29 @@ export const loginSchema = z
   })
   .strict();
 
+/**
+ * An uploaded picture. Settings crops and re-encodes it to a 128 px square in the
+ * browser, so a real one is a few kilobytes; the cap leaves room for a browser
+ * that falls back to PNG. SVG is excluded by the type list.
+ */
+const AVATAR_DATA_URL = /^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
+export const AVATAR_DATA_URL_MAX = 200_000;
+
+/** '' clears the picture; otherwise a web link or an uploaded picture. */
+const avatarUrl = z.union([
+  z.literal(''),
+  z
+    .string()
+    .max(2048)
+    .url()
+    .regex(/^https?:\/\//i, 'must be an http or https link'),
+  z.string().max(AVATAR_DATA_URL_MAX).regex(AVATAR_DATA_URL, 'must be a PNG, JPEG or WebP image'),
+]);
+
 export const updateMeSchema = z
   .object({
     name: z.string().trim().min(2).max(60).optional(),
-    // '' clears the picture: Settings sends the whole profile, empty box included.
-    avatarUrl: z.string().url().max(2048).or(z.literal('')).optional(),
+    avatarUrl: avatarUrl.optional(),
     university: z.string().trim().max(120).optional(),
     gradYear: z.number().int().min(1950).max(2100).optional(),
     targetRoles: z.array(z.string().trim().min(1).max(80)).max(20).optional(),

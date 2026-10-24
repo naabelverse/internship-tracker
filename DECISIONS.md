@@ -5925,3 +5925,26 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   avatar is now drawn in the top bar, an open profile would let one visitor show the next an
   image of their choosing. Theme, timezone, weekly goal and the email toggles stay open so the
   demo still demonstrates them.
+
+## Avatar upload: resized in the browser, stored as a data URL (24 Oct 2026)
+
+- **The picture is cropped to a centred square, scaled to 128 px and re-encoded as WebP in the
+  browser, then saved in `avatarUrl` as a data URL** (about 3.5 KB for the 1200×630 OG image).
+  Re-encoding through a canvas drops EXIF, a phone photo's GPS position included, and anything else
+  the file carried. A browser that cannot encode WebP returns PNG, which is still inside the cap.
+- **Not the storage adapter.** Uploads are served with `Content-Disposition: attachment` (SPEC
+  section 12), which an `<img>` cannot display, so a picture there would need a second, inline
+  serving path, deletion on purge and its own quota. A few kilobytes in the user document needs
+  none of that. It does not count towards the 100 MB upload cap, and `/auth/me` grows by the same
+  few kilobytes. If larger pictures are ever wanted, that is the point to move them to storage.
+- **The server accepts `''`, an `http(s)` link up to 2048 characters, or
+  `data:image/(png|jpeg|webp);base64,…` up to 200,000 characters.** SVG, other `data:` types,
+  `javascript:` and other schemes are refused. Before this, any string `URL` could parse was
+  accepted, `javascript:` included.
+- **Upload and Remove save at once, outside "Save profile".** A picked file cannot be shown back
+  in a text box. The link box is empty while an uploaded picture is saved, and the profile save
+  sends `avatarUrl` only when that box changed, so saving a name cannot clear the picture.
+- **`UserAvatar` takes `size` rather than a `className` override.** `cn` joins classes without
+  merging them, so the earlier `h-11 w-11` sat beside the default `h-8 w-8` and lost. The Settings
+  preview rendered at 32 px instead of the intended size. Measured after the fix: 32 px in the top
+  bar, 56 px in Settings.

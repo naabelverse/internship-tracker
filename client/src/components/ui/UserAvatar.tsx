@@ -4,9 +4,18 @@ import { cn } from '@/lib/cn';
 interface UserAvatarProps {
   name: string;
   src?: string;
-  /** Overrides the default 32 px size and type scale. */
-  className?: string;
+  /** 32 px in the top bar, 56 px beside the upload controls. */
+  size?: keyof typeof SIZES;
 }
+
+/**
+ * Sizes as whole class sets. `cn` joins rather than merges, so passing `h-14`
+ * next to a default `h-8` left both on the element and the default won.
+ */
+const SIZES = {
+  sm: 'h-8 w-8 text-xs',
+  lg: 'h-14 w-14 text-base',
+} as const;
 
 /** Up to two initials: "Ada Lovelace" becomes "AL". */
 function initials(name: string): string {
@@ -25,11 +34,11 @@ function initials(name: string): string {
  * The failure is remembered per URL rather than as a flag, so saving a new URL
  * after a broken one tries the new image without an effect to reset state.
  */
-export function UserAvatar({ name, src, className }: UserAvatarProps): JSX.Element {
+export function UserAvatar({ name, src, size = 'sm' }: UserAvatarProps): JSX.Element {
   const [failedSrc, setFailedSrc] = useState<string>();
   const base = cn(
-    'grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-primary/15 text-xs font-semibold text-primary',
-    className,
+    'grid shrink-0 place-items-center overflow-hidden rounded-full bg-primary/15 font-semibold text-primary',
+    SIZES[size],
   );
 
   if (src && src !== failedSrc) {
