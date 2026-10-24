@@ -89,7 +89,7 @@ describe('avatar upload', () => {
     const user = userEvent.setup();
     const api = renderProfile(makeUser({ name: 'Ada Lovelace', avatarUrl: UPLOADED }));
 
-    expect(screen.getByLabelText('Or use an image link')).toHaveValue('');
+    expect(screen.getByLabelText('Image link')).toHaveValue('');
 
     const name = screen.getByLabelText('Name');
     await user.clear(name);
