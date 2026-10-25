@@ -77,22 +77,6 @@ export function RegisterForm(): JSX.Element {
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <FormError message={errors.root?.message ?? googleError} />
 
-      {/*
-        Not registered with react-hook-form, and not in the zod schema: it is not
-        a value the user provides, so it has no validation and no error state.
-        See HONEYPOT_STYLE for why it is positioned away rather than hidden.
-      */}
-      <input
-        ref={honeypot}
-        type="text"
-        name="website"
-        tabIndex={-1}
-        autoComplete="off"
-        aria-hidden="true"
-        style={HONEYPOT_STYLE}
-        defaultValue=""
-      />
-
       <TextField
         label="Name"
         autoComplete="name"
@@ -161,6 +145,27 @@ export function RegisterForm(): JSX.Element {
           event.preventDefault();
           void trigger('acceptTerms');
         }}
+      />
+
+      {/*
+        Not registered with react-hook-form, and not in the zod schema: it is not
+        a value the user provides, so it has no validation and no error state.
+        See HONEYPOT_STYLE for why it is positioned away rather than hidden.
+
+        Last, not first: `space-y-4` puts a margin on every child after the
+        first, and an absolutely positioned input still counts as one, so ahead
+        of the Name field it added a phantom 16px between the subtitle and the
+        form. Here its own margin moves nothing.
+      */}
+      <input
+        ref={honeypot}
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={HONEYPOT_STYLE}
+        defaultValue=""
       />
     </form>
   );
