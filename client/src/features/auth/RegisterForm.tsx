@@ -80,7 +80,7 @@ export function RegisterForm(): JSX.Element {
       <TextField
         label="Name"
         autoComplete="name"
-        placeholder="Ada Lovelace"
+        placeholder="Alex Tan"
         error={errors.name?.message}
         {...register('name')}
       />
