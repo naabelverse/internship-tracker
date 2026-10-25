@@ -5987,3 +5987,7 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   Its colour is a new `wordmark` token (`114 135 163` / `82 105 137`) rather than `wash`: axe
   measures it as large text even when `aria-hidden`, and `wash` failed at 1.49:1 / 1.21:1. The token
   is gated at 3:1 on the canvas in `tokenContrast.test.ts`.
+- **A newly opened page starts at the top; back and forward keep the browser's position.**
+  `BrowserRouter` has no scroll restoration, so footer links opened Terms and Privacy at the bottom.
+  `useScrollToTopOnNavigate` resets on a pathname change only, so query-string filter updates and
+  `#hash` targets do not jump.

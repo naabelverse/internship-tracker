@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '@/App';
 import { paths } from '@/routes/paths';
 import { installMockApi } from '../utils/mockAdapter';
@@ -59,6 +60,22 @@ describe('the legal pages render from markdown in the repository', () => {
       'href',
       paths.privacy,
     );
+  });
+
+  it('opens at the top when reached from the footer, not at the scroll offset it was clicked from', async () => {
+    const user = userEvent.setup();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    await screen.findByRole('heading', { level: 1, name: /never miss a deadline/i });
+    scrollTo.mockClear();
+
+    await user.click(screen.getByRole('link', { name: 'Terms of Service' }));
+    await screen.findByRole('heading', { level: 1, name: 'Terms of Service' });
+
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    scrollTo.mockRestore();
   });
 
   it('leaves the sign-up card off, so the fine print is not a pitch', async () => {
