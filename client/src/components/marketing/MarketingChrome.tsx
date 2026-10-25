@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { APP_TAGLINE, CONTACT_EMAIL, REPO_URL } from '@/lib/siteMeta';
+import { STATUS_CONFIG } from '@/lib/statusConfig';
 import { paths } from '@/routes/paths';
 
 /**
@@ -87,6 +88,41 @@ export function MarketingHeader(): JSX.Element {
   );
 }
 
+const PIPELINE_STAGES = ['saved', 'applied', 'interview', 'offer'] as const;
+
+/**
+ * Decoration for the sign-up card's middle: an application moving through the
+ * pipeline. Only from `lg`, where the card has a gap to fill; below that the
+ * card stacks and there is none. Reduced motion keeps the stages and drops the
+ * comet and pings.
+ */
+function PipelineAnimation(): JSX.Element {
+  return (
+    <div aria-hidden="true" className="mx-10 hidden max-w-xs flex-1 pb-6 lg:block">
+      <div className="relative flex items-center justify-between">
+        <div className="absolute inset-x-[5px] top-1/2 h-px -translate-y-1/2 bg-border-strong">
+          <span className="absolute top-1/2 h-0.5 w-10 -translate-x-full -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent to-primary opacity-0 motion-safe:animate-pipeline-travel" />
+        </div>
+        {PIPELINE_STAGES.map((status, i) => {
+          const { label, dot } = STATUS_CONFIG[status];
+          return (
+            <span key={status} className="relative h-2.5 w-2.5">
+              <span
+                className={`absolute inset-0 rounded-full ${dot} opacity-0 motion-safe:animate-stage-ping`}
+                style={{ animationDelay: `${i}s` }}
+              />
+              <span className={`relative block h-full w-full rounded-full ${dot}`} />
+              <span className="absolute left-1/2 top-5 -translate-x-1/2 whitespace-nowrap text-xs text-content-subtle">
+                {label}
+              </span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 interface MarketingFooterProps {
   /**
    * The closing sign-up card. On for the landing page, which otherwise ends on
@@ -109,6 +145,7 @@ export function MarketingFooter({ signUpCard = false }: MarketingFooterProps): J
               </h2>
               <p className="mt-1.5 text-sm text-content-muted">{APP_TAGLINE}</p>
             </div>
+            <PipelineAnimation />
             <Link to={paths.register} className={`${PRIMARY_BUTTON} self-start sm:self-auto`}>
               Create an account
             </Link>
