@@ -53,6 +53,7 @@ past this layer.
 | `surface`                         | A card or panel on the canvas        | `249 252 255` | `26 37 51`    |
 | `surface-muted`                   | A recessed row, a chip, a track      | `231 237 246` | `35 45 60`    |
 | `wash`                            | The auth split screen, and only it   | `166 196 232` | `26 44 74`    |
+| `wordmark`                        | The marketing footer's giant name    | `114 135 163` | `82 105 137`  |
 | `border`                          | The default rule                     | `216 223 233` | `43 54 70`    |
 | `border-strong`                   | An input edge, a dashed empty state  | `159 176 198` | `58 74 96`    |
 | `content`                         | Primary text                         | `6 10 18`     | `229 236 241` |

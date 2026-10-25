@@ -5979,3 +5979,11 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   "Asia / Shanghai" did not tell anyone it is China's time. Place names are curated beside the zone
   list (Intl has no zone-to-country lookup), and the offset is read at render time so DST zones
   show today's offset.
+- **Marketing footer is a closing sign-up card, one centred link row, and a cropped wordmark.** The
+  old three-column footer sat on the same blue as the page and read as an afterthought. The card
+  shows on the landing page only (`signUpCard`), because a pitch under Terms and Privacy reads as
+  pushy and the header's "Create account" is there anyway. The wordmark is sized in container units
+  so it fills the shell at every width, and is `aria-hidden` because the header logo names the app.
+  Its colour is a new `wordmark` token (`114 135 163` / `82 105 137`) rather than `wash`: axe
+  measures it as large text even when `aria-hidden`, and `wash` failed at 1.49:1 / 1.21:1. The token
+  is gated at 3:1 on the canvas in `tokenContrast.test.ts`.

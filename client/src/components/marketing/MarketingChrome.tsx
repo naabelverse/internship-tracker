@@ -14,6 +14,8 @@ import { paths } from '@/routes/paths';
  */
 
 const LINK = 'rounded-control text-sm text-content-muted transition-colors hover:text-content';
+const PRIMARY_BUTTON =
+  'inline-flex h-9 items-center whitespace-nowrap rounded-control bg-primary-fill px-3.5 text-sm font-semibold text-primary-fill-fg transition-colors hover:bg-primary-fill-hover';
 
 /**
  * The mark: an angular fold.
@@ -76,10 +78,7 @@ export function MarketingHeader(): JSX.Element {
           <Link to={paths.login} className={`${LINK} whitespace-nowrap px-2 py-2 sm:px-3`}>
             Sign in
           </Link>
-          <Link
-            to={paths.register}
-            className="inline-flex h-9 items-center whitespace-nowrap rounded-control bg-primary-fill px-3.5 text-sm font-semibold text-primary-fill-fg transition-colors hover:bg-primary-fill-hover"
-          >
+          <Link to={paths.register} className={PRIMARY_BUTTON}>
             Create account
           </Link>
         </div>
@@ -88,85 +87,78 @@ export function MarketingHeader(): JSX.Element {
   );
 }
 
-interface FooterColumnProps {
-  title: string;
-  children: ReactNode;
+interface MarketingFooterProps {
+  /**
+   * The closing sign-up card. On for the landing page, which otherwise ends on
+   * the FAQ with no last ask; off for Terms and Privacy, where someone is
+   * checking the fine print and a pitch reads as pushy. The header's
+   * "Create account" is on every page either way.
+   */
+  signUpCard?: boolean;
 }
 
-function FooterColumn({ title, children }: FooterColumnProps): JSX.Element {
+export function MarketingFooter({ signUpCard = false }: MarketingFooterProps): JSX.Element {
   return (
-    <div>
-      <h2 className="text-xs font-semibold text-content-subtle">{title}</h2>
-      <ul className="mt-3 space-y-2">{children}</ul>
-    </div>
-  );
-}
-
-export function MarketingFooter(): JSX.Element {
-  return (
-    <footer className="border-t border-border bg-canvas">
-      <div className="marketing-shell py-14">
-        {/*
-          Asymmetric on purpose: the wordmark block is the widest thing here and
-          the three link groups cluster to the right of it, rather than four
-          columns of equal weight pretending the sitemap is the point.
-        */}
-        <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
-          <div className="lg:col-span-5">
-            <p className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-content">
-              <BrandMark className="h-4 w-4 text-primary" />
-              <span className="stretch-wide">Internship Tracker</span>
-            </p>
-            <p className="mt-3 max-w-[38ch] text-sm leading-relaxed text-content-muted nums-proportional">
-              {APP_TAGLINE}
-            </p>
+    <footer className="overflow-hidden border-t border-border bg-canvas">
+      <div className="marketing-shell pt-14 [container-type:inline-size]">
+        {signUpCard && (
+          <div className="mb-12 flex flex-col gap-5 rounded-panel border border-border bg-surface p-6 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-content stretch-wide sm:text-2xl">
+                Ready for your next application?
+              </h2>
+              <p className="mt-1.5 text-sm text-content-muted">{APP_TAGLINE}</p>
+            </div>
+            <Link to={paths.register} className={`${PRIMARY_BUTTON} self-start sm:self-auto`}>
+              Create an account
+            </Link>
           </div>
+        )}
 
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-7">
-            <FooterColumn title="Product">
-              <li>
-                <Link to={paths.register} className={LINK}>
-                  Create an account
-                </Link>
-              </li>
-              <li>
-                <Link to={paths.login} className={LINK}>
-                  Sign in
-                </Link>
-              </li>
-            </FooterColumn>
+        <ul className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+          <li>
+            <Link to={paths.login} className={LINK}>
+              Sign in
+            </Link>
+          </li>
+          <li>
+            <Link to={paths.terms} className={LINK}>
+              Terms of Service
+            </Link>
+          </li>
+          <li>
+            <Link to={paths.privacy} className={LINK}>
+              Privacy Policy
+            </Link>
+          </li>
+          <li>
+            <a href={REPO_URL} className={LINK} rel="noreferrer noopener" target="_blank">
+              GitHub
+            </a>
+          </li>
+          <li>
+            <a href={`mailto:${CONTACT_EMAIL}`} className={LINK}>
+              Contact
+            </a>
+          </li>
+        </ul>
 
-            <FooterColumn title="Legal">
-              <li>
-                <Link to={paths.terms} className={LINK}>
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link to={paths.privacy} className={LINK}>
-                  Privacy Policy
-                </Link>
-              </li>
-            </FooterColumn>
-
-            <FooterColumn title="Project">
-              <li>
-                <a href={REPO_URL} className={LINK} rel="noreferrer noopener" target="_blank">
-                  GitHub
-                </a>
-              </li>
-              <li>
-                <a href={`mailto:${CONTACT_EMAIL}`} className={LINK}>
-                  Contact
-                </a>
-              </li>
-            </FooterColumn>
-          </div>
-        </div>
-
-        <p className="mt-12 border-t border-border pt-6 text-xs leading-relaxed text-content-subtle nums-proportional">
+        <p className="mx-auto mt-4 max-w-[60ch] text-center text-xs leading-relaxed text-content-subtle nums-proportional">
           Open source, and free because it costs almost nothing to run. Export your data or delete
           it whenever you like.
+        </p>
+
+        {/*
+          The wordmark as decoration: sized in container units so it spans the
+          shell at every width, and pushed past the footer's bottom edge so the
+          clip crops its foot. Hidden from assistive tech because the header's
+          logo link already carries the name.
+        */}
+        <p
+          aria-hidden="true"
+          className="mt-8 select-none whitespace-nowrap text-center text-[length:9.7cqw] font-extrabold leading-[0.78] tracking-tight text-wordmark stretch-display translate-y-[0.12em]"
+        >
+          Internship Tracker
         </p>
       </div>
     </footer>
@@ -174,14 +166,17 @@ export function MarketingFooter(): JSX.Element {
 }
 
 /** The shell every logged-out page renders into. */
-export function MarketingShell({ children }: { children: ReactNode }): JSX.Element {
+export function MarketingShell({
+  children,
+  signUpCard,
+}: { children: ReactNode } & MarketingFooterProps): JSX.Element {
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       <MarketingHeader />
       <main id="main" className="flex-1">
         {children}
       </main>
-      <MarketingFooter />
+      <MarketingFooter signUpCard={signUpCard} />
     </div>
   );
 }

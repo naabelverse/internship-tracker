@@ -61,6 +61,7 @@
   --color-surface: 249 252 255;
   --color-surface-muted: 231 237 246;
   --color-wash: 166 196 232;
+  --color-wordmark: 114 135 163;
   --color-border: 216 223 233;
   --color-border-strong: 159 176 198;
   --color-text: 6 10 18;
@@ -164,6 +165,7 @@
   --color-surface: 26 37 51;
   --color-surface-muted: 35 45 60;
   --color-wash: 26 44 74;
+  --color-wordmark: 82 105 137;
   --color-border: 43 54 70;
   --color-border-strong: 58 74 96;
   --color-text: 229 236 241;

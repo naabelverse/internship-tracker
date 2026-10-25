@@ -60,6 +60,15 @@ describe('the legal pages render from markdown in the repository', () => {
       paths.privacy,
     );
   });
+
+  it('leaves the sign-up card off, so the fine print is not a pitch', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.privacy });
+    await screen.findByRole('heading', { level: 1, name: 'Privacy Policy' });
+
+    expect(screen.queryByRole('heading', { name: 'Ready for your next application?' })).toBeNull();
+  });
 });
 
 describe('the privacy policy describes what this application actually stores', () => {
