@@ -5991,3 +5991,8 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   `BrowserRouter` has no scroll restoration, so footer links opened Terms and Privacy at the bottom.
   `useScrollToTopOnNavigate` resets on a pathname change only, so query-string filter updates and
   `#hash` targets do not jump.
+- **The sign-up card's empty middle holds a looping pipeline animation.** A comet crosses Saved →
+  Applied → Interview → Offer every 3s and each stage pings as it is reached. The stage colours come
+  from `STATUS_CONFIG`, so they match the board. It renders from `lg` up only, because below that
+  the card stacks and has no gap. Reduced motion keeps the stages and drops the comet and pings, and
+  the whole thing is `aria-hidden` because it is decoration.

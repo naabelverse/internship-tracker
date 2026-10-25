@@ -203,6 +203,26 @@ export default {
        * spelled by hand at seven call sites is the shape of drift the palette
        * work already spent four fixes closing.
        */
+      /*
+       * The sign-up card's pipeline: a comet crosses four stages in 3s and each
+       * stage pings as it is reached. Both share the 3s cycle, so a ping delay
+       * of `i` seconds lands on the comet at stage `i`.
+       */
+      keyframes: {
+        'pipeline-travel': {
+          '0%': { left: '0%', opacity: '0' },
+          '10%, 90%': { opacity: '1' },
+          '100%': { left: '100%', opacity: '0' },
+        },
+        'stage-ping': {
+          '0%': { transform: 'scale(1)', opacity: '0.6' },
+          '30%, 100%': { transform: 'scale(2.6)', opacity: '0' },
+        },
+      },
+      animation: {
+        'pipeline-travel': 'pipeline-travel 3s linear infinite',
+        'stage-ping': 'stage-ping 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+      },
       accentColor: {
         primary: token('color-primary'),
       },
