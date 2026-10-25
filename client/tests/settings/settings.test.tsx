@@ -195,7 +195,9 @@ describe('settings preferences', () => {
 
     const select = await screen.findByLabelText('Timezone');
 
-    expect(within(select).getByRole('option', { name: /Indian \/ Christmas/ })).toBeInTheDocument();
+    expect(
+      within(select).getByRole('option', { name: '(UTC+07:00) Christmas' }),
+    ).toBeInTheDocument();
   });
 
   it('reports the account state back after a successful save', async () => {
