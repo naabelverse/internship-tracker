@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { RouteSkeleton } from '@/components/layout/RouteSkeleton';
 import { DashboardSkeleton } from '@/features/dashboard/DashboardSkeleton';
 import { useAccountTheme } from '@/hooks/useAccountTheme';
+import { useScrollToTopOnNavigate } from '@/hooks/useScrollToTopOnNavigate';
 import { useSessionBootstrap } from '@/hooks/useSession';
 import { useSystemThemeSync } from '@/hooks/useSystemThemeSync';
 import { MarketingRoute } from '@/routes/MarketingRoute';
@@ -66,6 +67,7 @@ export function App(): JSX.Element {
   useSessionBootstrap();
   useAccountTheme();
   useSystemThemeSync();
+  useScrollToTopOnNavigate();
 
   return (
     <Routes>
