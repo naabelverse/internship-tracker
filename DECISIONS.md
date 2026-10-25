@@ -5975,3 +5975,7 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   demo button.
 - **Password inputs hide Edge's `::-ms-reveal` eye.** `PasswordField` renders its own toggle, so
   Edge showed two eyes; no regression test because jsdom does not render browser pseudo-elements.
+- **Timezone options read "(UTC+08:00) Kuala Lumpur, Malaysia", ordered by offset.** A bare
+  "Asia / Shanghai" did not tell anyone it is China's time. Place names are curated beside the zone
+  list (Intl has no zone-to-country lookup), and the offset is read at render time so DST zones
+  show today's offset.

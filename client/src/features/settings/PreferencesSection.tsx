@@ -7,7 +7,11 @@ import { Select } from '@/components/ui/Select';
 import { TextField } from '@/components/ui/TextField';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { preferencesSchema, type PreferencesValues } from '@/features/settings/settingsSchemas';
-import { detectedTimezone, timezoneOptions } from '@/features/settings/timezoneOptions';
+import {
+  detectedTimezone,
+  timezoneLabel,
+  timezoneOptions,
+} from '@/features/settings/timezoneOptions';
 import { useUpdatePreferences } from '@/features/settings/useSettingsMutations';
 import { THEME_PREFERENCES, type User } from '@/types/user';
 
@@ -124,7 +128,7 @@ export function PreferencesSection({ user }: PreferencesSectionProps): JSX.Eleme
             }}
             className="text-xs font-medium text-primary hover:underline"
           >
-            This device says {detected}. Use that instead.
+            This device says {timezoneLabel(detected)}. Use that instead.
           </button>
         )}
       </div>
