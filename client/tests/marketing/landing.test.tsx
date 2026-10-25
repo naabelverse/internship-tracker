@@ -19,6 +19,7 @@ import { renderWithProviders, resetClientState, signIn } from '../utils/render';
 
 const DEMO = 'POST /auth/demo';
 const HERO = /never miss a deadline/i;
+const SIGN_UP_CARD = 'Ready for your next application?';
 
 beforeEach(() => {
   resetClientState();
@@ -99,6 +100,20 @@ describe('the landing page', () => {
       'github.com',
     );
     expect(screen.getByRole('link', { name: 'Contact' }).getAttribute('href')).toContain('mailto:');
+  });
+
+  it('closes with a sign-up card above the footer links', async () => {
+    installMockApi({});
+
+    renderWithProviders(<App />, { route: paths.landing });
+    await screen.findByRole('heading', { level: 1, name: HERO });
+
+    const card = screen.getByRole('heading', { name: SIGN_UP_CARD }).parentElement
+      ?.parentElement as HTMLElement;
+    expect(within(card).getByRole('link', { name: 'Create an account' })).toHaveAttribute(
+      'href',
+      paths.register,
+    );
   });
 
   it('carries a screenshot with real alternative text, not a filename', async () => {

@@ -71,3 +71,6 @@ ruvector.db
 # committed copy can never pick up the deployment domain.
 client/public/robots.txt
 client/public/sitemap.xml
+
+# Brainstorming mockups (local only)
+.superpowers/

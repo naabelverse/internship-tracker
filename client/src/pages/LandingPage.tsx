@@ -25,7 +25,7 @@ export default function LandingPage(): JSX.Element {
   const demoLogin = useDemoLogin();
 
   return (
-    <MarketingShell>
+    <MarketingShell signUpCard>
       <Seo
         standaloneTitle
         title="Internship Tracker - never miss an application deadline"
