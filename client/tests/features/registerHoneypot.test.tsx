@@ -102,6 +102,13 @@ describe('the registration honeypot', () => {
     expect(style.width).toBe('1px');
   });
 
+  it('comes after every visible field, so it adds no gap above the first one', async () => {
+    await renderRegisterPage();
+
+    // Ahead of Name, `space-y-4` gave Name a margin for a sibling nobody sees.
+    expect(honeypot().closest('form')?.lastElementChild).toBe(honeypot());
+  });
+
   it('has no label, so it is invisible to a screen reader as well as a mouse', async () => {
     await renderRegisterPage();
 
