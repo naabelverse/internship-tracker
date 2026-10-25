@@ -87,6 +87,12 @@ describe.each(['light', 'dark'] as const)('%s theme token contrast', (theme) => 
     expect(contrastRatio(token(fg), token('wash'))).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
+  // The footer's giant wordmark is decoration, but axe measures it as large
+  // text, and the first cut on `wash` failed CI at 1.49 light / 1.21 dark.
+  it('wordmark clears AA for large text on the canvas', () => {
+    expect(contrastRatio(token('wordmark'), token('canvas'))).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
   it.each(PILL_TOKENS)('%s clears AA as text on a card', (name) => {
     expect(contrastRatio(token(name), token('surface'))).toBeGreaterThanOrEqual(AA_TEXT);
   });

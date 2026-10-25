@@ -41,6 +41,9 @@ export default {
         // this saturated forces every status colour to near-black to keep a 15%
         // pill tint legible on it. Nothing carrying a pill is painted on it.
         wash: token('color-wash'),
+        // The marketing footer's giant wordmark. Decorative, but axe still
+        // measures it as large text, so it is gated at 3:1 on the canvas.
+        wordmark: token('color-wordmark'),
         border: token('color-border'),
         'border-strong': token('color-border-strong'),
         content: token('color-text'),

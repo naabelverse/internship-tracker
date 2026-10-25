@@ -156,7 +156,7 @@ export function MarketingFooter({ signUpCard = false }: MarketingFooterProps): J
         */}
         <p
           aria-hidden="true"
-          className="mt-8 select-none whitespace-nowrap text-center text-[length:9.7cqw] font-extrabold leading-[0.78] tracking-tight text-wash stretch-display translate-y-[0.12em]"
+          className="mt-8 select-none whitespace-nowrap text-center text-[length:9.7cqw] font-extrabold leading-[0.78] tracking-tight text-wordmark stretch-display translate-y-[0.12em]"
         >
           Internship Tracker
         </p>

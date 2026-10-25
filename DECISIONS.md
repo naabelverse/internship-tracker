@@ -5984,3 +5984,6 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   shows on the landing page only (`signUpCard`), because a pitch under Terms and Privacy reads as
   pushy and the header's "Create account" is there anyway. The wordmark is sized in container units
   so it fills the shell at every width, and is `aria-hidden` because the header logo names the app.
+  Its colour is a new `wordmark` token (`114 135 163` / `82 105 137`) rather than `wash`: axe
+  measures it as large text even when `aria-hidden`, and `wash` failed at 1.49:1 / 1.21:1. The token
+  is gated at 3:1 on the canvas in `tokenContrast.test.ts`.
