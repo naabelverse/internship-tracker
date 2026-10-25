@@ -1,6 +1,15 @@
 import { Button } from '@/components/ui/Button';
+import { CheckIcon } from '@/components/ui/icons';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { useExportAccount } from '@/features/settings/useAccountData';
+
+/** What the export holds, mirroring what the export service actually writes. */
+const INCLUDED = [
+  'Your profile',
+  'Every application and its interviews, notes and status history',
+  'Every reminder',
+  'Each signed-in device',
+] as const;
 
 /**
  * Taking your data with you.
@@ -20,23 +29,9 @@ export function DataSection(): JSX.Element {
   return (
     <SettingsSection
       title="Your data"
-      description="Everything this account holds, in one file you can keep."
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-sm font-medium text-content">Export all my data</h3>
-          <p className="mt-0.5 text-sm text-content-muted">
-            One JSON file with your profile, every application and its interviews, notes and status
-            history, every reminder, and the record of each signed-in device.
-          </p>
-          <p className="mt-1 text-xs text-content-subtle">
-            Attachments are listed with their name, type and size; download the files themselves
-            from each application. Passwords and session tokens are never included.
-          </p>
-        </div>
-
+      description="Export everything this account holds as one JSON file you can keep."
+      footer={
         <Button
-          variant="secondary"
           isLoading={exportAccount.isPending}
           loadingLabel="Preparing"
           onClick={() => {
@@ -45,7 +40,21 @@ export function DataSection(): JSX.Element {
         >
           Export
         </Button>
-      </div>
+      }
+    >
+      <ul className="space-y-2 text-sm text-content">
+        {INCLUDED.map((item) => (
+          <li key={item} className="flex items-start gap-2.5">
+            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-content-subtle" />
+            {item}
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-xs text-content-subtle">
+        Attachments are listed with their name, type and size; download the files from each
+        application. Passwords and session tokens are never included.
+      </p>
     </SettingsSection>
   );
 }

@@ -260,6 +260,15 @@
   }
 
   /*
+   * Edge draws its own reveal eye inside password inputs, next to the one
+   * PasswordField already renders, so the field showed two eyes.
+   */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+
+  /*
    * A board drag. The pointer rides over the drag preview, not the Move handle
    * it pressed, so the handle's own cursor cannot show the grab in progress.
    * The preview exists only mid-drag, so every ending (drop, Escape, release
