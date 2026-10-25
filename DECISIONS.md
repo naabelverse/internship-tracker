@@ -5965,3 +5965,13 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   scroll offset to a device pixel and could stop at 96.25 px, a quarter-pixel short of the 96 px
   line, so "Storage and limits" marked "Signed in devices". Reproduced in Edge at 125-175% with a
   fractional card height; sections sit 16 px apart, so the slack cannot mark a neighbour.
+- **Settings data, usage and sessions sections: one layer each, no nested boxes.** The export
+  became a checklist with one footnote, usage became two side-by-side meter cards, and sessions a
+  divided list with the warning in the footer, because each had two heading levels and three text
+  sizes in one card.
+- **`secondary` buttons fill with `surface-muted` and outline with `border-strong`, app-wide.** The
+  old `bg-surface` was the card's own colour, so every secondary button inside a card read only as
+  a hairline. Fixed in the variant rather than per call site; this also shifts the landing hero's
+  demo button.
+- **Password inputs hide Edge's `::-ms-reveal` eye.** `PasswordField` renders its own toggle, so
+  Edge showed two eyes; no regression test because jsdom does not render browser pseudo-elements.

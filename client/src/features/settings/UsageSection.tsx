@@ -21,7 +21,6 @@ function percentage({ used, limit }: UsageCounter): number {
 
 interface MeterProps {
   label: string;
-  description: string;
   counter: UsageCounter;
   format: (value: number) => string;
 }
@@ -34,28 +33,23 @@ interface MeterProps {
  * percentage nobody can act on. The bar turns amber past 80% and red past 95%,
  * which is early enough to do something about it before a write is refused.
  */
-function Meter({ label, description, counter, format }: MeterProps): JSX.Element {
+function Meter({ label, counter, format }: MeterProps): JSX.Element {
   const percent = percentage(counter);
   const tone = percent >= 95 ? 'bg-danger' : percent >= 80 ? 'bg-warning' : 'bg-primary';
 
   return (
-    <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-medium text-content">{label}</h3>
-        <p className="text-sm tabular-nums text-content-muted">
-          {`${format(counter.used)} of ${format(counter.limit)}`}
-        </p>
-      </div>
+    <div className="rounded-control border border-border p-4">
+      <h3 className="text-xs font-medium text-content-muted">{label}</h3>
+      <p className="mt-1 text-base font-semibold tabular-nums text-content">
+        {`${format(counter.used)} of ${format(counter.limit)}`}
+      </p>
 
-      <div
-        aria-hidden="true"
-        className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted"
-      >
+      <div aria-hidden="true" className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-border">
         <div className={`h-full rounded-full ${tone}`} style={{ width: `${String(percent)}%` }} />
       </div>
 
-      <p className="mt-1.5 text-xs text-content-subtle">
-        {`${description} ${format(counter.remaining)} remaining.`}
+      <p className="mt-2 text-xs tabular-nums text-content-subtle">
+        {`${format(counter.remaining)} remaining`}
       </p>
     </div>
   );
@@ -79,9 +73,9 @@ export function UsageSection(): JSX.Element {
       description="What this account is using, and the ceilings it is measured against."
     >
       {usage.isPending && (
-        <div className="space-y-5">
-          <Skeleton className="h-12 w-full" label="Loading your usage" />
-          <Skeleton className="h-12 w-full" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-28 w-full" label="Loading your usage" />
+          <Skeleton className="h-28 w-full" />
         </div>
       )}
 
@@ -96,28 +90,22 @@ export function UsageSection(): JSX.Element {
       )}
 
       {usage.data && (
-        <div className="space-y-5">
-          <Meter
-            label="Applications"
-            description="Tracked applications on this account."
-            counter={usage.data.applications}
-            format={(value) => value.toLocaleString()}
-          />
-
-          <Meter
-            label="Uploads"
-            description="Every attachment across every application."
-            counter={usage.data.storageBytes}
-            format={formatBytes}
-          />
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Meter
+              label="Applications"
+              counter={usage.data.applications}
+              format={(value) => value.toLocaleString()}
+            />
+            <Meter label="Uploads" counter={usage.data.storageBytes} format={formatBytes} />
+          </div>
 
           <p className="text-xs text-content-subtle">
-            Any one application can carry up to{' '}
-            {usage.data.attachmentsPerApplication.limit.toLocaleString()} attachments. Reaching a
-            limit does not affect anything already saved - it only stops new records being added
-            until you remove some.
+            Each application holds up to{' '}
+            {usage.data.attachmentsPerApplication.limit.toLocaleString()} attachments. Hitting a
+            limit only blocks new additions; nothing already saved is touched.
           </p>
-        </div>
+        </>
       )}
     </SettingsSection>
   );

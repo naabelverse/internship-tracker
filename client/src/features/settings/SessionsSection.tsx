@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { MonitorIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import {
@@ -52,17 +53,21 @@ function SessionRow({ session }: { session: ActiveSession }): JSX.Element {
   const label = describeDevice(session.userAgent);
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-border px-3 py-2.5">
-      <div className="min-w-0 text-sm">
-        <p className="font-medium text-content">
+    <li className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-surface-muted text-content-muted">
+        <MonitorIcon className="h-4 w-4" />
+      </span>
+
+      <div className="min-w-0 flex-1 text-sm">
+        <p className="flex flex-wrap items-center gap-2 font-medium text-content">
           {label}
           {session.current && (
-            <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+            <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
               This device
             </span>
           )}
         </p>
-        <p className="text-content-muted">
+        <p className="text-xs text-content-muted">
           {session.ip ?? 'Unknown address'} · last used{' '}
           {formatRelative(session.lastUsedAt ?? session.createdAt)}
         </p>
@@ -104,17 +109,22 @@ export function SessionsSection(): JSX.Element {
       title="Signed in devices"
       description="Every device with a live session. Signing one out takes effect immediately."
       footer={
-        <Button
-          type="button"
-          variant="secondary"
-          isLoading={logoutEverywhere.isPending}
-          loadingLabel="Signing out"
-          onClick={() => {
-            logoutEverywhere.mutate();
-          }}
-        >
-          Sign out everywhere
-        </Button>
+        <>
+          <p className="mr-auto self-center text-xs text-content-subtle">
+            Signing out everywhere includes this device.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            isLoading={logoutEverywhere.isPending}
+            loadingLabel="Signing out"
+            onClick={() => {
+              logoutEverywhere.mutate();
+            }}
+          >
+            Sign out everywhere
+          </Button>
+        </>
       }
     >
       {sessions.isPending && (
@@ -139,16 +149,12 @@ export function SessionsSection(): JSX.Element {
         (sessions.data.length === 0 ? (
           <p className="text-sm text-content-muted">No other devices are signed in.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border">
             {sessions.data.map((session) => (
               <SessionRow key={session.id} session={session} />
             ))}
           </ul>
         ))}
-
-      <p className="text-sm text-content-muted">
-        Signing out everywhere ends this session too, so you will be asked to sign in again.
-      </p>
     </SettingsSection>
   );
 }
