@@ -5996,3 +5996,17 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   from `STATUS_CONFIG`, so they match the board. It renders from `lg` up only, because below that
   the card stacks and has no gap. Reduced motion keeps the stages and drops the comet and pings, and
   the whole thing is `aria-hidden` because it is decoration.
+- **The FAQ's left column holds a "Still have a question?" card under the heading, and is centred
+  against the closed question list.** The heading alone left a tall empty gutter. The card links to
+  `CONTACT_EMAIL` and `REPO_URL` and comes last in source order, so a phone reads the questions
+  first. Centring uses a measured offset rather than CSS: centring against the live list height
+  moved the left column every time an answer opened. A `ResizeObserver` on the list re-measures on
+  width or font changes. No unit test covers the offset because jsdom does no layout; it was
+  measured in Edge at 1024 and 1440 with answers open and closed.
+- **The landing budget stays at 150 KB; the FAQ redesign was trimmed to fit.** The first build
+  came to 153,708 bytes against a 153,600 limit (`main` is 153,061). An intro line under the heading
+  and a subtitle in the card were cut, leaving 153,567. That is 33 bytes of headroom, so the next
+  landing change will likely need its own trim or a deliberate budget decision.
+- **Two FAQ answers corrected.** Restoring a closed account needs an email-and-password sign-in,
+  because Google sign-in answers `ACCOUNT_CLOSED`. "Plenty of people use it for graduate schemes"
+  was dropped, because no usage data backs it.
