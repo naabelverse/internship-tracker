@@ -1,4 +1,5 @@
-import { useId, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { CONTACT_EMAIL, REPO_URL } from '@/lib/siteMeta';
 
 /**
  * The FAQ, per SPEC section 12.
@@ -30,7 +31,7 @@ const FAQ: QuestionAndAnswer[] = [
   {
     question: 'What happens to my data?',
     answer:
-      'It stays yours. It is never sold, shared, or used to train anything. You can export the lot as JSON from Settings at any moment. Closing your account starts a 30-day grace period: sign in during it and you can restore everything as you left it. After 30 days the account and its data, including uploaded files, are permanently deleted. Password reset does not work for a closed account, so if you have forgotten your password, you will not be able to restore it yourself.',
+      'It stays yours. It is never sold, shared, or used to train anything. You can export the lot as JSON from Settings at any moment. Closing your account starts a 30-day grace period: sign in with your email and password during it and you can restore everything as you left it. After 30 days the account and its data, including uploaded files, are permanently deleted. Password reset does not work for a closed account, so if you have forgotten your password, you will not be able to restore it yourself.',
   },
   {
     question: 'Will it email me constantly?',
@@ -45,27 +46,71 @@ const FAQ: QuestionAndAnswer[] = [
   {
     question: 'Can I use it for graduate roles rather than internships?',
     answer:
-      'Nothing in it is internship-specific — it is a pipeline with deadlines and interviews. Plenty of people use it for graduate schemes and full-time roles.',
+      'Yes. Nothing in it is internship-specific: it is a pipeline with deadlines and interviews, so it works just as well for graduate schemes and full-time roles.',
   },
 ];
+
+const CARD_LINK =
+  'inline-flex items-center gap-1.5 rounded-control text-sm font-semibold text-content transition-colors hover:text-primary';
 
 export function FaqAccordion(): JSX.Element {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const baseId = useId();
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  /*
+    Centres the heading and card against the list as it stands with every
+    answer closed, so opening one grows the list downward without moving the
+    left column. CSS alone centres against the live height, which shifts the
+    block on every toggle. The observer fires once before first paint, then
+    again when a width change or a late font rewraps the text. Below `lg` the
+    card sits under the list, so the room comes out negative and the margin is
+    zero without a breakpoint check.
+  */
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    // Source order, which the JSX below fixes: heading, list, card.
+    const [head, list, card] = Array.from(grid.children) as HTMLElement[];
+
+    const observer = new ResizeObserver(() => {
+      let room = list.offsetHeight - (card.offsetTop + card.offsetHeight - head.offsetTop);
+      list.querySelectorAll<HTMLElement>('[role="region"]').forEach((panel) => {
+        room -= panel.offsetHeight;
+      });
+      head.style.marginTop = `${String(Math.max(0, room / 2))}px`;
+    });
+    observer.observe(list);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <section aria-labelledby="faq-heading" className="border-t border-border bg-surface">
-      <div className="marketing-shell grid gap-8 py-16 lg:grid-cols-12 lg:gap-10">
-        {/*
-          The heading sits beside the answers rather than centred above them, so
-          the questions read as one continuous ruled column instead of a boxed
-          widget in the middle of the page.
-        */}
-        <h2 id="faq-heading" className="text-display-md stretch-wide text-content lg:col-span-4">
+      {/*
+        The heading sits beside the answers rather than centred above them, so
+        the questions read as one continuous ruled column instead of a boxed
+        widget in the middle of the page. The contact card fills the gutter under
+        the heading on wide screens, but comes last in source order, so a phone
+        reads the questions before it is offered a way out of them. The trailing
+        `1fr` row takes whatever an open answer adds, so the two rows above it
+        stay the height of their own content. The list is `self-start` and the
+        rows carry no gap, so the list's height is its own and never a product of
+        the offset measured from it.
+      */}
+      <div
+        ref={gridRef}
+        className="marketing-shell grid gap-8 py-16 lg:grid-cols-12 lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-0"
+      >
+        <h2
+          id="faq-heading"
+          className="text-display-md stretch-wide text-content lg:col-span-4 lg:row-start-1"
+        >
           Questions people ask
         </h2>
 
-        <div className="divide-y divide-border border-t border-border lg:col-span-8">
+        <div className="divide-y divide-border border-t border-border lg:col-span-8 lg:col-start-5 lg:row-span-3 lg:row-start-1 lg:self-start">
           {FAQ.map((entry, index) => {
             const isOpen = openIndex === index;
             const panelId = `${baseId}-panel-${String(index)}`;
@@ -82,9 +127,15 @@ export function FaqAccordion(): JSX.Element {
                     onClick={() => {
                       setOpenIndex(isOpen ? null : index);
                     }}
-                    className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-semibold text-content transition-colors hover:text-primary"
+                    className="flex w-full items-center gap-4 py-5 text-left text-base font-semibold tracking-tight text-content transition-colors hover:text-primary"
                   >
-                    {entry.question}
+                    <span
+                      aria-hidden="true"
+                      className="w-7 shrink-0 text-sm stretch-display text-primary"
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="flex-1">{entry.question}</span>
                     <svg
                       aria-hidden="true"
                       viewBox="0 0 24 24"
@@ -101,13 +152,31 @@ export function FaqAccordion(): JSX.Element {
                   </button>
                 </h3>
                 <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!isOpen}>
-                  <p className="max-w-[68ch] pb-5 text-sm leading-relaxed text-content-muted nums-proportional">
+                  <p className="max-w-[68ch] pb-6 pl-11 text-sm leading-relaxed text-content-muted nums-proportional">
                     {entry.answer}
                   </p>
                 </div>
               </div>
             );
           })}
+        </div>
+
+        <div className="rounded-panel border border-border bg-canvas p-6 lg:col-span-4 lg:row-start-2 lg:mt-8">
+          <p className="text-base font-semibold tracking-tight text-content">
+            Still have a question?
+          </p>
+          <ul className="mt-4 space-y-2">
+            <li>
+              <a href={`mailto:${CONTACT_EMAIL}`} className={CARD_LINK}>
+                Email us <span aria-hidden="true">→</span>
+              </a>
+            </li>
+            <li>
+              <a href={REPO_URL} className={CARD_LINK} rel="noreferrer noopener" target="_blank">
+                Read the code on GitHub <span aria-hidden="true">→</span>
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </section>
