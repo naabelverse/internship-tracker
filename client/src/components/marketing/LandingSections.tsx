@@ -114,17 +114,12 @@ export function ScreenshotSection(): JSX.Element {
   return (
     <section aria-labelledby="screenshot-heading" className="border-y border-border bg-surface">
       <div className="marketing-shell py-16">
-        <div className="grid gap-6 lg:grid-cols-12 lg:items-end lg:gap-10">
-          <h2
-            id="screenshot-heading"
-            className="text-display-md stretch-wide text-content lg:col-span-6"
-          >
-            Your whole search, on one screen
-          </h2>
-          <p className="max-w-[56ch] text-sm leading-relaxed text-content-muted nums-proportional lg:col-span-6">
-            What you sent, who replied and what is due next, side by side.
-          </p>
-        </div>
+        <h2 id="screenshot-heading" className="text-display-md stretch-wide text-content">
+          Your whole search, on one screen
+        </h2>
+        <p className="mt-4 max-w-[56ch] text-sm leading-relaxed text-content-muted nums-proportional">
+          What you sent, who replied and what is due next, side by side.
+        </p>
 
         {/*
           One capture per theme, swapped by `dark:`, which keys off the same
