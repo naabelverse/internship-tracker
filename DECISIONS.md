@@ -6035,3 +6035,10 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   picture itself swaps with the theme.
 - **Trimmed to fit the landing budget, not the other way round.** The first draft went over 150 KB.
   The shipped copy leaves the landing chunk 20 bytes smaller gzipped than before.
+
+## The screenshot section's description sits under its heading (27 Oct 2026)
+
+- **One column, not a 6/6 split.** Once the description became one short line, the bottom-aligned
+  right column left it floating beside the heading's second line. It now follows the heading with
+  `mt-4`, and the heading takes the full width, which fits it on one line at desktop like the other
+  section headings.
