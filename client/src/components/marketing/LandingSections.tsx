@@ -122,8 +122,7 @@ export function ScreenshotSection(): JSX.Element {
             Your whole search, on one screen
           </h2>
           <p className="max-w-[56ch] text-sm leading-relaxed text-content-muted nums-proportional lg:col-span-6">
-            The dashboard after a couple of months of applying — the same view the demo account
-            opens on. Dark and light both ship, and every view works down to a phone.
+            What you sent, who replied and what is due next, side by side.
           </p>
         </div>
 
@@ -147,6 +146,9 @@ export function ScreenshotSection(): JSX.Element {
               className={`${className} w-full rounded-panel border border-border`}
             />
           ))}
+          <figcaption className="mt-3 text-xs leading-relaxed text-content-subtle">
+            The same view the demo account opens on.
+          </figcaption>
         </figure>
       </div>
     </section>

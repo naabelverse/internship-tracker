@@ -6021,3 +6021,17 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
 - **This drops the 24 Sep entry's symmetric hero.** That entry made the hero's own top and bottom
   equal, and this leaves them unequal on purpose: the seam between sections is what the eye
   compares, and every other landing section already uses 64px.
+
+## The screenshot section's description describes, and its caption captions (27 Oct 2026)
+
+- **The paragraph beside "Your whole search, on one screen" was a caption.** It described the
+  picture ("the dashboard after a couple of months… dark and light both ship") rather than the
+  section, so it read wrong in the description slot. It is now one line about what the screen shows
+  — what you sent, who replied, what is due next — and the claim about the picture moved under it
+  as a `figcaption`.
+- **The caption keeps the exact words "the same view the demo account opens on".**
+  `captureScreenshot.mjs` and `dashboardScreenshot.test.tsx` both quote that claim as the reason the
+  screenshot must stay real, so it survives verbatim. "Dark and light both ship" was dropped: the
+  picture itself swaps with the theme.
+- **Trimmed to fit the landing budget, not the other way round.** The first draft went over 150 KB.
+  The shipped copy leaves the landing chunk 20 bytes smaller gzipped than before.
