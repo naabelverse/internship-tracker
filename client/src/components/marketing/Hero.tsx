@@ -124,7 +124,11 @@ function DispatchPanel(): JSX.Element {
 export function Hero({ onTryDemo, isDemoLoading, showDemo }: HeroProps): JSX.Element {
   return (
     <section className="atmos-field border-b border-border">
-      <div className="marketing-shell py-16 sm:py-24 lg:py-28">
+      {/*
+        The top grows with the viewport to clear the nav; the bottom stays at the
+        sections' own py-16, so the gap either side of the border is the same.
+      */}
+      <div className="marketing-shell pb-16 pt-16 sm:pt-24 lg:pt-28">
         <div className="grid items-start gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-6">
             <h1 className="max-w-[13ch] text-display-lg stretch-display text-content">

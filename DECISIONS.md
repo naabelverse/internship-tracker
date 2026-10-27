@@ -6010,3 +6010,14 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
 - **Two FAQ answers corrected.** Restoring a closed account needs an email-and-password sign-in,
   because Google sign-in answers `ACCOUNT_CLOSED`. "Plenty of people use it for graduate schemes"
   was dropped, because no usage data backs it.
+
+## The hero's bottom padding matches the sections below it (27 Oct 2026)
+
+- **The gap either side of the hero's border is now even.** The hero closed on `lg:py-28` (112px)
+  and the feature grid opened on `py-16` (64px), so the border sat 113px under the last ink and
+  64px over the next heading. The hero's bottom is now `pb-16` at every width, while the top keeps
+  `pt-16 sm:pt-24 lg:pt-28` to clear the nav. Measured in Edge on the built page at 1440, 1024 and
+  390 wide: 65px below and 64px above at all three, and the hero is 675px tall at desktop (was 723).
+- **This drops the 24 Sep entry's symmetric hero.** That entry made the hero's own top and bottom
+  equal, and this leaves them unequal on purpose: the seam between sections is what the eye
+  compares, and every other landing section already uses 64px.
