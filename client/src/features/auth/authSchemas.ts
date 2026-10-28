@@ -29,9 +29,7 @@ export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Use at least 2 characters').max(60, 'Use at most 60 characters'),
   email,
   password: strongPassword,
-  acceptTerms: z.literal(true, {
-    errorMap: () => ({ message: 'Accept the Terms and Privacy Policy to continue' }),
-  }),
+  acceptTerms: z.literal(true, { error: 'Accept the Terms and Privacy Policy to continue' }),
 });
 
 export type LoginValues = z.infer<typeof loginSchema>;

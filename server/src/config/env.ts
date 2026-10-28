@@ -1,6 +1,7 @@
 import path from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
+import { parseOptions } from '@/utils/parseOptions';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -277,7 +278,7 @@ function withoutBlanks(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
  * in a single pass instead of one variable per restart.
  */
 export function parseEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const result = envSchemaWithGoogle.safeParse(withoutBlanks(source));
+  const result = envSchemaWithGoogle.safeParse(withoutBlanks(source), parseOptions);
 
   if (!result.success) {
     const details = result.error.issues

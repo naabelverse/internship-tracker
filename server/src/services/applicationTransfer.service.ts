@@ -11,6 +11,7 @@ import { buildFilter, createApplication } from '@/services/application.service';
 import { assertApplicationCapacity } from '@/services/usage.service';
 import { ApiError } from '@/utils/ApiError';
 import { parseCsv, toCsv, type CsvCell } from '@/utils/csv';
+import { parseOptions } from '@/utils/parseOptions';
 
 export const EXPORT_COLUMNS = [
   'company',
@@ -268,7 +269,7 @@ export async function importApplications(
 
   for (const [index, row] of rows.entries()) {
     const rowNumber = index + 2;
-    const parsed = createApplicationSchema.safeParse(rowToInput(row));
+    const parsed = createApplicationSchema.safeParse(rowToInput(row), parseOptions);
 
     if (!parsed.success) {
       skipped += 1;

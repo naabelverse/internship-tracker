@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import type { ZodTypeAny } from 'zod';
+import { parseOptions } from '@/utils/parseOptions';
 
 /**
  * Validates and replaces `req.body` with the parsed result, so controllers work
@@ -8,7 +9,7 @@ import type { ZodTypeAny } from 'zod';
  */
 export function validateBody(schema: ZodTypeAny): RequestHandler {
   return (req, _res, next) => {
-    const result = schema.safeParse(req.body);
+    const result = schema.safeParse(req.body, parseOptions);
 
     if (!result.success) {
       next(result.error);
@@ -26,7 +27,7 @@ export function validateBody(schema: ZodTypeAny): RequestHandler {
  */
 export function validateQuery(schema: ZodTypeAny): RequestHandler {
   return (req, _res, next) => {
-    const result = schema.safeParse(req.query);
+    const result = schema.safeParse(req.query, parseOptions);
 
     if (!result.success) {
       next(result.error);
@@ -41,7 +42,7 @@ export function validateQuery(schema: ZodTypeAny): RequestHandler {
 /** Validates route parameters, so a malformed id is a 400 rather than a cast error. */
 export function validateParams(schema: ZodTypeAny): RequestHandler {
   return (req, _res, next) => {
-    const result = schema.safeParse(req.params);
+    const result = schema.safeParse(req.params, parseOptions);
 
     if (!result.success) {
       next(result.error);

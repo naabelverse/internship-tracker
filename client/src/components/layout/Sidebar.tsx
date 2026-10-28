@@ -1,13 +1,18 @@
-import { useRef, useState } from 'react';
+import { Suspense, lazy, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { BrandMark } from '@/components/marketing/MarketingChrome';
 import { CloseIcon, MailIcon } from '@/components/ui/icons';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
-import { FeedbackModal } from '@/features/feedback/FeedbackModal';
 import { APP_VERSION, AUTHOR_URL } from '@/lib/siteMeta';
 import { NAV_ITEMS } from '@/routes/navItems';
 import { paths } from '@/routes/paths';
+
+/** Split out: its form brings zod, which would otherwise sit in every route's first load. */
+const FeedbackModal = lazy(async () => {
+  const module = await import('@/features/feedback/FeedbackModal');
+  return { default: module.FeedbackModal };
+});
 
 interface SidebarProps {
   isOpen: boolean;
@@ -37,6 +42,8 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
   const panelRef = useRef<HTMLDivElement>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Mounted on first open and never after unmounted, so closing still keeps the draft.
+  const [feedbackMounted, setFeedbackMounted] = useState(false);
   useFocusTrap(panelRef, isOpen, onClose);
 
   return (
@@ -127,6 +134,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
             type="button"
             onClick={() => {
               onClose();
+              setFeedbackMounted(true);
               setFeedbackOpen(true);
             }}
             className={cn(navLinkClass({ isActive: false }), 'w-full')}
@@ -151,7 +159,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps): JSX.Element {
         </div>
       </div>
 
-      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      {feedbackMounted && (
+        <Suspense fallback={null}>
+          <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 }

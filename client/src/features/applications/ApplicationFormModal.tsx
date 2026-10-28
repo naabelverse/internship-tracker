@@ -13,6 +13,7 @@ import {
   toFormValues,
   toOptimisticPatch,
   toPayload,
+  type ApplicationFormInput,
   type ApplicationFormValues,
 } from '@/features/applications/applicationFormSchema';
 import { VersionConflictDialog } from '@/features/applications/VersionConflictDialog';
@@ -95,7 +96,7 @@ export function ApplicationFormModal({
     getValues,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<ApplicationFormValues>({
+  } = useForm<ApplicationFormInput, unknown, ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema),
     defaultValues: toFormValues(application),
   });
@@ -262,7 +263,8 @@ export function ApplicationFormModal({
           if (current) reset(toFormValues(current));
         }}
         onOverwrite={() => {
-          const values = getValues();
+          // Through the schema, as handleSubmit does: the raw inputs still hold '' for an empty URL.
+          const values = applicationFormSchema.parse(getValues());
           setConflict(null);
           void save(values, true);
         }}

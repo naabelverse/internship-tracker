@@ -6083,3 +6083,22 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   `body-parser`, `follow-redirects`, `morgan`, `qs`). `zod` 3 → 4 touches every route and form
   schema, `react-router-dom` 6 → 7 touches routing, and `vitest` 3 → 5 is dev-only; each is a
   migration with its own review, not a side effect of an audit run.
+
+## zod 4 (29 Oct 2026)
+
+- **zod 3.25 → 4.6.7 with `@hookform/resolvers` 3 → 5, to clear the high-severity memory
+  advisory that has no zod 3 fix.** Three `errorMap` options became `error`, and the application
+  form now types `useForm` with the schema's input and output separately, as resolvers 5 requires.
+- **A missing value still reads "Required".** Zod 4's default is "Invalid input: expected string,
+  received undefined". `utils/parseOptions.ts` restores the old wording for the env loader, the
+  request validators and the CSV import, the three places a person reads the message. A message
+  written on a schema still takes precedence.
+- **The tighter types exposed a real bug, fixed here.** "Overwrite with my changes" sent
+  `getValues()`, the raw inputs, so an empty website or job URL went out as `''` and the API's
+  `.url()` answered 400. It now parses through the form schema exactly as a normal save does;
+  `versionConflict.test.tsx` fails against the old code.
+- **The feedback modal is now a lazy chunk.** zod 4 is about 12 KB gzip larger, which put the
+  landing route at 162 KB against its 150 KB budget, because `Sidebar` imported the feedback form
+  eagerly. It now mounts on first open and stays mounted, so a closed draft is still kept (now
+  tested). `filterParams.ts` also dropped zod for a single regex, since `api/queryKeys` imports
+  it. Landing is 124 KB, below where it stood on zod 3.

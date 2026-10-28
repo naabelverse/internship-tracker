@@ -158,4 +158,32 @@ describe('version conflict UI', () => {
     expect(second).not.toHaveProperty('version');
     expect(second.role).toBe('Backend Engineer Intern');
   });
+
+  it('overwrites with the same parsed body the first save sent, not the raw inputs', async () => {
+    const user = userEvent.setup();
+    let attempts = 0;
+
+    const mock = renderList({
+      [PATCH]: (request) => {
+        attempts += 1;
+        if (attempts === 1) return conflictResponse(request);
+        return { status: 200, data: { success: true, data: { application: stored } } };
+      },
+    });
+
+    await openEditAndSave(user);
+    const prompt = await screen.findByRole('dialog', { name: 'This was changed elsewhere' });
+    await user.click(within(prompt).getByRole('button', { name: 'Overwrite with my changes' }));
+
+    await waitFor(() => {
+      expect(mock.callsTo('PATCH', '/applications/app-1')).toHaveLength(2);
+    });
+
+    // An empty URL input is '' until the schema turns it into undefined; the API's
+    // `.url()` rejects '', so a raw overwrite of a row with no website was a 400.
+    const [first, second] = mock
+      .callsTo('PATCH', '/applications/app-1')
+      .map(({ data }) => ({ ...(data as Record<string, unknown>), version: undefined }));
+    expect(second).toEqual(first);
+  });
 });

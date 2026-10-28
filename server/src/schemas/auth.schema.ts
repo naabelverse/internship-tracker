@@ -28,9 +28,7 @@ export const registerSchema = z
     email,
     password,
     timezone: ianaTimezone.optional(),
-    acceptTerms: z.literal(true, {
-      errorMap: () => ({ message: 'you must accept the Terms and Privacy Policy' }),
-    }),
+    acceptTerms: z.literal(true, { error: 'you must accept the Terms and Privacy Policy' }),
     /**
      * Honeypot. The form renders it off-screen and a person never fills it, so
      * any value at all means something filled the form by field name. Accepted

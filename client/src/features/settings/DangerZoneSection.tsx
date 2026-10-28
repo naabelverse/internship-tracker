@@ -15,7 +15,7 @@ const CONFIRM_PHRASE = 'DELETE';
 const deleteSchema = z.object({
   password: z.string().min(1, 'Enter your password to confirm'),
   confirmation: z.literal(CONFIRM_PHRASE, {
-    errorMap: () => ({ message: `You must type ${CONFIRM_PHRASE} exactly, in capitals` }),
+    error: `You must type ${CONFIRM_PHRASE} exactly, in capitals`,
   }),
 });
 
