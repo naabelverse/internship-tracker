@@ -1,0 +1,38 @@
+name: Audit
+
+# Kept out of ci.yml on purpose: deploy.yml deploys only when CI succeeds, and an
+# advisory can be published against code nobody touched. Inside CI it would stop
+# every deploy, including the one shipping the fix. Here it still turns a PR red.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Advisories arrive without commits; 13 piled up unseen before this existed.
+  schedule:
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: production dependency advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Reads package-lock.json only, so no install is needed. Dev-only packages are
+      # left out because they never reach a user; moderate is the floor because the
+      # React Router open redirect fixed in #159 was rated moderate.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
