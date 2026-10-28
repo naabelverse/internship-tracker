@@ -81,6 +81,8 @@ export const applicationFormSchema = z
   });
 
 export type ApplicationFormValues = z.infer<typeof applicationFormSchema>;
+/** What the inputs hold before the schema's transforms run; `useForm` needs both shapes. */
+export type ApplicationFormInput = z.input<typeof applicationFormSchema>;
 
 /** `2026-01-31T00:00:00.000Z` to `2026-01-31`, which is what a date input wants. */
 function toDateInput(value: string | undefined): string {

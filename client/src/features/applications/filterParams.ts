@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { APPLICATION_STATUSES, PRIORITIES, SOURCES, WORK_MODES } from '@/types/application';
 
 export const SORTABLE_FIELDS = [
@@ -38,11 +37,11 @@ function readFreeList(raw: string | null): string[] {
     .filter(Boolean);
 }
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+/** A plain regex, not zod: `api/queryKeys` imports this file, so zod here lands in every route. */
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
 function readDate(raw: string | null): string | undefined {
-  const parsed = isoDate.safeParse(raw ?? '');
-  return parsed.success ? parsed.data : undefined;
+  return raw !== null && isoDate.test(raw) ? raw : undefined;
 }
 
 function readInt(raw: string | null, fallback: number, min: number, max: number): number {

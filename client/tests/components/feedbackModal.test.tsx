@@ -22,7 +22,8 @@ async function openFeedback(onClose = vi.fn()) {
 
   await user.click(screen.getByRole('button', { name: 'Send feedback' }));
 
-  return { user, dialog: screen.getByRole('dialog', { name: 'Send feedback' }) };
+  // The modal is a lazy chunk, so it appears after the click rather than with it.
+  return { user, dialog: await screen.findByRole('dialog', { name: 'Send feedback' }) };
 }
 
 describe('the feedback modal', () => {
@@ -68,5 +69,20 @@ describe('the feedback modal', () => {
       expect(failure).toHaveBeenCalledWith(expect.stringMatching(/could not be sent/));
     });
     expect(screen.getByRole('dialog', { name: 'Send feedback' })).toBeInTheDocument();
+  });
+
+  it('keeps an unsent draft across closing and reopening', async () => {
+    installMockApi({});
+    const { user, dialog } = await openFeedback();
+
+    await user.type(within(dialog).getByLabelText('Your message'), 'Half a thought');
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Send feedback' })).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Send feedback' }));
+    const reopened = await screen.findByRole('dialog', { name: 'Send feedback' });
+    expect(within(reopened).getByLabelText('Your message')).toHaveValue('Half a thought');
   });
 });
