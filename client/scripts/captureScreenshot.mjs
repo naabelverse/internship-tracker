@@ -8,8 +8,8 @@ import { chromium } from 'playwright';
  *
  * They are real screenshots of the real app signed into the real demo account,
  * taken against a production build — not a mock-up. That matters: the landing
- * page claims "the same view the demo account opens on", and a hand-drawn
- * approximation would make that claim false the moment the UI changed.
+ * page presents them as the dashboard, and a hand-drawn approximation would
+ * stop being that the moment the UI changed.
  *
  * Alongside the images it writes `dashboardScreenshot.json`: the pixel size the
  * landing page's <img> declares, and the stat-card labels read off the page at

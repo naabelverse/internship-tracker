@@ -141,9 +141,6 @@ export function ScreenshotSection(): JSX.Element {
               className={`${className} w-full rounded-panel border border-border`}
             />
           ))}
-          <figcaption className="mt-3 text-xs leading-relaxed text-content-subtle">
-            The same view the demo account opens on.
-          </figcaption>
         </figure>
       </div>
     </section>

@@ -5,8 +5,8 @@ import { StatCards } from '@/features/dashboard/StatCards';
 import { makeSummary } from '../utils/factories';
 
 /**
- * The landing page shows screenshots of the dashboard and calls them "the same
- * view the demo account opens on". They are images, so nothing else notices when
+ * The landing page shows screenshots of the dashboard as the real thing. They
+ * are images, so nothing else notices when
  * the dashboard moves on without them: PR #33 added two stat cards and the
  * screenshot went on showing six.
  *
