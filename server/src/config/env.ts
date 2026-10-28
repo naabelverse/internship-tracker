@@ -19,6 +19,18 @@ export const EXAMPLE_SECRET_VALUES: readonly string[] = [
   'generate-with-openssl-rand-base64-48',
 ];
 
+/**
+ * An absolute URL with any trailing slash removed. Callers append paths like
+ * `/api/v1/...`, so `https://api.example.com/` would yield a `//api` path that
+ * Express does not route and Google rejects as a redirect URI.
+ */
+const baseUrl = (fallback: string) =>
+  z
+    .string()
+    .url()
+    .default(fallback)
+    .transform((url) => url.replace(/\/+$/, ''));
+
 const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(5000),
@@ -27,10 +39,10 @@ const baseSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
   ACCESS_TOKEN_TTL: z.string().min(1).default('15m'),
   REFRESH_TOKEN_TTL: z.string().min(1).default('7d'),
-  CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
-  APP_URL: z.string().url().default('http://localhost:5173'),
+  CLIENT_ORIGIN: baseUrl('http://localhost:5173'),
+  APP_URL: baseUrl('http://localhost:5173'),
   /** Public origin of this API, used to build signed download links. */
-  API_URL: z.string().url().default('http://localhost:5000'),
+  API_URL: baseUrl('http://localhost:5000'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
 
