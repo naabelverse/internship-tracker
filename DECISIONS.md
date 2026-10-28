@@ -6112,3 +6112,13 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   `react-router-dom`, which v7 still publishes as a re-export of `react-router`, so the 34 import
   sites did not need touching. Every route's first load grew about 5.6 KB gzip; landing is
   129.7 KB against its 150 KB budget.
+
+## Dependency audit as its own workflow (29 Oct 2026)
+
+- **`npm audit --omit=dev --audit-level=moderate` runs in `.github/workflows/audit.yml`, not in
+  `ci.yml`.** `deploy.yml` deploys only when CI succeeds, and an advisory can be published against
+  code nobody touched; inside CI it would stop every deploy, including the one carrying the fix.
+  As a separate workflow it still marks a PR red without gating production. It also runs weekly
+  on a schedule, because advisories arrive without commits: 13 accumulated unseen before
+  #157-#159 cleared them. Dev-only packages are excluded since they never reach a user, and the
+  floor is moderate because the React Router open redirect fixed in #159 was rated moderate.
