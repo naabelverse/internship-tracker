@@ -6042,3 +6042,13 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   right column left it floating beside the heading's second line. It now follows the heading with
   `mt-4`, and the heading takes the full width, which fits it on one line at desktop like the other
   section headings.
+
+## The FAQ drops its "Still have a question?" card (28 Oct 2026)
+
+- **Removed at the maintainer's request.** The footer already carries the same email and GitHub
+  links, so nothing became unreachable. This reverses the card half of the earlier FAQ-redesign
+  entry; the heading is still centred against the closed question list.
+- **Below `lg` the centring now needs an explicit stacked check.** The card used to sit under the
+  list on a phone, which made the measured room negative and the margin zero for free. Without it,
+  the effect compares the list's top with the heading's bottom instead. Measured in Edge at 1440,
+  1024 and 390: the heading does not move when an answer opens, and its margin is 0 at 390.
