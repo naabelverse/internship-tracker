@@ -6074,3 +6074,12 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   storage (storage, not memory, so it survives the Google redirect), and the sign-in after it
   writes the choice to the account instead. A value merely cached on the device still loses to
   the account, so the cross-device sync is unchanged.
+
+## Dependency advisories: semver-safe fixes now, majors later (28 Oct 2026)
+
+- **`npm audit fix` was applied without `--force`; the three advisories that need a major bump stay
+  open on purpose.** The lockfile-only update clears every production advisory that has an
+  in-range fix (`dompurify`, `proxy-addr`, `multer`, `nodemailer`, `sharp`, `compression`,
+  `body-parser`, `follow-redirects`, `morgan`, `qs`). `zod` 3 → 4 touches every route and form
+  schema, `react-router-dom` 6 → 7 touches routing, and `vitest` 3 → 5 is dev-only; each is a
+  migration with its own review, not a side effect of an audit run.
