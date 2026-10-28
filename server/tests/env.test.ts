@@ -63,6 +63,19 @@ describe('env loader', () => {
       expect(env.PORT).toBe(8080);
       expect(env.TRUST_PROXY).toBe(1);
     });
+
+    it('strips trailing slashes from the origin URLs so appended paths never start with //', () => {
+      const env = parseEnv({
+        ...minimalEnv(),
+        CLIENT_ORIGIN: 'https://tracker.example.com/',
+        APP_URL: 'https://tracker.example.com//',
+        API_URL: 'https://api.tracker.example.com/',
+      } as NodeJS.ProcessEnv);
+
+      expect(env.CLIENT_ORIGIN).toBe('https://tracker.example.com');
+      expect(env.APP_URL).toBe('https://tracker.example.com');
+      expect(env.API_URL).toBe('https://api.tracker.example.com');
+    });
   });
 
   describe('missing configuration', () => {

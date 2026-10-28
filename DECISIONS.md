@@ -6059,3 +6059,11 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   27 Oct entry kept "the same view the demo account opens on" verbatim because two comments quoted
   it; those comments now give the same reason without the quote: the screenshot is shown as the
   real dashboard, so it still has to be a real capture.
+
+## Origin URLs lose any trailing slash at load (28 Oct 2026)
+
+- **`CLIENT_ORIGIN`, `APP_URL` and `API_URL` are normalised in the env loader, not at each caller.**
+  Enabling Google sign-in showed production's `API_URL` ends in `/`, so the callback sent to Google
+  was `https://<api>//api/v1/auth/google/callback`, which matches no registered redirect URI. The
+  unsubscribe and signed-download links are built the same way and had the same `//` path. One
+  transform in `env.ts` fixes every caller; a URL without a trailing slash comes out unchanged.
