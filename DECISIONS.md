@@ -6067,3 +6067,10 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   was `https://<api>//api/v1/auth/google/callback`, which matches no registered redirect URI. The
   unsubscribe and signed-download links are built the same way and had the same `//` path. One
   transform in `env.ts` fixes every caller; a URL without a trailing slash comes out unchanged.
+
+- **A theme clicked while signed out is carried to the account at the next sign-in.**
+  Choosing light on the landing page and then signing in repainted dark, because the account's
+  stored theme always won. A click while signed out now sets a one-shot pending flag in local
+  storage (storage, not memory, so it survives the Google redirect), and the sign-in after it
+  writes the choice to the account instead. A value merely cached on the device still loses to
+  the account, so the cross-device sync is unchanged.

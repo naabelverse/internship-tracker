@@ -30,8 +30,8 @@ const ARROW_STEP: Record<string, 1 | -1> = {
  * control feel broken on a slow connection. `useUpdatePreferences` rolls the
  * local value back if the write fails, so the two cannot end up disagreeing.
  *
- * Signed out there is no account to write to, and the local preference is all
- * there is; it is overridden by the account's own value at the next sign in.
+ * Signed out there is no account to write to, so the choice is kept on the
+ * device and the next sign in carries it to the account (`useAccountTheme`).
  *
  * The selected state is one thumb that slides between the options rather than
  * a background each button paints for itself: two buttons cross-fading read as

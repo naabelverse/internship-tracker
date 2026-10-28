@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
+import { useUpdatePreferences } from '@/features/settings/useSettingsMutations';
 import { useSession } from '@/hooks/useSession';
-import { useThemeStore } from '@/store/themeStore';
+import { takePendingChoice, useThemeStore } from '@/store/themeStore';
 
 /**
  * Reconciles the theme stored on the account with the one cached on this device.
@@ -18,6 +19,11 @@ import { useThemeStore } from '@/store/themeStore';
  * Signing out and back in as somebody else therefore lands on their theme, not
  * on whatever the previous person left on the machine.
  *
+ * Except a choice clicked while signed out, on the landing or auth pages. That
+ * is newer than anything the account holds, so the sign-in right after it
+ * writes it to the account instead of repainting over it. Only a click counts:
+ * a value merely cached on the device still loses to the account.
+ *
  * The demo account is the exception. It is one login shared by every visitor,
  * so its stored theme is whatever the last of them picked, not a preference of
  * the person looking at it now. Adopting it would repaint their screen and
@@ -28,10 +34,17 @@ import { useThemeStore } from '@/store/themeStore';
 export function useAccountTheme(): void {
   const { user } = useSession();
   const adoptAccountPreference = useThemeStore((state) => state.adoptAccountPreference);
+  const { mutate: updatePreferences } = useUpdatePreferences();
 
   useEffect(() => {
     if (!user || user.isDemo) return;
 
+    const local = useThemeStore.getState().preference;
+    if (takePendingChoice() && local !== user.theme) {
+      updatePreferences({ theme: local });
+      return;
+    }
+
     adoptAccountPreference(user.theme);
-  }, [user, adoptAccountPreference]);
+  }, [user, adoptAccountPreference, updatePreferences]);
 }
