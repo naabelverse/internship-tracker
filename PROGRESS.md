@@ -1019,12 +1019,12 @@ nothing is lost.
       `railway run npm run storage:sweep -w server` for the dry run, review the keys, then
       `-- --apply --expect <N>` (plus `--allow-majority` if it says so). Record the before and
       after counts in the #42 entry in `DECISIONS.md`. DEPLOYMENT.md §10.4.
-- [ ] **Optional: enable Google sign-in** (DEPLOYMENT.md Step 12). The code is live but off: on
-      21 Oct 2026 `/api/v1/auth/google` answered `302 → /login?oauth=GOOGLE_UNAVAILABLE`. Deferred
-      the same day: Google Cloud Console required 2-Step Verification, and turning it on was held
-      by Google's "verify it's you" check. No billing account is needed; dismiss the prepayment
-      notice. Retry from a familiar device and network, or own the OAuth client from another
-      Google account and add yours as a test user.
+- [x] **Optional: enable Google sign-in** (DEPLOYMENT.md Step 12). Done 28 Oct 2026: OAuth
+      client in Testing mode with the maintainer as test user; register, sign-in and cancel all
+      verified in production. Two snags on the way: `API_URL` had a trailing slash, which made the
+      callback `//api/...` (fixed in #152), and `VITE_GOOGLE_AUTH_ENABLED` must sit on the client
+      service, not the server. **Publish** the app in Google Auth Platform → Audience to open it
+      beyond the listed test users.
 
 ## Deferred / known issues
 _Anything intentionally postponed, with the reason._
