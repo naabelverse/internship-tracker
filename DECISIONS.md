@@ -6102,3 +6102,13 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   eagerly. It now mounts on first open and stays mounted, so a closed draft is still kept (now
   tested). `filterParams.ts` also dropped zod for a single regex, since `api/queryKeys` imports
   it. Landing is 124 KB, below where it stood on zod 3.
+
+## React Router 7 (29 Oct 2026)
+
+- **`react-router-dom` 6.30 → 7.18.5, for the open-redirect advisory (backslash in `<Link>` and
+  `useNavigate`) that has no v6 fix.** The app had opted into both v7 future flags since Phase 5,
+  so v7 changes no behaviour here; `routes/routerFuture.ts` and the two `future` props were
+  removed because v7 makes those flags the default and no longer accepts them. Imports stay on
+  `react-router-dom`, which v7 still publishes as a re-export of `react-router`, so the 34 import
+  sites did not need touching. Every route's first load grew about 5.6 KB gzip; landing is
+  129.7 KB against its 150 KB budget.

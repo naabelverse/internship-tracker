@@ -7,7 +7,6 @@ import { cleanup, render, screen, waitFor, type RenderResult } from '@testing-li
 import { apiClient } from '@/api/client';
 import { authClient } from '@/api/http';
 import { resetRefreshState } from '@/api/refresh';
-import { ROUTER_FUTURE } from '@/routes/routerFuture';
 import { useAuthStore } from '@/store/authStore';
 import type { AuthSession } from '@/types/user';
 
@@ -40,9 +39,7 @@ export function renderWithProviders(
     return (
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={[route]} future={ROUTER_FUTURE}>
-            {children}
-          </MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
         </QueryClientProvider>
       </HelmetProvider>
     );

@@ -6,7 +6,6 @@ import { Toaster } from 'react-hot-toast';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/App';
 import { createQueryClient } from '@/api/queryClient';
-import { ROUTER_FUTURE } from '@/routes/routerFuture';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { initSentry } from '@/lib/sentry';
 // Self-hosted so the app owns its typography rather than depending on a
@@ -34,7 +33,7 @@ createRoot(container).render(
     <ErrorBoundary>
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
-          <BrowserRouter future={ROUTER_FUTURE}>
+          <BrowserRouter>
             <App />
           </BrowserRouter>
           <Toaster
