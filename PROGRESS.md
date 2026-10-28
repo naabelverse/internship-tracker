@@ -1019,12 +1019,13 @@ nothing is lost.
       `railway run npm run storage:sweep -w server` for the dry run, review the keys, then
       `-- --apply --expect <N>` (plus `--allow-majority` if it says so). Record the before and
       after counts in the #42 entry in `DECISIONS.md`. DEPLOYMENT.md §10.4.
-- [x] **Optional: enable Google sign-in** (DEPLOYMENT.md Step 12). Done 28 Oct 2026: OAuth
-      client in Testing mode with the maintainer as test user; register, sign-in and cancel all
-      verified in production. Two snags on the way: `API_URL` had a trailing slash, which made the
-      callback `//api/...` (fixed in #152), and `VITE_GOOGLE_AUTH_ENABLED` must sit on the client
-      service, not the server. **Publish** the app in Google Auth Platform → Audience to open it
-      beyond the listed test users.
+- [x] **Optional: enable Google sign-in** (DEPLOYMENT.md Step 12). Done 28 Oct 2026: register,
+      sign-in and cancel all verified in production, then the app was published (Audience → In
+      production) and sign-in re-tested with an account outside the test-user list. Scopes stay
+      non-sensitive, so no Google review; brand verification was skipped, so the account picker
+      may show the API's domain instead of the app name. Two snags on the way: `API_URL` had a
+      trailing slash, which made the callback `//api/...` (fixed in #152), and
+      `VITE_GOOGLE_AUTH_ENABLED` must sit on the client service, not the server.
 
 ## Deferred / known issues
 _Anything intentionally postponed, with the reason._
