@@ -4,6 +4,26 @@ import { THEME_PREFERENCES, type ThemePreference } from '@/types/user';
 /** Must match the literal in the inline boot script in `index.html`. */
 export const THEME_STORAGE_KEY = 'internship-tracker.theme';
 
+/**
+ * Marks a choice made while signed out that the account has not seen yet. It
+ * lives in storage rather than memory because Google sign-in leaves the page.
+ */
+const PENDING_STORAGE_KEY = 'internship-tracker.theme.pending';
+
+/**
+ * Reports, and forgets, whether a signed-out choice is waiting for the account.
+ * One-shot, so only the first sign-in after the choice carries it.
+ */
+export function takePendingChoice(): boolean {
+  try {
+    const pending = window.localStorage.getItem(PENDING_STORAGE_KEY) !== null;
+    window.localStorage.removeItem(PENDING_STORAGE_KEY);
+    return pending;
+  } catch {
+    return false;
+  }
+}
+
 /** SPEC section 6: dark is the default when the visitor has expressed no preference. */
 export const DEFAULT_THEME_PREFERENCE: ThemePreference = 'dark';
 
@@ -43,6 +63,7 @@ function applyTheme(resolved: ResolvedTheme): void {
 interface ThemeState {
   preference: ThemePreference;
   resolved: ResolvedTheme;
+  /** A signed-out choice: device only, until the next sign-in carries it to the account. */
   setPreference: (preference: ThemePreference) => void;
   /**
    * Adopts the preference stored on the account, which outranks whatever this
@@ -66,6 +87,7 @@ export const useThemeStore = create<ThemeState>((set, get) => {
 
       try {
         window.localStorage.setItem(THEME_STORAGE_KEY, next);
+        window.localStorage.setItem(PENDING_STORAGE_KEY, '1');
       } catch {
         // A rejected write only costs persistence, not the theme itself.
       }

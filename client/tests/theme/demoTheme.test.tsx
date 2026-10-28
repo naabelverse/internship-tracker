@@ -155,4 +155,33 @@ describe('a normal sign-in', () => {
     expect(await screen.findByText('Skip to main content')).toBeInTheDocument();
     expectTheme('dark', 'dark');
   });
+
+  it('carries a choice clicked while signed out to the account instead of repainting', async () => {
+    const user = userEvent.setup();
+    arriveWith('dark');
+    const api = installMockApi({
+      'POST /auth/login': () => ({
+        status: 200,
+        data: successBody(makeSession({ user: makeUser({ theme: 'dark' }) })),
+      }),
+      'PATCH /auth/me': () => ({
+        status: 200,
+        data: successBody({ user: makeUser({ theme: 'light' }) }),
+      }),
+      ...dashboardRoutes,
+    });
+
+    renderWithProviders(<App />, { route: paths.login });
+    await user.click(await screen.findByRole('radio', { name: 'Light theme' }));
+    await user.type(screen.getByLabelText('Email'), 'ada@example.test');
+    await user.type(screen.getByLabelText('Password'), 'CorrectHorse9');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByText('Skip to main content')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(api.callsTo('PATCH', '/auth/me')).toHaveLength(1);
+    });
+    expect(api.callsTo('PATCH', '/auth/me')[0].data).toEqual({ theme: 'light' });
+    expectTheme('light', 'light');
+  });
 });
