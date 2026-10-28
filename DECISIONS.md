@@ -6052,3 +6052,10 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   list on a phone, which made the measured room negative and the margin zero for free. Without it,
   the effect compares the list's top with the heading's bottom instead. Measured in Edge at 1440,
   1024 and 390: the heading does not move when an answer opens, and its margin is 0 at 390.
+
+## The landing screenshot drops its caption (28 Oct 2026)
+
+- **Removed at the maintainer's request.** The figure is now just the two theme-swapped images. The
+  27 Oct entry kept "the same view the demo account opens on" verbatim because two comments quoted
+  it; those comments now give the same reason without the quote: the screenshot is shown as the
+  real dashboard, so it still has to be a real capture.
