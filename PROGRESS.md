@@ -24,7 +24,8 @@ Notes:
 - Verified against the running compose stack: `/health` 200, `/ready` 200 with a real `admin().ping()`
   reporting `connected`, `/api/v1/health` 200, unknown route 404 with the standard envelope,
   client served on :5173, and CORS locked to `http://localhost:5173`.
-- Dockerfiles carry a `dev` target only; production image stages are Phase 16 work.
+- Dockerfiles carry a `dev` target only; production image stages are Phase 16 work. _Closed in
+  Phase 16 — see "Deferred / known issues"._
 - The client currently renders a live API health readout. It is real, tested behaviour, replaced by
   the application shell in Phase 5.
 
@@ -1033,7 +1034,10 @@ _Anything intentionally postponed, with the reason._
 - **RESOLVED in Phase 15.** Real-browser verification is no longer deferred: `@playwright/test` and
   Chromium are installed, and `e2e/audits/overflow.spec.ts` drives all seven routes at 375, 768 and
   1440 px on every run, in CI as well as locally.
-- Production Docker image stages and the split-host deployment configuration are Phase 16 work.
+- **RESOLVED in Phase 16.** The split-host configuration is `railway.client.json` and
+  `railway.server.json`. `client/Dockerfile` gained a `prod` stage, kept last by
+  `dockerfileStages.test.ts`; `server/Dockerfile` stays `dev`-only on purpose because the API
+  builds with Railpack (DECISIONS.md, "The API is pinned to RAILPACK deliberately").
 - **FIXED before Phase 11 began — the board's version-conflict dialog vanishing mid-interaction.**
   The mutation, the conflict state, the pending drop and the dialog were hoisted out of
   `KanbanBoard` into `BoardPage`, which owns the query and so cannot be unmounted by it;
