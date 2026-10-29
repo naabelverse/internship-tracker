@@ -6132,6 +6132,15 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   jest's dev tree, and npm's only suggested fix is a downgrade to jest 25, so they are left as
   they are; `audit.yml` ignores them because it omits dev dependencies and floors at moderate.
 
+## README refresh (29 Oct 2026)
+
+- **Lighthouse and API latency keep their 6 Sep 2026 figures, labelled with that date, rather than
+  being re-measured.** Both need the signed-in compose stack and a manual run, while every other
+  number in the README (tests, coverage, bundle sizes, E2E count, demo spread) was re-measured on
+  29 Oct 2026. Bundle sizes are enforced by CI, so they are the only performance figures the README
+  presents as current. The API table is now complete but stays hand-written; `/api/docs` is named
+  as the authority because only that document is held to the router by `openapi.test.ts`.
+
 ## The analytics variables are dropped (29 Oct 2026)
 
 - **`VITE_ANALYTICS_DOMAIN` and `VITE_ANALYTICS_SRC` are removed, a deliberate departure from SPEC
