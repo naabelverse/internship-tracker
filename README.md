@@ -7,6 +7,9 @@ board, a filterable data table, a calendar of deadlines and interviews, reminder
 timezone, and an analytics dashboard that shows where your applications actually stall. It is
 single-tenant per user, and ownership is enforced in every database query rather than only in the UI.
 
+> **Live:** <https://internship-tracker-by-naabel.up.railway.app/> — press **Try the demo** to look
+> around without signing up.
+>
 > **Status:** all 17 phases of [SPEC.md](SPEC.md) are complete, including the optional Google
 > sign-in, and the app runs in production on Railway with MongoDB Atlas, an S3-compatible bucket
 > and Resend for email. Every green commit on `main` deploys automatically. See
