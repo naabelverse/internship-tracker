@@ -515,13 +515,12 @@ VITE_API_URL=https://${{api.RAILWAY_PUBLIC_DOMAIN}}
 VITE_APP_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}
 ```
 
-| Variable                                       | Value                                                 |
-| ---------------------------------------------- | ----------------------------------------------------- |
-| `VITE_API_URL`                                 | `https://api.tracker.example.com` — no trailing slash |
-| `VITE_APP_URL`                                 | `https://tracker.example.com`                         |
-| `VITE_DEMO_ENABLED`                            | `true`                                                |
-| `VITE_SENTRY_DSN`                              | optional                                              |
-| `VITE_ANALYTICS_DOMAIN` / `VITE_ANALYTICS_SRC` | optional, cookieless analytics only                   |
+| Variable            | Value                                                 |
+| ------------------- | ----------------------------------------------------- |
+| `VITE_API_URL`      | `https://api.tracker.example.com` — no trailing slash |
+| `VITE_APP_URL`      | `https://tracker.example.com`                         |
+| `VITE_DEMO_ENABLED` | `true`                                                |
+| `VITE_SENTRY_DSN`   | optional                                              |
 
 ### 5.4 The SPA rewrite — a Dockerfile and a Caddyfile
 
@@ -1415,14 +1414,13 @@ refuses to start on a bad configuration, listing every problem at once.
 
 ### Client (`web` service) — build-time
 
-| Variable                                       | Example                           | Notes                                                     |
-| ---------------------------------------------- | --------------------------------- | --------------------------------------------------------- |
-| `VITE_API_URL`                                 | `https://api.tracker.example.com` | No trailing slash.                                        |
-| `VITE_APP_URL`                                 | `https://tracker.example.com`     | Canonical URLs, sitemap, OG tags.                         |
-| `VITE_DEMO_ENABLED`                            | `true`                            | Cosmetic; the API is the enforcement.                     |
-| `VITE_GOOGLE_AUTH_ENABLED`                     | `false`                           | Shows "Continue with Google". Step 12.                    |
-| `VITE_SENTRY_DSN`                              | unset                             | Behind a dynamic import when unset.                       |
-| `VITE_ANALYTICS_DOMAIN` / `VITE_ANALYTICS_SRC` | unset                             | Cookieless analytics only, so no cookie banner is needed. |
+| Variable                   | Example                           | Notes                                  |
+| -------------------------- | --------------------------------- | -------------------------------------- |
+| `VITE_API_URL`             | `https://api.tracker.example.com` | No trailing slash.                     |
+| `VITE_APP_URL`             | `https://tracker.example.com`     | Canonical URLs, sitemap, OG tags.      |
+| `VITE_DEMO_ENABLED`        | `true`                            | Cosmetic; the API is the enforcement.  |
+| `VITE_GOOGLE_AUTH_ENABLED` | `false`                           | Shows "Continue with Google". Step 12. |
+| `VITE_SENTRY_DSN`          | unset                             | Behind a dynamic import when unset.    |
 
 > Never put a secret in a `VITE_*` variable. Every one of them is compiled into JavaScript that
 > anyone can read.

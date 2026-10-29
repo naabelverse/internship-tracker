@@ -6131,3 +6131,14 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   notices it printed on vitest 3. The seven remaining `npm audit` entries are low-severity, in
   jest's dev tree, and npm's only suggested fix is a downgrade to jest 25, so they are left as
   they are; `audit.yml` ignores them because it omits dev dependencies and floors at moderate.
+
+## The analytics variables are dropped (29 Oct 2026)
+
+- **`VITE_ANALYTICS_DOMAIN` and `VITE_ANALYTICS_SRC` are removed, a deliberate departure from SPEC
+  §8, which lists both as optional.** Nothing ever read them: they sat in `client/.env.example` and
+  DEPLOYMENT.md, and the privacy page promised a cookieless provider "configured through
+  `VITE_ANALYTICS_*`" that setting them could never load. No deployment uses analytics, so the
+  honest fix was to delete the promise rather than build an integration nobody asked for. The
+  privacy page now says there is no third-party analytics, which is stricter, so SPEC §11's cookie
+  notice condition never arises. Wiring it later is a script tag injected at build time when both
+  are set, and the privacy page would have to say so again.
