@@ -324,9 +324,10 @@ Read at build time and baked into the bundle, so never put a secret here.
 
 > These tables cover every variable the code reads, and the zod loader in
 > `server/src/config/env.ts` refuses to boot on an invalid one. Every variable SPEC §8 lists
-> exists, with one deliberate exception: `CONTACT_EMAIL` is a client build-time constant in
+> exists, with two deliberate exceptions: `CONTACT_EMAIL` is a client build-time constant in
 > `client/src/lib/siteMeta.ts` rather than a server variable, because only client-rendered surfaces
-> consume it. [DECISIONS.md](DECISIONS.md) records why.
+> consume it; and `VITE_ANALYTICS_DOMAIN`/`VITE_ANALYTICS_SRC` were dropped because no analytics
+> is used. [DECISIONS.md](DECISIONS.md) records why.
 >
 > For the production values — and for the cross-origin cookie configuration a split-host deploy
 > needs — see [DEPLOYMENT.md](DEPLOYMENT.md).
