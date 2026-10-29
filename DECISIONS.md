@@ -6151,3 +6151,17 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   privacy page now says there is no third-party analytics, which is stricter, so SPEC §11's cookie
   notice condition never arises. Wiring it later is a script tag injected at build time when both
   are set, and the privacy page would have to say so again.
+
+## Lighthouse and latency re-measured (29 Oct 2026)
+
+- **The README's Lighthouse and API latency figures are re-measured, superseding the README-refresh
+  entry above that kept the 6 Sep 2026 numbers.** Lighthouse is unchanged: landing 100/100/96/100
+  (the same single `errors-in-console` deduction) and dashboard 98/100/100/100, each checked on
+  `finalDisplayedUrl`. Latency improved: sequential p95 21.4 ms (was 30.5), and p99 243 ms at
+  concurrency 10 (was 386). Docker was not running, so the stack was an in-memory MongoDB, the API
+  on a spare port and `vite preview`, not Compose. That is the same code path with no network hop
+  to the database, so treat the numbers as a regression baseline, not a production figure. Two
+  harness traps: running Lighthouse with `execSync` from the Playwright script blocks Node's event
+  loop and hangs the attached browser, so it has to be an async `exec`; and the concurrent run used
+  a second API process, because the global limiter counts per process and one process cannot serve
+  both 150-request runs inside its 200-per-15-minutes window.

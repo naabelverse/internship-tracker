@@ -651,16 +651,19 @@ committed and later deleted is still committed. `.gitleaks.toml` records the onl
 ## Performance
 
 Bundle sizes are enforced on every CI run, so they always describe the current `main`. Lighthouse and
-API latency are measured by hand, and the figures below date from 2026-09-06 — before the September
-redesigns and the dashboard's weekly-pace panel — so re-measure them before quoting them.
+API latency are measured by hand; every figure below was last measured on 2026-10-29. Re-measure
+after any change to the dashboard or the list endpoint.
 
 ### Lighthouse
 
-Measured against a production build (`npm run build -w client`, served by `vite preview` on port 5173
-so the API's CORS allowlist applies unchanged) talking to the API in Docker Compose with the seeded
-demo account. Desktop form factor, run through Chromium. The dashboard is audited **signed in** — the run drives
-"Try the demo" first and shares the browser profile with Lighthouse, because auditing `/dashboard`
-without a session silently measures the login page instead.
+Lighthouse 12.6.0, desktop preset, in headless Microsoft Edge 156. The client is a production build
+served by `vite preview`, talking to the real API on another port with the seeded demo account, and
+`CLIENT_ORIGIN` set to the preview's origin so the CORS allowlist applies as it does in production.
+Each route gets its own persistent browser profile, and Lighthouse attaches to that browser over its
+debugging port, so its tab shares the profile's cookies. The dashboard is audited **signed in**:
+the profile signs in through `/login` first, because auditing `/dashboard` without a session
+silently measures the login page instead. Both runs check `finalDisplayedUrl`, so the table shows
+the page that was actually audited.
 
 | Route            | Performance | Accessibility | Best Practices | SEO     |
 | ---------------- | ----------- | ------------- | -------------- | ------- |
@@ -690,20 +693,21 @@ is the application detail page at 218.8 KB.
 
 ### API latency
 
-`GET /api/v1/applications` with the seeded 64-application account, over 150 requests, on
-2026-09-06:
+`GET /api/v1/applications` with the seeded 64-application account, 150 requests per run, against a
+local API with MongoDB on the same machine. Every response was a `200`.
 
 | Concurrency     | p50     | p95         | p99                    |
 | --------------- | ------- | ----------- | ---------------------- |
-| 1               | 14.4 ms | **30.5 ms** | 46.0 ms                |
-| 10 (autocannon) | 147 ms  | —           | 386 ms (p97.5: 341 ms) |
+| 1               | 12.4 ms | **21.4 ms** | 42.4 ms                |
+| 10 (autocannon) | 93 ms   | —           | 243 ms (p97.5: 222 ms) |
 
-p95 is **30.5 ms** against SPEC §10's 200 ms threshold, so no additional indexes are warranted;
+p95 is **21.4 ms** against SPEC §10's 200 ms threshold, so no additional indexes are warranted;
 `Application` already carries compound indexes on `user + status`, `user + deadline` and
 `user + createdAt`, plus a text index for search.
 
-The run is capped at 150–180 requests on purpose: SPEC §7's global rate limit is 200 requests per 15
-minutes, and that limit is part of the configuration being measured. A longer run would measure 429s.
+Each run is capped at 150 requests on purpose, and the two runs went to separate API processes: SPEC
+§7's global rate limit is 200 requests per 15 minutes per process, and that limit is part of the
+configuration being measured. A longer run would measure 429s.
 
 ---
 
