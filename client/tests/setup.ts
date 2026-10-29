@@ -50,6 +50,14 @@ if (typeof window.PointerEvent === 'undefined') {
   window.PointerEvent = PointerEventShim as unknown as typeof PointerEvent;
 }
 
+/**
+ * jsdom defines `window.scrollTo` but only to report "Not implemented" on its
+ * virtual console, so every route change through `useScrollToTopOnNavigate` printed
+ * an error that buried real ones in the test log. Overwritten rather than guarded
+ * like the shims above, since it does exist; tests that assert on it still spy on it.
+ */
+window.scrollTo = (() => undefined) as typeof window.scrollTo;
+
 if (typeof Element.prototype.setPointerCapture === 'undefined') {
   Element.prototype.setPointerCapture = function setPointerCapture(): void {
     /* no-op */
