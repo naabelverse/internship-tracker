@@ -6122,3 +6122,12 @@ Closes issue #103 without a change, by the owner's choice after the candidates w
   on a schedule, because advisories arrive without commits: 13 accumulated unseen before
   #157-#159 cleared them. Dev-only packages are excluded since they never reach a user, and the
   floor is moderate because the React Router open redirect fixed in #159 was rated moderate.
+
+## vitest 5 (29 Oct 2026)
+
+- **`vitest` 3.2 → 5.0.5 clears the two critical dev-only advisories (the `@vitest/mocker`
+  redirect-mock path traversal and the `tinypool` prototype-pollution gadget).** No config or test
+  changed; the client suite runs 1003/1003 as before, with the same 34 jsdom `window.scrollTo`
+  notices it printed on vitest 3. The seven remaining `npm audit` entries are low-severity, in
+  jest's dev tree, and npm's only suggested fix is a downgrade to jest 25, so they are left as
+  they are; `audit.yml` ignores them because it omits dev dependencies and floors at moderate.
