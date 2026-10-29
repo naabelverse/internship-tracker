@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated: 25 September 2026**
+**Last updated: 29 October 2026**
 
 This policy describes exactly what Internship Tracker stores, why it stores it, and how
 long it keeps it. It describes this application specifically — every field listed below is
@@ -68,9 +68,8 @@ explicitly excluded from logs.
 
 - **No tracking or advertising cookies.** The only cookie set is the `httpOnly` refresh
   token that keeps you signed in, scoped to the authentication path.
-- **No third-party analytics by default.** If this deployment enables analytics it uses a
-  cookieless provider configured through `VITE_ANALYTICS_*`, which sets no cookie and
-  builds no cross-site profile. If that is switched on, it is disclosed here.
+- **No third-party analytics.** No analytics script is loaded, so no visitor is profiled
+  across sites.
 - **No advertising identifiers, no fingerprinting, no session recording.**
 - **No payment data.** Nothing is charged, so no card details are ever handled.
 
