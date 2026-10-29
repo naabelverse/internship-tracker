@@ -7,10 +7,11 @@ board, a filterable data table, a calendar of deadlines and interviews, reminder
 timezone, and an analytics dashboard that shows where your applications actually stall. It is
 single-tenant per user, and ownership is enforced in every database query rather than only in the UI.
 
-> **Status:** phases 1–10 of 17 complete. Auth, applications, analytics, the full front end, seed
-> data, tests, docs and CI are in place. Account lifecycle (email verification, password reset),
-> transactional email, the public landing page and the deployment pipeline are still to come — see
-> [PROGRESS.md](PROGRESS.md) for the state of every phase.
+> **Status:** all 17 phases of [SPEC.md](SPEC.md) are complete, including the optional Google
+> sign-in, and the app runs in production on Railway with MongoDB Atlas, an S3-compatible bucket
+> and Resend for email. Every green commit on `main` deploys automatically. See
+> [PROGRESS.md](PROGRESS.md) for what each phase delivered and [CHANGELOG.md](CHANGELOG.md) for
+> what changed since.
 
 ---
 
@@ -29,9 +30,11 @@ single-tenant per user, and ownership is enforced in every database query rather
 - [Testing](#testing)
 - [Performance](#performance)
 - [Deployment](#deployment)
-- [Possible extensions](#possible-extensions)
 - [Backups and restore](#backups-and-restore)
 - [Schema migrations](#schema-migrations)
+- [Possible extensions](#possible-extensions)
+- [Repository documents](#repository-documents)
+- [License](#license)
 
 ---
 
@@ -63,17 +66,43 @@ single-tenant per user, and ownership is enforced in every database query rather
   changes that roll back on failure.
 - Month calendar merging deadlines and interviews into one stream.
 - Dashboard with stat cards carrying period-over-period deltas, plus timeline, status doughnut,
-  by-source, funnel, top-companies and activity-heatmap visuals — all Chart.js, all re-themed live
-  on a dark-mode toggle, and each duplicated as a screen-reader data table.
+  by-source, funnel and top-companies charts — all Chart.js, all re-themed live on a dark-mode
+  toggle, and each duplicated as a screen-reader data table — and a 12-week activity heatmap with
+  weekly pace measured against your own weekly goal.
 
-**Platform**
+**Accounts**
 
 - JWT auth: a 15-minute in-memory access token plus a 7-day rotating httpOnly refresh cookie, with
   reuse detection that revokes the whole token family.
-- Rate limits keyed independently on IP and email; account lock after repeated failures.
-- Reminder digest cron that respects each user's own timezone across daylight-saving changes.
+- Email verification, forgot and reset password (the response is identical whether or not the
+  address exists), and email change confirmed at the new address. Every token is single-use,
+  expiring and stored only as a hash.
+- A list of signed-in devices, each revocable, plus "sign out everywhere".
+- Closing an account soft-deletes it; it can be restored within 30 days, after which a nightly job
+  purges it. A full JSON export of everything stored about the account is one click in Settings.
+- Optional "Continue with Google", off until the deployment configures an OAuth client.
+- "Try the demo" on the landing page signs into a shared sandbox account. Its password, shared
+  profile and the account itself cannot be changed or closed, and its data is reseeded every night.
+
+**Email**
+
+- Six templates, each responsive HTML plus plain text, sent through SMTP or Resend's HTTP API with a
+  retry queue — a failed send never fails the HTTP request. With no provider configured the app
+  falls back to printing mail to the console, so it boots and registers with no email setup at all.
+- A daily reminder digest and an opt-in weekly summary, both delivered at a set hour in each user's
+  own timezone across daylight-saving changes, with a signed one-click unsubscribe.
+
+**Platform**
+
+- Rate limits keyed independently on IP and email; account lock after repeated failures; a
+  disposable-email blocklist and a honeypot on registration; per-account caps of 2,000
+  applications, 20 attachments per application and 100 MB of uploads.
+- Uploads are type-checked, EXIF-stripped and stored under opaque keys; downloads go through signed,
+  expiring URLs.
+- A public landing page, Terms and Privacy pages, and full SEO metadata — Open Graph image,
+  sitemap, robots, manifest and favicons.
 - Light and dark themes with no flash on first paint, a keyboard-navigable shell, focus-trapped
-  modals and a WCAG-AA contrast pass.
+  modals and a WCAG-AA contrast pass enforced by a test over every colour token.
 - OpenAPI 3 spec at `/api/docs`, kept honest by a test that fails if any route is undocumented or any
   documented path no longer exists.
 
@@ -81,17 +110,12 @@ single-tenant per user, and ownership is enforced in every database query rather
 
 ## Screenshots
 
-> Placeholders — replace with real captures before publishing. Generate them against the seeded demo
-> account (`npm run seed`, then sign in with the credentials below).
+The dashboard, signed in as the seeded demo account. These are the same captures the landing page
+shows, regenerated with `npm run screenshot -w client` whenever the dashboard changes.
 
-| Surface   | Image                                                      |
-| --------- | ---------------------------------------------------------- |
-| Dashboard | `![Dashboard](docs/screenshots/dashboard.png)`             |
-| Board     | `![Kanban board](docs/screenshots/board.png)`              |
-| Table     | `![Applications table](docs/screenshots/applications.png)` |
-| Detail    | `![Application detail](docs/screenshots/detail.png)`       |
-| Calendar  | `![Calendar](docs/screenshots/calendar.png)`               |
-| Dark mode | `![Dark theme](docs/screenshots/dashboard-dark.png)`       |
+![Dashboard, light theme](client/public/screenshot-dashboard-light.png)
+
+![Dashboard, dark theme](client/public/screenshot-dashboard-dark.png)
 
 ---
 
@@ -100,17 +124,18 @@ single-tenant per user, and ownership is enforced in every database query rather
 | Layer         | Choices                                                                                                                     |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Runtime       | Node.js 20, TypeScript 5.7 (strict), npm workspaces monorepo                                                                |
-| API           | Express 4, Mongoose 8 / MongoDB 7, zod validation at every route boundary                                                   |
-| Auth          | `jsonwebtoken`, `bcryptjs` (12 rounds), rotating refresh cookies                                                            |
+| API           | Express 4, Mongoose 8 / MongoDB 7, zod 4 validation at every route boundary                                                 |
+| Auth          | `jsonwebtoken`, `bcryptjs` (12 rounds), rotating refresh cookies, `passport-google-oauth20` for the optional Google sign-in |
 | API hardening | `helmet`, `cors`, `express-rate-limit`, `compression`, `cookie-parser`                                                      |
 | Files         | `multer` in memory → `StorageAdapter` (`LocalDiskStorage` in dev, `S3Storage`/R2 in production), `sharp` for EXIF stripping |
-| Jobs & logs   | `node-cron`, `winston`, `morgan` with request IDs                                                                           |
+| Email         | `nodemailer` over SMTP, or Resend's HTTP API where outbound SMTP is blocked, with a console fallback                        |
+| Jobs & logs   | `node-cron`, `winston`, `morgan` with request IDs, optional Sentry on both server and client                                |
 | Docs          | `swagger-ui-express` over a hand-written OpenAPI 3 document                                                                 |
-| Front end     | React 18, Vite 6, Tailwind 3, `react-router-dom` 6                                                                          |
-| Client state  | TanStack Query for all server state, Zustand for theme and session                                                          |
-| Forms & UI    | `react-hook-form` + zod resolver, `react-hot-toast`, `marked` + `dompurify` for notes                                       |
+| Front end     | React 18, Vite 6, Tailwind 3, `react-router-dom` 7, `react-helmet-async` for per-route head tags                            |
+| Client state  | TanStack Query 5 for all server state, Zustand for theme and session                                                        |
+| Forms & UI    | `react-hook-form` + zod resolver, `react-day-picker`, `react-hot-toast`, `marked` + `dompurify` for notes                   |
 | Visuals       | Chart.js 4 + `react-chartjs-2`, `@dnd-kit/core`, `date-fns`                                                                 |
-| Tests         | Jest + supertest + `mongodb-memory-server` (server), Vitest + React Testing Library (client)                                |
+| Tests         | Jest + supertest + `mongodb-memory-server` (server), Vitest 5 + React Testing Library (client), Playwright + axe (E2E)      |
 | Tooling       | ESLint 9 + Prettier with `--max-warnings 0`, husky + lint-staged, Docker Compose, GitHub Actions                            |
 
 ---
@@ -134,15 +159,19 @@ flowchart LR
         MW --> RT --> CT --> SV
     end
 
-    DB[("MongoDB 7<br/>users, applications,<br/>reminders, refreshtokens")]
+    DB[("MongoDB 7<br/>users, applications, reminders,<br/>refreshtokens, migrations")]
     ST["StorageAdapter<br/>local disk | S3 / R2"]
-    CR["node-cron<br/>hourly reminder sweep"]
+    ML["Mailer + retry queue<br/>SMTP | Resend API | console"]
+    CR["node-cron<br/>hourly digests, nightly purge<br/>and demo reset"]
+    GO["Google OAuth<br/>(optional)"]
     DOC["/api/docs<br/>OpenAPI 3"]
 
     AX -- "JSON + httpOnly refresh cookie" --> MW
     SV --> DB
     SV --> ST
-    CR --> DB
+    SV --> ML
+    SV <--> GO
+    CR --> SV
     RT --> DOC
 ```
 
@@ -209,8 +238,9 @@ open  localhost:5000/api/docs       # OpenAPI 3 / Swagger UI
 ## Demo account
 
 `npm run seed` creates one account holding 64 generated applications spread over the last six months —
-every status represented, seven sources, interviews on the in-progress records, deadlines both past
-and upcoming, and a populated status history behind every row, so no dashboard panel is empty.
+all eight statuses and all ten sources represented, interviews on the in-progress records, deadlines
+both past and upcoming, and a populated status history behind every row, so no dashboard panel is
+empty.
 
 | Field    | Value              |
 | -------- | ------------------ |
@@ -220,6 +250,12 @@ and upcoming, and a populated status history behind every row, so no dashboard p
 These are fixture credentials, published deliberately, and configurable via `DEMO_EMAIL` and
 `DEMO_PASSWORD`. Change them on any publicly reachable instance. `npm run seed` refuses an account
 that already holds applications; use `npm run seed:reset` to wipe and regenerate.
+
+The landing page's **Try the demo** button signs into this same account without a password, through
+`POST /auth/demo`, which takes no body and can reach no other account. Changing its password or
+shared profile fields, and closing it, are refused there, and a nightly job runs the same reset as
+`npm run seed:reset` at 04:20 UTC so a visitor's edits never outlive the day.
+`VITE_DEMO_ENABLED=false` hides the button.
 
 ---
 
@@ -232,49 +268,62 @@ empty.
 
 ### Server (`server/.env`)
 
-| Variable                                   | Default                 | Notes                                                                      |
-| ------------------------------------------ | ----------------------- | -------------------------------------------------------------------------- |
-| `NODE_ENV`                                 | `development`           | `development` \| `test` \| `production`                                    |
-| `PORT`                                     | `5000`                  |                                                                            |
-| `MONGO_URI`                                | —                       | **Required.** Atlas form `mongodb+srv://…` also works                      |
-| `JWT_ACCESS_SECRET`                        | —                       | **Required.** ≥32 chars in production, must differ from the refresh secret |
-| `JWT_REFRESH_SECRET`                       | —                       | **Required.** Same rules                                                   |
-| `ACCESS_TOKEN_TTL`                         | `15m`                   | `ms`-style duration string                                                 |
-| `REFRESH_TOKEN_TTL`                        | `7d`                    | `ms`-style duration string                                                 |
-| `CLIENT_ORIGIN`                            | `http://localhost:5173` | CORS allow-list; rejected if localhost in production                       |
-| `APP_URL`                                  | `http://localhost:5173` | Public client URL used in generated links                                  |
-| `API_URL`                                  | `http://localhost:5000` | Public API origin; signed download links are built from it                 |
-| `LOG_LEVEL`                                | `info`                  | `error` \| `warn` \| `info` \| `http` \| `debug`                           |
-| `TRUST_PROXY`                              | `0`                     | Proxy hops to trust for client IPs; `1` behind Render or Railway           |
-| `STORAGE_DRIVER`                           | `local`                 | `local` \| `s3`. Production refuses `local` — free-tier disks are wiped    |
-| `UPLOAD_DIR`                               | `uploads`               | Local driver only, relative to the server workspace                        |
-| `MAX_UPLOAD_MB`                            | `5`                     | Per-file ceiling                                                           |
-| `S3_ENDPOINT`                              | _(unset)_               | Leave blank for AWS; set for Cloudflare R2 or another S3-compatible host   |
-| `S3_REGION`, `S3_BUCKET`                   | _(unset)_               | Required when `STORAGE_DRIVER=s3`                                          |
-| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | _(unset)_               | Required when `STORAGE_DRIVER=s3`                                          |
-| `DEMO_EMAIL`                               | `demo@tracker.dev`      | Account created by `npm run seed`                                          |
-| `DEMO_PASSWORD`                            | `Demo@1234`             | Minimum 8 characters                                                       |
-| `REMINDER_DIGEST_HOUR`                     | `8`                     | Local hour at which each user receives their digest                        |
-| `ENABLE_CRON`                              | `true`                  | `false` keeps the scheduler off; the test suite sets this                  |
+| Variable                                   | Default                                   | Notes                                                                         |
+| ------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------- |
+| `NODE_ENV`                                 | `development`                             | `development` \| `test` \| `production`                                       |
+| `PORT`                                     | `5000`                                    |                                                                               |
+| `MONGO_URI`                                | —                                         | **Required.** Atlas form `mongodb+srv://…` also works                         |
+| `JWT_ACCESS_SECRET`                        | —                                         | **Required.** ≥32 chars in production, must differ from the refresh secret    |
+| `JWT_REFRESH_SECRET`                       | —                                         | **Required.** Same rules                                                      |
+| `ACCESS_TOKEN_TTL`                         | `15m`                                     | `ms`-style duration string                                                    |
+| `REFRESH_TOKEN_TTL`                        | `7d`                                      | `ms`-style duration string                                                    |
+| `CLIENT_ORIGIN`                            | `http://localhost:5173`                   | CORS allow-list; rejected if localhost in production                          |
+| `APP_URL`                                  | `http://localhost:5173`                   | Public client URL used in generated links                                     |
+| `API_URL`                                  | `http://localhost:5000`                   | Public API origin; signed download links are built from it                    |
+| `LOG_LEVEL`                                | `info`                                    | `error` \| `warn` \| `info` \| `http` \| `debug`                              |
+| `TRUST_PROXY`                              | `0`                                       | Proxy hops to trust for client IPs; `1` behind Render or Railway              |
+| `STORAGE_DRIVER`                           | `local`                                   | `local` \| `s3`. Production refuses `local` — free-tier disks are wiped       |
+| `UPLOAD_DIR`                               | `uploads`                                 | Local driver only, relative to the server workspace                           |
+| `MAX_UPLOAD_MB`                            | `5`                                       | Per-file ceiling                                                              |
+| `S3_ENDPOINT`                              | _(unset)_                                 | Leave blank for AWS; set for Cloudflare R2 or another S3-compatible host      |
+| `S3_REGION`, `S3_BUCKET`                   | _(unset)_                                 | Required when `STORAGE_DRIVER=s3`                                             |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | _(unset)_                                 | Required when `STORAGE_DRIVER=s3`                                             |
+| `DEMO_EMAIL`                               | `demo@tracker.dev`                        | Account created by `npm run seed`                                             |
+| `DEMO_PASSWORD`                            | `Demo@1234`                               | Minimum 8 characters                                                          |
+| `REMINDER_DIGEST_HOUR`                     | `8`                                       | Local hour at which each user receives their digest                           |
+| `ENABLE_CRON`                              | `true`                                    | `false` keeps the scheduler off; the test suite sets this                     |
+| `COOKIE_DOMAIN`                            | _(unset)_                                 | Leave blank for a host-only refresh cookie, which the split-host deploy wants |
+| `MAIL_FROM`                                | `Internship Tracker <no-reply@localhost>` | From header; use a domain with SPF/DKIM/DMARC set up                          |
+| `MAIL_TRANSPORT`                           | _(unset)_                                 | `smtp` \| `console` \| `resend-api`. Unset picks from the credential present  |
+| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`      | _(unset)_                                 | With these and `RESEND_API_KEY` blank, mail is printed to the console         |
+| `SMTP_PORT`                                | `587`                                     | `465` is implicit TLS; `587` and `25` upgrade with STARTTLS                   |
+| `RESEND_API_KEY`                           | _(unset)_                                 | For `resend-api`, which sends over HTTPS where SMTP ports are blocked         |
+| `WEEKLY_SUMMARY_WEEKDAY`                   | `1`                                       | ISO weekday for the opt-in weekly summary, `1` Monday to `7` Sunday           |
+| `SENTRY_DSN`                               | _(unset)_                                 | Unset means the SDK is never initialised                                      |
+| `SENTRY_TRACES_SAMPLE_RATE`                | `0`                                       | `0` to `1`; errors only by default                                            |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | _(unset)_                                 | Set both or neither; the server refuses to boot with one                      |
 
-`SENTRY_DSN` is optional and unset by default: with no DSN the SDK is never initialised, so the
-server makes no outbound call and behaves exactly as it does without it. When set, only 5xx
-responses are reported, request headers, cookies and bodies are stripped, and the reported user is
-reduced to an id. `SENTRY_TRACES_SAMPLE_RATE` defaults to `0` — traces are billed per event and this
-is a free-tier deployment, so errors are the point.
+With Sentry on, only 5xx responses are reported, request headers, cookies and bodies are stripped,
+and the reported user is reduced to an id. Traces default to `0` because they are billed per event
+and this is a free-tier deployment, so errors are the point.
 
 ### Client (`client/.env`)
 
-| Variable       | Default                 | Notes                                        |
-| -------------- | ----------------------- | -------------------------------------------- |
-| `VITE_API_URL` | `http://localhost:5000` | API base URL, no trailing slash              |
-| `VITE_APP_URL` | `http://localhost:5173` | Public origin of this client, for canonicals |
+Read at build time and baked into the bundle, so never put a secret here.
 
-> The tables above are the frequently-edited ones. `server/.env.example` and `client/.env.example`
-> document every variable, and the zod loader in `server/src/config/env.ts` refuses to boot on an
-> invalid one. Every variable SPEC §8 lists now exists, with one deliberate exception: `CONTACT_EMAIL`
-> is a client build-time constant in `client/src/lib/siteMeta.ts` rather than a server variable,
-> because only client-rendered surfaces consume it. [DECISIONS.md](DECISIONS.md) records why.
+| Variable                   | Default                 | Notes                                                          |
+| -------------------------- | ----------------------- | -------------------------------------------------------------- |
+| `VITE_API_URL`             | `http://localhost:5000` | API base URL, no trailing slash                                |
+| `VITE_APP_URL`             | `http://localhost:5173` | Public origin of this client, for canonicals and the sitemap   |
+| `VITE_DEMO_ENABLED`        | `true`                  | `false` hides "Try the demo"; the API is still the real gate   |
+| `VITE_GOOGLE_AUTH_ENABLED` | `false`                 | `true` shows "Continue with Google" once the API is configured |
+| `VITE_SENTRY_DSN`          | _(unset)_               | Unset means the Sentry SDK is never downloaded                 |
+
+> These tables cover every variable the code reads, and the zod loader in
+> `server/src/config/env.ts` refuses to boot on an invalid one. Every variable SPEC §8 lists
+> exists, with one deliberate exception: `CONTACT_EMAIL` is a client build-time constant in
+> `client/src/lib/siteMeta.ts` rather than a server variable, because only client-rendered surfaces
+> consume it. [DECISIONS.md](DECISIONS.md) records why.
 >
 > For the production values — and for the cross-origin cookie configuration a split-host deploy
 > needs — see [DEPLOYMENT.md](DEPLOYMENT.md).
@@ -285,28 +334,29 @@ is a free-tier deployment, so errors are the point.
 
 Run from the repository root unless noted.
 
-| Script                            | What it does                                                          |
-| --------------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`                     | API and client together with hot reload                               |
-| `npm run build`                   | Type-checked build of both workspaces                                 |
-| `npm run lint`                    | ESLint with `--max-warnings 0`, then `prettier --check`               |
-| `npm run lint:fix`                | ESLint autofix                                                        |
-| `npm run format`                  | Prettier write                                                        |
-| `npm run typecheck`               | `tsc --noEmit` in both workspaces                                     |
-| `npm run test`                    | Jest (server), then Vitest (client)                                   |
-| `npm run test:coverage`           | Server tests with the coverage report, enforcing the §10 target       |
-| `npm run verify`                  | lint → typecheck → test → build. **Must pass before any commit**      |
-| `npm run seed`                    | Create the demo account and its 64 applications                       |
-| `npm run seed:reset`              | Wipe the demo account's data and reseed                               |
-| `npm run migrate`                 | Apply pending schema migrations (see below)                           |
-| `npm run stats`                   | User, application and 7-day signup counts against the live database   |
-| `npm run storage:sweep -w server` | Dry run of the one-off orphaned-upload sweep; see DEPLOYMENT.md §10.4 |
-| `npm run e2e:up`                  | Build and start the isolated end-to-end stack (5174 / 5001)           |
-| `npm run test:e2e`                | Playwright: the eight SPEC §10 flows, axe, and the responsive sweep   |
-| `npm run e2e:down`                | Stop that stack and drop its volume                                   |
-| `npm run e2e:logs`                | Tail the E2E API log, where mail tokens are printed                   |
-| `npm run analyze`                 | `vite-bundle-visualizer` treemap of the client bundle                 |
-| `npm run check:bundle`            | Route bundle sizes against the SPEC §12 budget                        |
+| Script                            | What it does                                                                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `npm run dev`                     | API and client together with hot reload                                                    |
+| `npm run build`                   | Type-checked build of both workspaces                                                      |
+| `npm run lint`                    | ESLint with `--max-warnings 0`, then `prettier --check`                                    |
+| `npm run lint:fix`                | ESLint autofix                                                                             |
+| `npm run format`                  | Prettier write                                                                             |
+| `npm run format:check`            | Prettier check only                                                                        |
+| `npm run typecheck`               | `tsc --noEmit` in both workspaces and the E2E suite                                        |
+| `npm run test`                    | Jest (server), then Vitest (client)                                                        |
+| `npm run test:coverage`           | Server tests with the coverage report, enforcing the §10 target                            |
+| `npm run verify`                  | lint → typecheck → test → build → check:bundle. **Must pass before any commit**            |
+| `npm run seed`                    | Create the demo account and its 64 applications                                            |
+| `npm run seed:reset`              | Wipe the demo account's data and reseed                                                    |
+| `npm run migrate`                 | Apply pending schema migrations (see below)                                                |
+| `npm run stats`                   | Active and soft-deleted users, applications, and 7-day signups in the `MONGO_URI` database |
+| `npm run storage:sweep -w server` | Dry run of the one-off orphaned-upload sweep; see DEPLOYMENT.md §10.4                      |
+| `npm run e2e:up`                  | Build and start the isolated end-to-end stack (5174 / 5001)                                |
+| `npm run test:e2e`                | Playwright: the ten flows, axe, and the layout audits                                      |
+| `npm run e2e:down`                | Stop that stack and drop its volume                                                        |
+| `npm run e2e:logs`                | Print the E2E API log, where mail tokens are printed                                       |
+| `npm run analyze`                 | `vite-bundle-visualizer` treemap of the client bundle                                      |
+| `npm run check:bundle`            | Route bundle sizes against the SPEC §12 budget                                             |
 
 Plus `./scripts/backup.sh`, which is a shell script rather than an npm script on purpose: a backup
 has to run from cron on a host that has never installed this project's dependencies.
@@ -316,57 +366,82 @@ Workspace-only extras: `npm run test:watch -w server`, `npm run test:watch -w cl
 `npm run build:deploy -w client` — a `build` that then strips the source maps out of `dist/`,
 which is what a public host should be given. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
+Generators: `npm run generate:theme -w client` writes the theme CSS from
+`client/src/theme/tokens.json`, `npm run assets -w client` regenerates the favicons, icons and OG
+image, and `npm run mail:palette -w server` derives the email colours from the same tokens — each
+has a test that fails when its committed output falls behind. `npm run screenshot -w client`
+recaptures the landing page's dashboard screenshots, and has to be re-run by hand after a dashboard
+change.
+
 ---
 
 ## API
 
 Base path `/api/v1`. Every response uses the `{ success, data, message?, meta? }` envelope and every
-error carries a stable `code`. All application, analytics, calendar and reminder routes require a
-bearer access token and are scoped to the caller.
+error carries a stable `code`. Application, analytics, calendar and reminder routes require a bearer
+access token and are scoped to the caller. Once the seven-day grace period after sign-up has passed,
+an unverified account's writes to application and reminder routes are refused with
+`EMAIL_UNVERIFIED`; its reads stay open.
 
-Interactive docs live at **`/api/docs`**. The table below mirrors the same router that document
-describes: a test walks the Express stack in both directions and fails if a route is undocumented or a
-documented path has gone stale, so the OpenAPI spec, this table and the code cannot drift apart.
+Interactive docs live at **`/api/docs`**. A test walks the Express stack in both directions and fails
+if a route is undocumented or a documented path has gone stale, so the OpenAPI document and the code
+cannot drift apart. The table below is written by hand from the same router — `/api/docs` is the
+authority if they ever disagree.
 
-| Method   | Path                                          | Purpose                                           |
-| -------- | --------------------------------------------- | ------------------------------------------------- |
-| `GET`    | `/health`, `/ready`                           | Liveness and readiness probes                     |
-| `POST`   | `/auth/register`                              | Create an account, set the refresh cookie         |
-| `POST`   | `/auth/login`                                 | Sign in                                           |
-| `POST`   | `/auth/refresh`                               | Rotate the refresh token, mint an access token    |
-| `POST`   | `/auth/logout`                                | Revoke the current refresh token                  |
-| `POST`   | `/auth/logout-all`                            | Revoke every session for the account              |
-| `GET`    | `/auth/me`                                    | Current account                                   |
-| `PATCH`  | `/auth/me`                                    | Update profile and preferences                    |
-| `PATCH`  | `/auth/me/password`                           | Change password, revoke other sessions            |
-| `GET`    | `/applications`                               | List — filters, search, sort, pagination          |
-| `POST`   | `/applications`                               | Create                                            |
-| `GET`    | `/applications/:id`                           | Read one                                          |
-| `PATCH`  | `/applications/:id`                           | Update, optimistic-locked by `version`            |
-| `DELETE` | `/applications/:id`                           | Delete                                            |
-| `PATCH`  | `/applications/:id/status`                    | Change status, append to `statusHistory`          |
-| `POST`   | `/applications/bulk`                          | Bulk delete, archive, unarchive, set status       |
-| `GET`    | `/applications/export`                        | Download CSV or JSON                              |
-| `POST`   | `/applications/import`                        | CSV import with per-row errors                    |
-| `POST`   | `/applications/demo-data`                     | Fill an empty account with the fixture set        |
-| `POST`   | `/applications/:id/interviews`                | Add an interview round                            |
-| `PATCH`  | `/applications/:id/interviews/:interviewId`   | Update a round                                    |
-| `DELETE` | `/applications/:id/interviews/:interviewId`   | Remove a round                                    |
-| `POST`   | `/applications/:id/attachments`               | Upload a file                                     |
-| `GET`    | `/applications/:id/attachments/:attachmentId` | Mint a signed, expiring download URL              |
-| `DELETE` | `/applications/:id/attachments/:attachmentId` | Delete a file                                     |
-| `GET`    | `/analytics/summary`                          | Counts, rates, streak, weekly goal, period delta  |
-| `GET`    | `/analytics/status-breakdown`                 | Count per status, empty statuses included         |
-| `GET`    | `/analytics/timeline`                         | Created and status changes, by day, week or month |
-| `GET`    | `/analytics/by-source`                        | Count per source                                  |
-| `GET`    | `/analytics/funnel`                           | Applied → assessment → interview → offer          |
-| `GET`    | `/analytics/top-companies`                    | Most-applied-to companies                         |
-| `GET`    | `/calendar`                                   | Deadlines and interviews in a date window         |
-| `GET`    | `/reminders`                                  | List reminders                                    |
-| `POST`   | `/reminders`                                  | Create a reminder                                 |
-| `PATCH`  | `/reminders/:id/read`                         | Mark read                                         |
-| `DELETE` | `/reminders/:id`                              | Delete                                            |
-| `GET`    | `/files/*`                                    | Serve a stored object against a signed URL        |
+| Method   | Path                                          | Purpose                                                  |
+| -------- | --------------------------------------------- | -------------------------------------------------------- |
+| `GET`    | `/health`, `/ready`                           | Liveness and readiness probes (also at the root)         |
+| `POST`   | `/auth/register`                              | Create an account, set the refresh cookie                |
+| `POST`   | `/auth/login`                                 | Sign in                                                  |
+| `POST`   | `/auth/restore`                               | Restore a closed account within 30 days                  |
+| `POST`   | `/auth/demo`                                  | Sign in to the shared demo account                       |
+| `GET`    | `/auth/google`, `/auth/google/callback`       | Start and finish "Continue with Google"                  |
+| `POST`   | `/auth/refresh`                               | Rotate the refresh token, mint an access token           |
+| `POST`   | `/auth/logout`                                | Revoke the current refresh token                         |
+| `POST`   | `/auth/logout-all`                            | Revoke every session for the account                     |
+| `GET`    | `/auth/me`                                    | Current account                                          |
+| `PATCH`  | `/auth/me`                                    | Update profile and preferences, or start an email change |
+| `DELETE` | `/auth/me`                                    | Close the account (soft delete, purged after 30 days)    |
+| `PATCH`  | `/auth/me/password`                           | Change password, revoke other sessions                   |
+| `GET`    | `/auth/me/export`                             | Download everything stored about the account             |
+| `GET`    | `/auth/me/usage`                              | Usage against the per-account resource caps              |
+| `POST`   | `/auth/verify-email`                          | Confirm an email address with the emailed token          |
+| `POST`   | `/auth/resend-verification`                   | Send a new confirmation link                             |
+| `POST`   | `/auth/forgot-password`                       | Request a reset link — same answer for any email         |
+| `POST`   | `/auth/reset-password`                        | Set a new password with a reset token                    |
+| `GET`    | `/auth/sessions`                              | List the signed-in devices                               |
+| `DELETE` | `/auth/sessions/:id`                          | Sign one device out                                      |
+| `GET`    | `/applications`                               | List — filters, search, sort, pagination                 |
+| `POST`   | `/applications`                               | Create                                                   |
+| `GET`    | `/applications/:id`                           | Read one                                                 |
+| `PATCH`  | `/applications/:id`                           | Update, optimistic-locked by `version`                   |
+| `DELETE` | `/applications/:id`                           | Delete                                                   |
+| `PATCH`  | `/applications/:id/status`                    | Change status, append to `statusHistory`                 |
+| `POST`   | `/applications/bulk`                          | Bulk delete, archive, unarchive, set status              |
+| `GET`    | `/applications/export`                        | Download CSV or JSON                                     |
+| `POST`   | `/applications/import`                        | CSV import with per-row errors                           |
+| `POST`   | `/applications/demo-data`                     | Fill an empty account with the fixture set               |
+| `POST`   | `/applications/:id/interviews`                | Add an interview round                                   |
+| `PATCH`  | `/applications/:id/interviews/:interviewId`   | Update a round                                           |
+| `DELETE` | `/applications/:id/interviews/:interviewId`   | Remove a round                                           |
+| `POST`   | `/applications/:id/attachments`               | Upload a file                                            |
+| `GET`    | `/applications/:id/attachments/:attachmentId` | Mint a signed, expiring download URL                     |
+| `DELETE` | `/applications/:id/attachments/:attachmentId` | Delete a file                                            |
+| `GET`    | `/analytics/summary`                          | Counts, rates, streak, weekly goal, period delta         |
+| `GET`    | `/analytics/status-breakdown`                 | Count per status, empty statuses included                |
+| `GET`    | `/analytics/timeline`                         | Created and status changes, by day, week or month        |
+| `GET`    | `/analytics/by-source`                        | Count per source                                         |
+| `GET`    | `/analytics/funnel`                           | Applied → assessment → interview → offer                 |
+| `GET`    | `/analytics/top-companies`                    | Most-applied-to companies                                |
+| `GET`    | `/calendar`                                   | Deadlines and interviews in a date window                |
+| `GET`    | `/reminders`                                  | List reminders                                           |
+| `POST`   | `/reminders`                                  | Create a reminder                                        |
+| `PATCH`  | `/reminders/:id/read`                         | Mark read                                                |
+| `DELETE` | `/reminders/:id`                              | Delete                                                   |
+| `GET`    | `/email/unsubscribe`                          | Unsubscribe from one non-transactional stream            |
+| `POST`   | `/email/unsubscribe`                          | RFC 8058 one-click unsubscribe                           |
+| `POST`   | `/email/feedback`                             | Send feedback to the maintainer                          |
+| `GET`    | `/files/*`                                    | Serve a stored object against a signed URL               |
 
 ---
 
@@ -387,17 +462,23 @@ erDiagram
         string name
         string email UK
         string password "bcrypt, select false"
+        string googleId UK "sparse"
         string university
         number gradYear
         number weeklyGoal
         string theme "light|dark|system"
         string timezone "IANA"
+        boolean emailRemindersEnabled
+        boolean weeklySummaryEnabled
         boolean emailVerified
+        string pendingEmail "awaiting confirmation"
         date passwordChangedAt
         number failedLoginAttempts
         date lockedUntil
+        date acceptedTermsAt
         date deletedAt "soft delete"
         boolean isDemo
+        number schemaVersion
     }
 
     APPLICATION {
@@ -413,6 +494,8 @@ erDiagram
         string employmentType "internship|part-time|full-time"
         object stipend "amount, currency, period"
         object contact "name, email, role, linkedin"
+        string jobUrl
+        string resumeVersion
         date appliedDate
         date deadline
         date nextActionDate "derived"
@@ -420,6 +503,7 @@ erDiagram
         string notes "markdown"
         boolean archived
         number version "optimistic lock"
+        number schemaVersion
     }
 
     INTERVIEW {
@@ -428,10 +512,12 @@ erDiagram
         date scheduledAt
         number durationMins
         string mode "onsite|video|phone"
+        string link
         string interviewer
         number round
         string outcome "pending|passed|failed|cancelled"
         string feedback
+        string prepNotes
     }
 
     STATUSHISTORY {
@@ -458,6 +544,7 @@ erDiagram
         string title
         date dueAt
         boolean sent
+        date sentAt
         date readAt
         string channel "in_app|email"
     }
@@ -465,19 +552,23 @@ erDiagram
     REFRESHTOKEN {
         ObjectId id PK
         ObjectId user FK
-        string tokenHash
+        string tokenHash UK
         string family "revoked wholesale on reuse"
-        date expiresAt
+        date expiresAt "TTL index"
         date revokedAt
+        string revokedReason
         ObjectId replacedBy
         string userAgent
         string ip
+        date lastUsedAt
     }
 ```
 
-Compound indexes on `{ user, status }` and `{ user, deadline }`, plus a text index across
-`company, role, notes, tags`. Timestamps are stored in UTC everywhere; every user-facing day, week and
-streak boundary is resolved through the account's IANA timezone.
+`Application` carries compound indexes on `{ user, status }`, `{ user, deadline }` and
+`{ user, createdAt }`, plus a text index across `company, role, notes, tags`. Refresh tokens expire
+out of the collection through a TTL index. A separate `migrations` collection is the ledger the
+migration runner writes to. Timestamps are stored in UTC everywhere; every user-facing day, week
+and streak boundary is resolved through the account's IANA timezone.
 
 ---
 
@@ -492,13 +583,14 @@ The server suite runs against `mongodb-memory-server`, so it needs no running da
 enforced rather than merely reported: `server/jest.config.js` fails the run if `src/services` or
 `src/controllers` falls below the 70% statement target from SPEC §10.
 
-581 tests across 53 suites, last measured 2026-09-06:
+The server has 804 tests in 65 suites and the client 1,003 tests in 87 files. Server coverage, last
+measured 2026-10-29:
 
 | Scope             | Statements | Branches | Functions | Lines  |
 | ----------------- | ---------- | -------- | --------- | ------ |
-| `src/controllers` | 100%       | 93.75%   | 100%      | 100%   |
-| `src/services`    | 97.03%     | 86.85%   | 96.75%    | 96.98% |
-| Whole server      | 92.33%     | 74.27%   | 88.67%    | 92.76% |
+| `src/controllers` | 98.81%     | 87.10%   | 100%      | 98.80% |
+| `src/services`    | 97.47%     | 86.96%   | 96.88%    | 97.69% |
+| Whole server      | 92.84%     | 75.98%   | 90%       | 93.49% |
 | SPEC §10 target   | ≥ 70%      | ≥ 60%    | ≥ 70%     | ≥ 70%  |
 
 Guarantees worth knowing are under test: user A cannot read user B's data through any endpoint;
@@ -511,25 +603,30 @@ matches the router exactly in both directions.
 
 ```bash
 npm run e2e:up        # isolated compose stack: web 5174, api 5001, mongo 27018
-npm run test:e2e      # eight flows, axe, and the responsive sweep
+npm run test:e2e      # ten flows, axe, and the layout audits
 npm run e2e:down
 ```
 
-Thirteen Playwright tests run against a real stack — a real API, a real Mongo, and a real
-cross-origin boundary between the client and the API. That last part earns its keep: it is what
-surfaced a missing `Access-Control-Expose-Headers`, which had made every file download in a
-deployed build fall back to a generic filename. Same-origin development cannot show that.
+32 Playwright tests in 20 files run against a real stack — a real API, a real Mongo, and a real
+cross-origin boundary between the client and the API — on every CI run. That last part earns its
+keep: it is what surfaced a missing `Access-Control-Expose-Headers`, which had made every file
+download in a deployed build fall back to a generic filename. Same-origin development cannot show
+that.
 
-The eight flows are SPEC §10's: register and verify from the emailed link; create an application
-and find it in the table and the right board column; drag a card and reload; filter and search
-through the URL and reload; reset a password and confirm the old one is refused; export the CSV
-and check its header row; log out and get redirected off a protected route; and recover from an
-expired access token through the silent refresh with no visible error.
+Eight of the ten flows are SPEC §10's: register and verify from the emailed link; create an
+application and find it in the table and the right board column; drag a card and reload; filter
+and search through the URL and reload; reset a password and confirm the old one is refused; export
+the CSV and check its header row; log out and get redirected off a protected route; and recover
+from an expired access token through the silent refresh with no visible error. The other two check
+that the CSV export's "Shown columns" follows the Columns menu, and walk one user through the whole
+product, from sign-up to sign-out, in a single continuous pass.
 
-Alongside them, `@axe-core/playwright` audits the landing page, login, dashboard, board and the
-create-application modal — currently zero violations at any impact level, not merely zero serious
-ones — and a responsive audit loads all seven routes at 375, 768 and 1440 px and asserts the
-document does not scroll sideways.
+Alongside them, `@axe-core/playwright` audits the landing, login, Terms and Privacy pages, the
+dashboard, the board and the create-application modal — zero violations at any impact level, not
+merely zero serious ones. A responsive audit loads all seven app routes at 375, 768 and 1440 px and
+asserts the document does not scroll sideways, and smaller audits pin layout details that once
+regressed: the board's fit to the window, hit-area sizes, the heatmap's figures, the search field
+and the filter popovers.
 
 `retries` is set to `0` on purpose: a retry hides exactly the intermittency the suite exists to
 catch. See [e2e/README.md](e2e/README.md) for how the stack is isolated, how mail tokens are read,
@@ -549,15 +646,15 @@ committed and later deleted is still committed. `.gitleaks.toml` records the onl
 
 ## Performance
 
-Measured on 2026-09-06 against a production build (`npm run build -w client`, served by
-`vite preview` on port 5173 so the API's CORS allowlist applies unchanged) talking to the API in
-Docker Compose with the seeded demo account. Re-measure after
-any change to the dashboard or the bundle; the numbers below are what the current `main` produces,
-not aspirations.
+Bundle sizes are enforced on every CI run, so they always describe the current `main`. Lighthouse and
+API latency are measured by hand, and the figures below date from 2026-09-06 — before the September
+redesigns and the dashboard's weekly-pace panel — so re-measure them before quoting them.
 
 ### Lighthouse
 
-Desktop form factor, run through Chromium. The dashboard is audited **signed in** — the run drives
+Measured against a production build (`npm run build -w client`, served by `vite preview` on port 5173
+so the API's CORS allowlist applies unchanged) talking to the API in Docker Compose with the seeded
+demo account. Desktop form factor, run through Chromium. The dashboard is audited **signed in** — the run drives
 "Try the demo" first and shares the browser profile with Lighthouse, because auditing `/dashboard`
 without a session silently measures the login page instead.
 
@@ -575,20 +672,22 @@ scores 100 once a session exists.
 ### Bundle sizes
 
 Enforced on every CI run by `npm run check:bundle`, which walks the built manifest's transitive
-static-import closure rather than guessing from file names.
+static-import closure rather than guessing from file names. Measured 2026-10-29:
 
 | Route         | Gzipped      | Budget |
 | ------------- | ------------ | ------ |
-| `/` (landing) | **111.4 KB** | 150 KB |
-| `/dashboard`  | **215.4 KB** | 300 KB |
+| `/` (landing) | **129.7 KB** | 150 KB |
+| `/dashboard`  | **259.8 KB** | 300 KB |
 
-Chart.js, dnd-kit and the markdown pair are provably absent from the landing route's closure — the
+Chart.js, dnd-kit, `marked` and DOMPurify are provably absent from the landing route's closure — the
 check fails the build if any of them reappears, because a chunk can be under budget and still drag a
-library behind it.
+library behind it. The same script reports every other route without a budget; the heaviest of those
+is the application detail page at 218.8 KB.
 
 ### API latency
 
-`GET /api/v1/applications` with the seeded 64-application account, over 150 requests:
+`GET /api/v1/applications` with the seeded 64-application account, over 150 requests, on
+2026-09-06:
 
 | Concurrency     | p50     | p95         | p99                    |
 | --------------- | ------- | ----------- | ---------------------- |
@@ -619,24 +718,10 @@ silently: a `SameSite=Strict` refresh cookie is never sent cross-site, so login
 appears to work and then drops the user on the next page refresh. The code derives the right value
 from `CLIENT_ORIGIN` and `API_URL`, but only if both name the real deployed origins.
 
----
-
-## Possible extensions
-
-- **Google OAuth sign-in**, linking to an existing account by verified email.
-- **Browser extension or bookmarklet** that saves a posting straight from LinkedIn or a careers page,
-  with company, role and URL pre-filled.
-- **Resume versioning** — attach the exact CV sent per application, and report which version
-  correlates with responses.
-- **Email ingestion**: forward rejection and interview-invite emails to a per-user address and let a
-  parser advance the status automatically.
-- **Cohort benchmarking**: anonymised, opt-in comparison of response rates by company and source.
-- **Follow-up nudges** that suggest when to chase an application that has gone quiet, based on the
-  observed response-time distribution.
-- **Offer comparison view** — stipend, location, team and deadline side by side once more than one
-  offer lands.
-- **iCal feed** of deadlines and interviews for Google or Apple Calendar.
-- **Saved filter presets** and a weekly email digest of the board's state.
+Deploys are automatic: `.github/workflows/deploy.yml` deploys both services by commit SHA once CI
+passes on `main`, and is the only deploy path — Railway's own push trigger is switched off so a red
+commit can never ship. It stays inert in a fork until `DEPLOY_ENABLED` and the Railway secrets are
+set; DEPLOYMENT.md's "Automated deploys" section has the setup.
 
 ---
 
@@ -712,7 +797,28 @@ finish before the new code is correct must not be competing with that code for t
 Writing one: add the new fields to the model as optional, bump `CURRENT_*_SCHEMA_VERSION`, and write
 a migration that selects on the old `schemaVersion`, writes the new fields and stamps the new
 version. Selecting on the version is what makes a re-run harmless — the second pass matches nothing.
-`001-backfill-schema-version.ts` is the worked example.
+`001-backfill-schema-version.ts` is the worked example. `002-retire-legacy-sources.ts` rewrites
+retired `source` values to `other`, keeping the platform's name in `sourceOther`; it selects on the
+old value itself, which makes a re-run just as harmless.
+
+---
+
+## Possible extensions
+
+- **Browser extension or bookmarklet** that saves a posting straight from LinkedIn or a careers page,
+  with company, role and URL pre-filled.
+- **Resume versioning** — today `resumeVersion` is a free-text label; attach the exact CV file sent
+  per application instead, and report which version correlates with responses.
+- **Email ingestion**: forward rejection and interview-invite emails to a per-user address and let a
+  parser advance the status automatically.
+- **Cohort benchmarking**: anonymised, opt-in comparison of response rates by company and source.
+- **Follow-up nudges** that suggest when to chase an application that has gone quiet, based on the
+  observed response-time distribution.
+- **Offer comparison view** — stipend, location, team and deadline side by side once more than one
+  offer lands.
+- **iCal feed** of deadlines and interviews for Google or Apple Calendar.
+- **Saved filter presets**, linkable like any other filtered view.
+- **Disconnecting Google** from Settings, which the Google sign-in does not offer yet.
 
 ---
 
